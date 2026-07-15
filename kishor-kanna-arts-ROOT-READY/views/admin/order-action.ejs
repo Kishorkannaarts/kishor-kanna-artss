@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title><%= title %> | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
+<body class="admin">
+<div class="admin-shell">
+  <% active = 'orders' %>
+  <%- include('partials/sidebar') %>
+  <div class="admin-main">
+    <div class="admin-topbar"><h1><%= title %></h1></div>
+    <p style="color:var(--muted); margin-top:-10px;">Order <%= order.order_code %> — <%= order.name %> (<%= order.email || 'no email on file' %>)</p>
+
+    <% if (!order.email) { %>
+      <div class="error-box">This customer didn't provide an email address, so no email can be sent — but you can still update the order status below.</div>
+    <% } %>
+
+    <form class="admin-form" action="<%= actionUrl %>" method="POST">
+      <% if (actionType === 'advance' || actionType === 'balance') { %>
+        <div class="form-group">
+          <label>Amount</label>
+          <input type="text" name="amount" placeholder="e.g. ₹800" required>
+        </div>
+        <div class="form-group">
+          <label>Payment Link</label>
+          <input type="text" name="payment_link" value="<%= defaultLink %>" placeholder="Paste your UPI / payment link here" required>
+        </div>
+      <% } %>
+      <% if (actionType === 'reject') { %>
+        <div class="form-group">
+          <label>Reason (shown to customer)</label>
+          <textarea name="reason" placeholder="e.g. That date is fully booked, could you choose another?" required></textarea>
+        </div>
+      <% } %>
+      <button class="btn btn-primary" type="submit">
+        <% if (actionType === 'advance') { %>Send Advance Payment Email
+        <% } else if (actionType === 'balance') { %>Send Balance Payment Email
+        <% } else { %>Send & Mark Awaiting New Date
+        <% } %>
+      </button>
+      <a class="btn btn-ghost" href="/admin/orders">Cancel</a>
+    </form>
+  </div>
+</div>
+</body></html>

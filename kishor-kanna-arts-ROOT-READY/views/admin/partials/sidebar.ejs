@@ -1,0 +1,19 @@
+<div class="admin-sidebar">
+  <div class="brand"><%= settings.site_name %><br><small style="color:var(--muted); font-weight:normal;">Admin Panel</small></div>
+  <a href="/admin/dashboard" class="<%= active === 'dashboard' ? 'active' : '' %>">Dashboard</a>
+  <a href="/admin/artworks" class="<%= active === 'artworks' ? 'active' : '' %>">Portfolio / Artworks</a>
+  <a href="/admin/services" class="<%= active === 'services' ? 'active' : '' %>">Services</a>
+  <a href="/admin/videos" class="<%= active === 'videos' ? 'active' : '' %>">Videos</a>
+  <a href="/admin/orders" class="<%= active === 'orders' ? 'active' : '' %>">Orders</a>
+  <a href="/admin/calendar" class="<%= active === 'calendar' ? 'active' : '' %>">Calendar / Availability</a>
+  <a href="/admin/email-templates" class="<%= active === 'email-templates' ? 'active' : '' %>">Email Templates</a>
+  <a href="/admin/testimonials" class="<%= active === 'testimonials' ? 'active' : '' %>">Reviews / Comments</a>
+  <a href="/admin/messages" class="<%= active === 'messages' ? 'active' : '' %>">Contact Messages</a>
+  <a href="/admin/offers" class="<%= active === 'offers' ? 'active' : '' %>">Offers / Updates</a>
+  <a href="/admin/newsletter" class="<%= active === 'newsletter' ? 'active' : '' %>">Newsletter</a>
+  <a href="/admin/settings" class="<%= active === 'settings' ? 'active' : '' %>">Site Settings</a>
+  <form action="/admin/logout" method="POST" style="padding: 14px 20px 0;">
+    <button class="btn btn-ghost btn-sm" type="submit" style="width:100%;">Log Out</button>
+  </form>
+  <div style="padding: 14px 20px 0;"><a href="/" target="_blank">&larr; View Live Site</a></div>
+</div>

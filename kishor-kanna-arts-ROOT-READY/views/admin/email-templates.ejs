@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Email Templates | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
+<body class="admin">
+<div class="admin-shell">
+  <% active = 'email-templates' %>
+  <%- include('partials/sidebar') %>
+  <div class="admin-main">
+    <div class="admin-topbar"><h1>Email Templates</h1></div>
+    <p style="color:var(--muted); font-size:0.9rem; max-width:640px;">
+      These control the wording of every automatic email the site sends. You can use these placeholders
+      anywhere in the subject or message and they'll be filled in automatically:
+      <code>{{name}} {{order_code}} {{art_type}} {{size}} {{amount}} {{payment_link}} {{track_url}} {{site_name}} {{status}} {{reason}}</code>
+      (not every placeholder applies to every template — unused ones are simply left blank).
+    </p>
+
+    <form class="admin-form" action="/admin/email-templates/save" method="POST" style="max-width:700px;">
+
+      <div class="form-group"><label>Default Payment Link (used to pre-fill payment request emails)</label>
+        <input type="text" name="default_payment_link" value="<%= settings.default_payment_link %>" placeholder="Paste your UPI / Razorpay / payment page link">
+      </div>
+
+      <hr style="border-color:var(--border); margin:24px 0;">
+      <h3 style="font-size:1rem;">1. Order Received (sent instantly when a customer places an order)</h3>
+      <div class="form-group"><label>Subject</label><input type="text" name="tmpl_order_received_subject" value="<%= settings.tmpl_order_received_subject %>"></div>
+      <div class="form-group"><label>Message</label><textarea name="tmpl_order_received_body" style="min-height:140px;"><%= settings.tmpl_order_received_body %></textarea></div>
+
+      <hr style="border-color:var(--border); margin:24px 0;">
+      <h3 style="font-size:1rem;">2. Status Update (sent whenever you change the status dropdown in Orders)</h3>
+      <div class="form-group"><label>Subject</label><input type="text" name="tmpl_status_update_subject" value="<%= settings.tmpl_status_update_subject %>"></div>
+      <div class="form-group"><label>Message</label><textarea name="tmpl_status_update_body" style="min-height:120px;"><%= settings.tmpl_status_update_body %></textarea></div>
+
+      <hr style="border-color:var(--border); margin:24px 0;">
+      <h3 style="font-size:1rem;">3. Advance Payment Request (sent when you click "Request Advance Payment")</h3>
+      <div class="form-group"><label>Subject</label><input type="text" name="tmpl_advance_subject" value="<%= settings.tmpl_advance_subject %>"></div>
+      <div class="form-group"><label>Message</label><textarea name="tmpl_advance_body" style="min-height:140px;"><%= settings.tmpl_advance_body %></textarea></div>
+
+      <hr style="border-color:var(--border); margin:24px 0;">
+      <h3 style="font-size:1rem;">4. Reject / Ask New Date (sent when you click "Reject & Ask For a New Date")</h3>
+      <div class="form-group"><label>Subject</label><input type="text" name="tmpl_reject_subject" value="<%= settings.tmpl_reject_subject %>"></div>
+      <div class="form-group"><label>Message</label><textarea name="tmpl_reject_body" style="min-height:120px;"><%= settings.tmpl_reject_body %></textarea></div>
+
+      <hr style="border-color:var(--border); margin:24px 0;">
+      <h3 style="font-size:1rem;">5. Balance Payment Request (sent when you click "Request Balance Payment")</h3>
+      <div class="form-group"><label>Subject</label><input type="text" name="tmpl_balance_subject" value="<%= settings.tmpl_balance_subject %>"></div>
+      <div class="form-group"><label>Message</label><textarea name="tmpl_balance_body" style="min-height:140px;"><%= settings.tmpl_balance_body %></textarea></div>
+
+      <hr style="border-color:var(--border); margin:24px 0;">
+      <h3 style="font-size:1rem;">6. Shipped / Order Sent (sent when you click "Mark as Sent")</h3>
+      <div class="form-group"><label>Subject</label><input type="text" name="tmpl_shipped_subject" value="<%= settings.tmpl_shipped_subject %>"></div>
+      <div class="form-group"><label>Message</label><textarea name="tmpl_shipped_body" style="min-height:100px;"><%= settings.tmpl_shipped_body %></textarea></div>
+
+      <br>
+      <button class="btn btn-primary" type="submit">Save All Templates</button>
+    </form>
+  </div>
+</div>
+</body></html>

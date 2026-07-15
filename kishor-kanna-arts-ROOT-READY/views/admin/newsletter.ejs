@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Newsletter | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
+<body class="admin">
+<div class="admin-shell">
+  <% active = 'newsletter' %>
+  <%- include('partials/sidebar') %>
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <h1>Newsletter Subscribers (<%= subscribers.length %>)</h1>
+      <a class="btn btn-primary" href="/admin/newsletter/export">Export CSV</a>
+    </div>
+    <table style="margin-bottom:30px;">
+      <tr><th>Email</th><th>Subscribed On</th></tr>
+      <% subscribers.forEach(s => { %>
+        <tr><td><%= s.email %></td><td><%= s.created_at %></td></tr>
+      <% }) %>
+      <% if (subscribers.length === 0) { %><tr><td colspan="2">No subscribers yet.</td></tr><% } %>
+    </table>
+
+    <h2 style="font-size:1.1rem;">Send Newsletter Update</h2>
+    <% if (typeof notice !== 'undefined' && notice) { %>
+      <div class="badge badge-ok" style="display:block; padding:12px 16px; margin-bottom:16px;"><%= notice %></div>
+    <% } %>
+    <form class="admin-form" action="/admin/newsletter/send" method="POST" onsubmit="return confirm('Send this to all ' + <%= subscribers.length %> + ' subscribers?');">
+      <div class="form-group"><label>Subject</label><input type="text" name="subject" required placeholder="e.g. New Canvas Collection Just Dropped"></div>
+      <div class="form-group"><label>Message</label><textarea name="message" required placeholder="Write your update here..." style="min-height:160px;"></textarea></div>
+      <button class="btn btn-primary" type="submit">Send to All Subscribers</button>
+    </form>
+  </div>
+</div>
+</body></html>

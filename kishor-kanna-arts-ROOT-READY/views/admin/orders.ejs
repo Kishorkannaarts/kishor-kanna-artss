@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orders | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
+<body class="admin">
+<div class="admin-shell">
+  <% active = 'orders' %>
+  <%- include('partials/sidebar') %>
+  <div class="admin-main">
+    <div class="admin-topbar"><h1>Orders</h1></div>
+    <table>
+      <tr><th>Order ID</th><th>Customer</th><th>Type / Size</th><th>Reference</th><th>Status</th><th>Payments</th><th>Actions</th></tr>
+      <% orders.forEach(o => { %>
+        <tr>
+          <td><%= o.order_code %><br><small style="color:var(--muted);"><%= o.created_at %></small></td>
+          <td><%= o.name %><br><small style="color:var(--muted);"><%= o.phone %><br><%= o.email || 'no email' %></small></td>
+          <td><%= o.art_type %> / <%= o.size %></td>
+          <td><% if (o.reference_image) { %><a href="<%= o.reference_image %>" target="_blank">View photo</a><% } else { %>—<% } %></td>
+          <td>
+            <span class="badge badge-new" style="display:block; margin-bottom:8px;"><%= o.status %></span>
+            <form action="/admin/orders/<%= o.id %>/status" method="POST">
+              <select name="status" onchange="this.form.submit()" style="width:100%; padding:6px; border-radius:6px; background:var(--panel-2); color:var(--text); border:1px solid var(--border);">
+                <% ['Received','Confirmed','In Progress','Completed','Delivered','Cancelled'].forEach(s => { %>
+                  <option value="<%= s %>" <%= o.status === s ? 'selected' : '' %>><%= s %></option>
+                <% }) %>
+              </select>
+            </form>
+          </td>
+          <td style="min-width:170px;">
+            <% if (o.advance_amount) { %>
+              <div style="margin-bottom:8px;">
+                <span class="badge <%= o.advance_paid ? 'badge-ok' : 'badge-new' %>">Advance <%= o.advance_amount %> <%= o.advance_paid ? '✓ Paid' : '- Pending' %></span>
+                <% if (!o.advance_paid) { %>
+                  <form action="/admin/orders/<%= o.id %>/advance-paid" method="POST">
+                    <button class="btn btn-success btn-sm" style="margin-top:4px;" type="submit">Mark Advance Paid</button>
+                  </form>
+                <% } %>
+              </div>
+            <% } %>
+            <% if (o.balance_amount) { %>
+              <div>
+                <span class="badge <%= o.balance_paid ? 'badge-ok' : 'badge-new' %>">Balance <%= o.balance_amount %> <%= o.balance_paid ? '✓ Paid' : '- Pending' %></span>
+                <% if (!o.balance_paid) { %>
+                  <form action="/admin/orders/<%= o.id %>/balance-paid" method="POST">
+                    <button class="btn btn-success btn-sm" style="margin-top:4px;" type="submit">Mark Balance Paid</button>
+                  </form>
+                <% } %>
+              </div>
+            <% } %>
+            <% if (!o.advance_amount && !o.balance_amount) { %><span style="color:var(--muted); font-size:0.85rem;">No payment requested yet</span><% } %>
+          </td>
+          <td class="actions-row" style="flex-wrap:wrap;">
+            <a class="btn btn-success btn-sm" href="/admin/orders/<%= o.id %>/advance">Request Advance</a>
+            <a class="btn btn-ghost btn-sm" href="/admin/orders/<%= o.id %>/reject">Reject / New Date</a>
+            <a class="btn btn-success btn-sm" href="/admin/orders/<%= o.id %>/balance">Request Balance</a>
+            <form action="/admin/orders/<%= o.id %>/shipped" method="POST" onsubmit="return confirm('Mark this order as sent and email the customer?');">
+              <button class="btn btn-primary btn-sm" type="submit">Mark as Sent</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+      <% if (orders.length === 0) { %><tr><td colspan="7">No orders yet.</td></tr><% } %>
+    </table>
+  </div>
+</div>
+</body></html>

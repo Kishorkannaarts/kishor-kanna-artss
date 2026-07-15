@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reviews | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
+<body class="admin">
+<div class="admin-shell">
+  <% active = 'testimonials' %>
+  <%- include('partials/sidebar') %>
+  <div class="admin-main">
+    <div class="admin-topbar"><h1>Reviews / Comments</h1></div>
+    <table>
+      <tr><th>Name</th><th>Rating</th><th>Review</th><th>Status</th><th>Actions</th></tr>
+      <% testimonials.forEach(t => { %>
+        <tr>
+          <td><%= t.name %></td>
+          <td><%= '★'.repeat(t.rating) %></td>
+          <td><%= t.message %></td>
+          <td><span class="badge <%= t.approved ? 'badge-ok' : 'badge-new' %>"><%= t.approved ? 'Approved' : 'Pending' %></span></td>
+          <td class="actions-row">
+            <% if (!t.approved) { %>
+              <form action="/admin/testimonials/<%= t.id %>/approve" method="POST">
+                <button class="btn btn-success btn-sm" type="submit">Approve</button>
+              </form>
+            <% } %>
+            <form action="/admin/testimonials/<%= t.id %>/delete" method="POST" onsubmit="return confirm('Delete this review?');">
+              <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+      <% if (testimonials.length === 0) { %><tr><td colspan="5">No reviews yet.</td></tr><% } %>
+    </table>
+
+    <h2 style="font-size:1.1rem;">Add a Review Directly</h2>
+    <p style="color:var(--muted); font-size:0.9rem; margin-top:-10px;">Use this to copy in a great review from Google Maps or WhatsApp — it goes live immediately, no approval step needed.</p>
+    <form class="admin-form" action="/admin/testimonials/add" method="POST">
+      <div class="form-group"><label>Customer Name</label><input type="text" name="name" required></div>
+      <div class="form-group">
+        <label>Rating</label>
+        <select name="rating">
+          <option value="5">★★★★★</option>
+          <option value="4">★★★★☆</option>
+          <option value="3">★★★☆☆</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Review Text</label><textarea name="message" required placeholder="Paste the review text here"></textarea></div>
+      <button class="btn btn-primary" type="submit">Publish Review</button>
+    </form>
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title><%= typeof pageTitle !== 'undefined' ? pageTitle + ' | ' + settings.site_name : settings.site_name %></title>
+<link rel="stylesheet" href="/public/css/style.css">
+</head>
+<body>
+<header class="site-header">
+  <a class="logo" href="/" style="display:flex; align-items:center; gap:10px;">
+    <% if (settings.logo_url) { %><img src="<%= settings.logo_url %>" alt="<%= settings.site_name %>" style="height:42px; width:auto;"><% } else { %><%= settings.site_name %><% } %>
+  </a>
+  <button class="menu-toggle" onclick="document.querySelector('.nav').classList.toggle('open')">&#9776;</button>
+  <nav class="nav">
+    <a href="/">Home</a>
+    <a href="/portfolio">Portfolio</a>
+    <a href="/services">Services</a>
+    <a href="/about">About Us</a>
+    <a href="/contact">Contact</a>
+    <a href="/track-order">Track Order</a>
+    <a class="nav-cta" href="/order">Order Now</a>
+  </nav>
+</header>

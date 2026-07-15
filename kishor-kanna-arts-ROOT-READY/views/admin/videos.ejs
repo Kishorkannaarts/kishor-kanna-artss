@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Videos | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
+<body class="admin">
+<div class="admin-shell">
+  <% active = 'videos' %>
+  <%- include('partials/sidebar') %>
+  <div class="admin-main">
+    <div class="admin-topbar"><h1>Videos</h1></div>
+    <p style="color:var(--muted); font-size:0.9rem; margin-top:-10px;">Paste a YouTube / Instagram / Google Drive video link — no need to upload large video files.</p>
+
+    <table style="margin-bottom:30px;">
+      <tr><th>Title</th><th>Link</th><th>Actions</th></tr>
+      <% videos.forEach(v => { %>
+        <tr>
+          <td><%= v.title %></td>
+          <td><a href="<%= v.video_url %>" target="_blank">Open link</a></td>
+          <td>
+            <form action="/admin/videos/<%= v.id %>/delete" method="POST" onsubmit="return confirm('Delete this video?');">
+              <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+      <% if (videos.length === 0) { %><tr><td colspan="3">No videos yet.</td></tr><% } %>
+    </table>
+
+    <h2 style="font-size:1.1rem;">Add Video</h2>
+    <form class="admin-form" action="/admin/videos/save" method="POST">
+      <div class="form-group"><label>Title</label><input type="text" name="title" required></div>
+      <div class="form-group"><label>Video URL</label><input type="url" name="video_url" required placeholder="https://youtube.com/..."></div>
+      <button class="btn btn-primary" type="submit">Save Video</button>
+    </form>
+  </div>
+</div>
+</body></html>

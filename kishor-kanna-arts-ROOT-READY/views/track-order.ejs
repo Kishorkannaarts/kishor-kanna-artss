@@ -1,0 +1,50 @@
+<% pageTitle = 'Track Order' %>
+<%- include('partials/header') %>
+
+<section class="section">
+  <h2>Track Your Order</h2>
+  <p class="sub">Enter your Order ID and the phone number used when ordering</p>
+
+  <div class="form-box">
+    <form action="/track-order" method="POST">
+      <div class="form-group"><label>Order ID</label><input type="text" name="order_code" required placeholder="e.g. KKA-123456-AB3DE"></div>
+      <div class="form-group"><label>Phone Number</label><input type="text" name="phone" required></div>
+      <button class="btn" type="submit">Track Order</button>
+    </form>
+
+    <% if (searched) { %>
+      <% if (order) { %>
+        <hr style="margin:26px 0; border-color:var(--border);">
+        <h3>Order <%= order.order_code %></h3>
+        <p><strong>Status:</strong> <span class="status-badge status-<%= order.status.replace(/ /g,'-') %>"><%= order.status %></span></p>
+        <p><strong>Art Type:</strong> <%= order.art_type %> &nbsp; | &nbsp; <strong>Size:</strong> <%= order.size %></p>
+        <p><strong>Placed on:</strong> <%= order.created_at %></p>
+        <% if (order.delivery_date) { %><p><strong>Preferred Delivery:</strong> <%= order.delivery_date %></p><% } %>
+        <% if (order.notes) { %><p><strong>Notes:</strong> <%= order.notes %></p><% } %>
+
+        <% if (order.advance_amount) { %>
+          <div style="margin-top:16px; padding:16px; border-radius:10px; background:<%= order.advance_paid ? '#e6f4ea' : '#fff2cc' %>; border:1px solid <%= order.advance_paid ? '#b7e0c4' : '#e6cf87' %>;">
+            <strong><%= order.advance_paid ? '✓ Advance Payment Received' : 'Advance Payment Pending' %></strong> — <%= order.advance_amount %>
+            <% if (!order.advance_paid && order.advance_payment_link) { %>
+              <br><a class="btn" style="margin-top:10px;" href="<%= order.advance_payment_link %>" target="_blank">Pay Advance Now</a>
+            <% } %>
+          </div>
+        <% } %>
+
+        <% if (order.balance_amount) { %>
+          <div style="margin-top:12px; padding:16px; border-radius:10px; background:<%= order.balance_paid ? '#e6f4ea' : '#fff2cc' %>; border:1px solid <%= order.balance_paid ? '#b7e0c4' : '#e6cf87' %>;">
+            <strong><%= order.balance_paid ? '✓ Final Payment Received' : 'Final Payment Pending' %></strong> — <%= order.balance_amount %>
+            <% if (!order.balance_paid && order.balance_payment_link) { %>
+              <br><a class="btn" style="margin-top:10px;" href="<%= order.balance_payment_link %>" target="_blank">Pay Balance Now</a>
+            <% } %>
+          </div>
+        <% } %>
+
+      <% } else { %>
+        <div class="alert alert-error" style="margin-top:20px;">No order found with that Order ID and phone number. Please check and try again.</div>
+      <% } %>
+    <% } %>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

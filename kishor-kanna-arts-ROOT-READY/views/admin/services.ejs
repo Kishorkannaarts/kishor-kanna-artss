@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Services | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
+<body class="admin">
+<div class="admin-shell">
+  <% active = 'services' %>
+  <%- include('partials/sidebar') %>
+  <div class="admin-main">
+    <div class="admin-topbar"><h1>Services</h1></div>
+
+    <table style="margin-bottom:30px;">
+      <tr><th>Image</th><th>Title</th><th>A5</th><th>A4</th><th>A3</th><th>Custom</th><th>Actions</th></tr>
+      <% services.forEach(s => { %>
+        <tr>
+          <td><img class="thumb" src="<%= s.image || 'https://placehold.co/60x60' %>"></td>
+          <td><%= s.title %></td>
+          <td><%= s.price_a5 %></td>
+          <td><%= s.price_a4 %></td>
+          <td><%= s.price_a3 %></td>
+          <td><%= s.price_custom %></td>
+          <td>
+            <form action="/admin/services/<%= s.id %>/delete" method="POST" onsubmit="return confirm('Delete this service?');">
+              <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+      <% if (services.length === 0) { %><tr><td colspan="7">No services yet.</td></tr><% } %>
+    </table>
+
+    <h2 style="font-size:1.1rem;">Add Service</h2>
+    <form class="admin-form" action="/admin/services/save" method="POST" enctype="multipart/form-data">
+      <div class="form-group"><label>Title</label><input type="text" name="title" required></div>
+      <div class="form-group"><label>Description</label><textarea name="description"></textarea></div>
+      <div class="form-group"><label>Image</label><input type="file" name="image" accept="image/*"></div>
+      <div class="form-group"><label>Price - A5</label><input type="text" name="price_a5"></div>
+      <div class="form-group"><label>Price - A4</label><input type="text" name="price_a4"></div>
+      <div class="form-group"><label>Price - A3</label><input type="text" name="price_a3"></div>
+      <div class="form-group"><label>Price - Custom</label><input type="text" name="price_custom"></div>
+      <button class="btn btn-primary" type="submit">Save Service</button>
+    </form>
+  </div>
+</div>
+</body></html>

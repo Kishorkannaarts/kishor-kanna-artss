@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
+<body class="admin">
+<div class="admin-shell">
+  <% active = 'dashboard' %>
+  <%- include('partials/sidebar') %>
+  <div class="admin-main">
+    <div class="admin-topbar"><h1>Dashboard</h1></div>
+
+    <div class="stat-grid">
+      <div class="stat-card"><div class="num"><%= counts.artworks %></div><div class="label">Artworks</div></div>
+      <div class="stat-card"><div class="num"><%= counts.orders %></div><div class="label">Total Orders</div></div>
+      <div class="stat-card"><div class="num"><%= counts.newOrders %></div><div class="label">New Orders</div></div>
+      <div class="stat-card"><div class="num"><%= counts.messages %></div><div class="label">Unread Messages</div></div>
+      <div class="stat-card"><div class="num"><%= counts.testimonials %></div><div class="label">Reviews Pending</div></div>
+      <div class="stat-card"><div class="num"><%= counts.subscribers %></div><div class="label">Newsletter Subscribers</div></div>
+    </div>
+
+    <h2 style="font-size:1.1rem;">Recent Orders</h2>
+    <table>
+      <tr><th>Order ID</th><th>Name</th><th>Art Type</th><th>Status</th><th>Placed</th></tr>
+      <% recentOrders.forEach(o => { %>
+        <tr>
+          <td><%= o.order_code %></td>
+          <td><%= o.name %></td>
+          <td><%= o.art_type %></td>
+          <td><span class="badge badge-new"><%= o.status %></span></td>
+          <td><%= o.created_at %></td>
+        </tr>
+      <% }) %>
+      <% if (recentOrders.length === 0) { %><tr><td colspan="5">No orders yet.</td></tr><% } %>
+    </table>
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,32 @@
+<% pageTitle = 'Portfolio' %>
+<%- include('partials/header') %>
+
+<section class="section">
+  <h2>Portfolio</h2>
+  <p class="sub">Browse artworks by category</p>
+
+  <div class="pills">
+    <a class="pill <%= !activeCategory ? 'active' : '' %>" href="/portfolio">All</a>
+    <% categories.forEach(c => { %>
+      <a class="pill <%= activeCategory === c ? 'active' : '' %>" href="/portfolio?category=<%= encodeURIComponent(c) %>"><%= c %></a>
+    <% }) %>
+  </div>
+
+  <div class="grid">
+    <% artworks.forEach(a => { %>
+      <a class="card" href="/portfolio/<%= a.id %>">
+        <img src="<%= a.image || 'https://placehold.co/400x300?text=Artwork' %>" alt="<%= a.title %>">
+        <div class="card-body">
+          <span class="tag"><%= a.category %></span>
+          <h3><%= a.title %></h3>
+          <p><%= a.description %></p>
+        </div>
+      </a>
+    <% }) %>
+    <% if (artworks.length === 0) { %>
+      <p class="sub">No artworks in this category yet.</p>
+    <% } %>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

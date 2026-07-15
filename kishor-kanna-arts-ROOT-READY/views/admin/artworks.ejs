@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Artworks | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
+<body class="admin">
+<div class="admin-shell">
+  <% active = 'artworks' %>
+  <%- include('partials/sidebar') %>
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <h1>Portfolio / Artworks</h1>
+      <a class="btn btn-primary" href="/admin/artworks/new">+ Add Artwork</a>
+    </div>
+    <table>
+      <tr><th>Image</th><th>Title</th><th>Category</th><th>Featured</th><th>Actions</th></tr>
+      <% artworks.forEach(a => { %>
+        <tr>
+          <td><img class="thumb" src="<%= a.image || 'https://placehold.co/60x60' %>"></td>
+          <td><%= a.title %></td>
+          <td><%= a.category %></td>
+          <td><%= a.featured ? 'Yes' : 'No' %></td>
+          <td class="actions-row">
+            <a class="btn btn-ghost btn-sm" href="/admin/artworks/<%= a.id %>/edit">Edit</a>
+            <form action="/admin/artworks/<%= a.id %>/delete" method="POST" onsubmit="return confirm('Delete this artwork?');">
+              <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+      <% if (artworks.length === 0) { %><tr><td colspan="5">No artworks yet.</td></tr><% } %>
+    </table>
+  </div>
+</div>
+</body></html>

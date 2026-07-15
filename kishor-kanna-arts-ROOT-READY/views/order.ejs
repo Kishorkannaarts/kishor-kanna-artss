@@ -1,0 +1,76 @@
+<% pageTitle = 'Order Now' %>
+<%- include('partials/header') %>
+
+<section class="section">
+  <h2>Order Your Custom Artwork</h2>
+  <p class="sub">Fill in the details below — we'll confirm your order shortly</p>
+
+  <div class="form-box">
+    <% if (success) { %>
+      <div class="alert alert-success">
+        Order placed successfully! Your Order ID is:<br>
+        <span class="order-code"><%= success %></span><br><br>
+        Save this ID — you'll need it (with your phone number) to track your order on the
+        <a href="/track-order">Track Order</a> page.
+      </div>
+    <% } else { %>
+      <% if (error) { %><div class="alert alert-error"><%= error %></div><% } %>
+      <form action="/order" method="POST" enctype="multipart/form-data" id="orderForm">
+        <div class="form-row">
+          <div class="form-group"><label>Full Name</label><input type="text" name="name" value="<%= old.name || '' %>" required></div>
+          <div class="form-group"><label>Phone Number</label><input type="text" name="phone" value="<%= old.phone || '' %>" required></div>
+        </div>
+        <div class="form-group"><label>Email</label><input type="email" name="email" value="<%= old.email || '' %>"></div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Art Type</label>
+            <select name="art_type" required>
+              <% ['Pencil Art','Pen Art','Blood Art','Colour Art','Canvas Art'].forEach(t => { %>
+                <option value="<%= t %>" <%= old.art_type === t ? 'selected' : '' %>><%= t %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Size</label>
+            <select name="size" required>
+              <% ['A5','A4','A3','Custom'].forEach(sz => { %>
+                <option value="<%= sz %>" <%= old.size === sz ? 'selected' : '' %>><%= sz %></option>
+              <% }) %>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Upload Reference Photo</label>
+          <input type="file" name="reference_image" accept="image/*">
+        </div>
+        <div class="form-group">
+          <label>Preferred Delivery Date</label>
+          <input type="date" name="delivery_date" id="deliveryDate" value="<%= old.delivery_date || '' %>">
+          <small id="dateWarning" style="color:#a2231d; display:none;">That date isn't available — please pick another.</small>
+        </div>
+        <div class="form-group"><label>Notes / Special Instructions</label><textarea name="notes"><%= old.notes || '' %></textarea></div>
+        <button class="btn" type="submit" id="orderSubmitBtn">Place Order</button>
+      </form>
+    <% } %>
+  </div>
+</section>
+
+<script>
+  const blockedDates = <%- JSON.stringify(blockedDates || []) %>;
+  const dateInput = document.getElementById('deliveryDate');
+  const warning = document.getElementById('dateWarning');
+  const submitBtn = document.getElementById('orderSubmitBtn');
+  if (dateInput) {
+    dateInput.addEventListener('change', function () {
+      if (blockedDates.includes(dateInput.value)) {
+        warning.style.display = 'block';
+        submitBtn.disabled = true;
+      } else {
+        warning.style.display = 'none';
+        submitBtn.disabled = false;
+      }
+    });
+  }
+</script>
+
+<%- include('partials/footer') %>

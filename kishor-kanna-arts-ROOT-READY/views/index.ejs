@@ -1,0 +1,106 @@
+<% pageTitle = 'Home' %>
+<%- include('partials/header') %>
+
+<section class="hero">
+  <h1><%= settings.hero_title %></h1>
+  <p><%= settings.hero_subtitle %></p>
+  <a class="btn" href="/order">Order Your Artwork</a>
+  <a class="btn btn-outline" style="margin-left:10px;" href="/portfolio">View Portfolio</a>
+</section>
+
+<% if (offers.length) { %>
+<div class="container" style="margin-bottom:10px;">
+  <% offers.forEach(o => { %>
+    <div style="background:#fff2cc; border:1px solid #e6cf87; border-radius:10px; padding:14px 20px; margin-bottom:12px; text-align:center;">
+      <strong><%= o.title %></strong>
+      <% if (o.message) { %> — <%= o.message %><% } %>
+    </div>
+  <% }) %>
+</div>
+<% } %>
+
+<section class="section">
+  <h2>Featured Portfolio</h2>
+  <p class="sub">A glimpse of recent handcrafted pieces</p>
+  <div class="grid">
+    <% featured.forEach(a => { %>
+      <a class="card" href="/portfolio/<%= a.id %>">
+        <img src="<%= a.image || 'https://placehold.co/400x300?text=Artwork' %>" alt="<%= a.title %>">
+        <div class="card-body">
+          <span class="tag"><%= a.category %></span>
+          <h3><%= a.title %></h3>
+          <p><%= a.description %></p>
+        </div>
+      </a>
+    <% }) %>
+    <% if (featured.length === 0) { %>
+      <p class="sub">No artworks added yet — add some from the admin panel.</p>
+    <% } %>
+  </div>
+</section>
+
+<section class="section" style="background:#fff;">
+  <h2>Services</h2>
+  <p class="sub">Custom art made to order</p>
+  <div class="grid">
+    <% services.forEach(s => { %>
+      <div class="card">
+        <img src="<%= s.image || 'https://placehold.co/400x300?text=Service' %>" alt="<%= s.title %>">
+        <div class="card-body">
+          <h3><%= s.title %></h3>
+          <p><%= s.description %></p>
+          <a class="btn btn-outline" href="/order">Order This</a>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Why Choose Us</h2>
+  <div class="grid">
+    <div class="card"><div class="card-body"><h3>100% Hand-made</h3><p>Every artwork is drawn or painted by hand, never printed.</p></div></div>
+    <div class="card"><div class="card-body"><h3>Made From Your Photos</h3><p>Send a photo and we turn it into a keepsake artwork.</p></div></div>
+    <div class="card"><div class="card-body"><h3>Tracked Orders</h3><p>Follow your order status from start to delivery.</p></div></div>
+    <div class="card"><div class="card-body"><h3>Nationwide Delivery</h3><p>Carefully packed and shipped anywhere in India.</p></div></div>
+  </div>
+</section>
+
+<% if (videos.length) { %>
+<section class="section" style="background:#fff;">
+  <h2>Videos</h2>
+  <p class="sub">Watch the artwork process</p>
+  <div class="grid">
+    <% videos.forEach(v => { %>
+      <div class="card"><div class="card-body">
+        <h3><%= v.title %></h3>
+        <a class="btn btn-outline" href="<%= v.video_url %>" target="_blank" rel="noopener">Watch Video</a>
+      </div></div>
+    <% }) %>
+  </div>
+</section>
+<% } %>
+
+<% if (testimonials.length) { %>
+<section class="section">
+  <h2>Reviews</h2>
+  <p class="sub">What our customers say</p>
+  <div class="grid">
+    <% testimonials.forEach(t => { %>
+      <div class="testimonial">
+        <div class="stars"><%= '★'.repeat(t.rating) %><%= '☆'.repeat(5 - t.rating) %></div>
+        <p>"<%= t.message %>"</p>
+        <div class="who">— <%= t.name %></div>
+      </div>
+    <% }) %>
+  </div>
+</section>
+<% } %>
+
+<section class="section" style="text-align:center; background:#fff;">
+  <h2>Ready to Order Your Custom Artwork?</h2>
+  <p class="sub">Tell us your idea — we'll bring it to life.</p>
+  <a class="btn" href="/order">Start Your Order</a>
+</section>
+
+<%- include('partials/footer') %>

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calendar | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
+<body class="admin">
+<div class="admin-shell">
+  <% active = 'calendar' %>
+  <%- include('partials/sidebar') %>
+  <div class="admin-main">
+    <div class="admin-topbar"><h1>Calendar / Availability</h1></div>
+    <p style="color:var(--muted); font-size:0.9rem; margin-top:-10px;">Block dates you can't deliver by. Customers won't be able to select these on the Order form.</p>
+
+    <table style="margin-bottom:30px;">
+      <tr><th>Date</th><th>Reason</th><th>Actions</th></tr>
+      <% blocked.forEach(b => { %>
+        <tr>
+          <td><%= b.date %></td>
+          <td><%= b.reason %></td>
+          <td>
+            <form action="/admin/calendar/unblock" method="POST">
+              <input type="hidden" name="date" value="<%= b.date %>">
+              <button class="btn btn-danger btn-sm" type="submit">Unblock</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+      <% if (blocked.length === 0) { %><tr><td colspan="3">No blocked dates — everything is open.</td></tr><% } %>
+    </table>
+
+    <h2 style="font-size:1.1rem;">Block a Date</h2>
+    <form class="admin-form" action="/admin/calendar/block" method="POST">
+      <div class="form-group"><label>Date</label><input type="date" name="date" required></div>
+      <div class="form-group"><label>Reason (optional, for your own reference)</label><input type="text" name="reason" placeholder="e.g. Fully booked / Holiday"></div>
+      <button class="btn btn-primary" type="submit">Block This Date</button>
+    </form>
+  </div>
+</div>
+</body></html>

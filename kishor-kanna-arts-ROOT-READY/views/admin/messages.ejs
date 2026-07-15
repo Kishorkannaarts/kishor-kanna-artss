@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Messages | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
+<body class="admin">
+<div class="admin-shell">
+  <% active = 'messages' %>
+  <%- include('partials/sidebar') %>
+  <div class="admin-main">
+    <div class="admin-topbar"><h1>Contact Messages</h1></div>
+    <table>
+      <tr><th>Name</th><th>Email / Phone</th><th>Subject</th><th>Message</th><th>Received</th><th></th></tr>
+      <% messages.forEach(m => { %>
+        <tr>
+          <td><%= m.name %></td>
+          <td><%= m.email %><br><small style="color:var(--muted);"><%= m.phone %></small></td>
+          <td><%= m.subject %></td>
+          <td><%= m.message %></td>
+          <td><%= m.created_at %></td>
+          <td>
+            <form action="/admin/messages/<%= m.id %>/delete" method="POST" onsubmit="return confirm('Delete this message?');">
+              <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+      <% if (messages.length === 0) { %><tr><td colspan="6">No messages yet.</td></tr><% } %>
+    </table>
+  </div>
+</div>
+</body></html>
