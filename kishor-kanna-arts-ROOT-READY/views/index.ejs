@@ -79,6 +79,11 @@
     <iframe src="<%= v.embed_url %>" style="position:absolute; top:0; left:0; width:100%; height:100%;" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
   </div>
 <% } else { %>
+  <% if (v.embed_url) { %>
+  <div style="position:relative; padding-bottom:56.25%; height:0; overflow:hidden; border-radius:8px;">
+    <iframe src="<%= v.embed_url %>" style="position:absolute; top:0; left:0; width:100%; height:100%;" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+  </div>
+<% } else { %>
   <a class="btn btn-outline" href="<%= v.video_url %>" target="_blank" rel="noopener">Watch Video</a>
 <% } %>
       </div></div>
