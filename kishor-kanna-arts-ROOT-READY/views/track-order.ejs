@@ -31,7 +31,11 @@
             <% } %>
           </div>
         <% } %>
-
+       <% if (order.estimated_price && order.advance_amount && !order.balance_amount) { %>
+          <div style="margin-top:12px; padding:16px; border-radius:10px; background:#eef2f7; border:1px solid #d5dee8;">
+            <strong>Remaining Balance (due after work is complete):</strong> ₹<%= (parseFloat(order.estimated_price) - parseFloat(order.advance_amount)).toFixed(0) %>
+          </div>
+        <% } %>
         <% if (order.balance_amount) { %>
           <div style="margin-top:12px; padding:16px; border-radius:10px; background:<%= order.balance_paid ? '#e6f4ea' : '#fff2cc' %>; border:1px solid <%= order.balance_paid ? '#b7e0c4' : '#e6cf87' %>;">
             <strong><%= order.balance_paid ? '✓ Final Payment Received' : 'Final Payment Pending' %></strong> — <%= order.balance_amount %>
