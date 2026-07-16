@@ -86,11 +86,11 @@ function ah(fn) {
 // =========================================================
 
 app.get('/', ah(async (req, res) => {
-  const featured  = db.normalize(await db.find('artworks', { featured: 1 }, { created_at: -1 }, 8));
-  const testimonials = db.normalize(await db.find('testimonials', { approved: 1 }, { created_at: -1 }, 6));
+  const featured  = db.normalize(await db.find('artworks', { featured: true }, { created_at: -1 }, 8));
+  const testimonials = db.normalize(await db.find('testimonials', { approved: true }, { created_at: -1 }, 6));
   const videos    = db.normalize(await db.find('videos', {}, { created_at: -1 }, 4));
   const services  = db.normalize(await db.find('services', {}, { created_at: -1 }, 4));
-  const offers    = db.normalize(await db.find('offers', { active: 1 }, { created_at: -1 }));
+  const offers    = db.normalize(await db.find('offers', { active: true }, { created_at: -1 }));
   res.render('index', { featured, testimonials, videos, services, offers });
 }));
 
