@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><%= typeof pageTitle !== 'undefined' ? pageTitle + ' | ' + settings.site_name : settings.site_name %></title>
 <link rel="stylesheet" href="/public/css/style.css">
+<style>
+  :root {
+    --accent: <%= settings.theme_accent || '#b5451b' %>;
+    --accent-dark: <%= settings.theme_accent_dark || '#8c3413' %>;
+    --gold: <%= settings.theme_gold || '#c99a3a' %>;
+    --paper: <%= settings.theme_paper || '#faf6f0' %>;
+    --ink: <%= settings.theme_ink || '#221a16' %>;
+  }
+</style>
 </head>
 <body>
 <header class="site-header">
