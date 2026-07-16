@@ -109,10 +109,34 @@ textarea { resize: vertical; min-height: 100px; }
 /* Testimonials */
 .testimonial {
   background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 22px; font-style: italic;
+  padding: 26px 24px; font-style: normal; display: flex; flex-direction: column;
 }
-.testimonial .stars { color: var(--gold); font-style: normal; margin-bottom: 8px; }
-.testimonial .who { font-style: normal; font-weight: bold; margin-top: 10px; color: var(--accent-dark); }
+.testimonial .quote-mark {
+  font-family: Georgia, serif; font-size: 2.6rem; line-height: 1; color: var(--ink);
+  margin-bottom: 8px; font-weight: bold;
+}
+.testimonial .review-title {
+  font-weight: bold; font-size: 1.05rem; margin-bottom: 8px; color: var(--ink);
+}
+.testimonial .review-body {
+  color: var(--muted); font-size: 0.95rem; margin-bottom: 4px;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.testimonial.expanded .review-body { -webkit-line-clamp: unset; overflow: visible; }
+.testimonial .read-more {
+  background: none; border: none; padding: 0; font-size: 0.85rem; font-weight: bold;
+  letter-spacing: 0.4px; color: var(--ink); text-decoration: underline; cursor: pointer;
+  margin-bottom: 16px; align-self: flex-start;
+}
+.testimonial .stars { color: var(--ink); font-style: normal; margin-top: auto; margin-bottom: 6px; }
+.testimonial .who-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.testimonial .who { font-style: normal; font-weight: bold; color: var(--ink); }
+.testimonial .meta-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-top: 12px; border-top: 1px solid var(--border); font-size: 0.85rem; color: var(--muted);
+}
+.testimonial .verified { display: flex; align-items: center; gap: 5px; color: var(--muted); }
+.testimonial .verified svg { width: 14px; height: 14px; }
 
 /* Footer */
 .site-footer { background: var(--ink); color: #e8ded3; padding: 50px 20px 24px; margin-top: 40px; }
@@ -164,32 +188,39 @@ textarea { resize: vertical; min-height: 100px; }
 }
 .reviews-track .testimonial { flex: 0 0 300px; white-space: normal; }
 
-/* Videos carousel */
-.videos-carousel-wrap { position: relative; max-width: 1140px; margin: 0 auto; padding: 0 46px; }
+/* Videos auto-scroll marquee */
+.videos-marquee {
+  overflow: hidden;
+  position: relative;
+  white-space: nowrap;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+}
 .videos-track {
-  display: flex; gap: 24px; overflow-x: auto; scroll-behavior: smooth;
-  scroll-snap-type: x mandatory; -ms-overflow-style: none; scrollbar-width: none;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 24px;
+  width: max-content;
+  animation: videos-scroll-left 40s linear infinite;
 }
-.videos-track::-webkit-scrollbar { display: none; }
+.videos-marquee:hover .videos-track { animation-play-state: paused; }
+@keyframes videos-scroll-left {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
 .video-card {
-  flex: 0 0 calc((100% - 48px) / 3); scroll-snap-align: start; box-sizing: border-box;
+  flex: 0 0 340px;
+  white-space: normal;
+  box-sizing: border-box;
 }
+.video-card .card {
+  padding: 22px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.video-card .card-body { padding: 0; }
+.video-card .card-body h3 { font-size: 1.05rem; margin-bottom: 14px; }
 .video-card .video-frame,
 .video-card video { width: 100%; aspect-ratio: 16 / 9; border-radius: 8px; background: #000; display: block; }
-.carousel-arrow {
-  position: absolute; top: 50%; transform: translateY(-50%);
-  width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border);
-  background: #fff; color: var(--ink); display: flex; align-items: center; justify-content: center;
-  cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.08); z-index: 2;
-}
-.carousel-arrow:hover { background: var(--paper); border-color: var(--accent); color: var(--accent); }
-.carousel-arrow.prev { left: 0; }
-.carousel-arrow.next { right: 0; }
-.carousel-arrow svg { width: 16px; height: 16px; }
-@media (max-width: 900px) {
-  .video-card { flex: 0 0 calc((100% - 24px) / 2); }
-}
 @media (max-width: 600px) {
-  .video-card { flex: 0 0 88%; }
-  .videos-carousel-wrap { padding: 0 34px; }
+  .video-card { flex: 0 0 260px; }
 }
