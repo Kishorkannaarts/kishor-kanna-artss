@@ -141,3 +141,55 @@ textarea { resize: vertical; min-height: 100px; }
   .nav.open { display: flex; }
   .menu-toggle { display: block; background: none; border: none; font-size: 1.6rem; cursor: pointer; }
 }
+
+/* Reviews auto-scroll marquee */
+.reviews-marquee {
+  overflow: hidden;
+  position: relative;
+  white-space: nowrap;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+}
+.reviews-track {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 26px;
+  width: max-content;
+  animation: reviews-scroll-left 35s linear infinite;
+}
+.reviews-marquee:hover .reviews-track { animation-play-state: paused; }
+@keyframes reviews-scroll-left {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.reviews-track .testimonial { flex: 0 0 300px; white-space: normal; }
+
+/* Videos carousel */
+.videos-carousel-wrap { position: relative; max-width: 1140px; margin: 0 auto; padding: 0 46px; }
+.videos-track {
+  display: flex; gap: 24px; overflow-x: auto; scroll-behavior: smooth;
+  scroll-snap-type: x mandatory; -ms-overflow-style: none; scrollbar-width: none;
+}
+.videos-track::-webkit-scrollbar { display: none; }
+.video-card {
+  flex: 0 0 calc((100% - 48px) / 3); scroll-snap-align: start; box-sizing: border-box;
+}
+.video-card .video-frame,
+.video-card video { width: 100%; aspect-ratio: 16 / 9; border-radius: 8px; background: #000; display: block; }
+.carousel-arrow {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border);
+  background: #fff; color: var(--ink); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.08); z-index: 2;
+}
+.carousel-arrow:hover { background: var(--paper); border-color: var(--accent); color: var(--accent); }
+.carousel-arrow.prev { left: 0; }
+.carousel-arrow.next { right: 0; }
+.carousel-arrow svg { width: 16px; height: 16px; }
+@media (max-width: 900px) {
+  .video-card { flex: 0 0 calc((100% - 24px) / 2); }
+}
+@media (max-width: 600px) {
+  .video-card { flex: 0 0 88%; }
+  .videos-carousel-wrap { padding: 0 34px; }
+}
