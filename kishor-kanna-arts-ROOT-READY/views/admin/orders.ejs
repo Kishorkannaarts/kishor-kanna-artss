@@ -58,6 +58,9 @@
           </td>
         </tr>
       <% }) %>
+      <% if (o.estimated_price && o.advance_amount && !o.balance_amount) { %>
+              <div style="margin-bottom:8px;"><small style="color:var(--muted);">Balance due: ₹<%= (parseFloat(o.estimated_price) - parseFloat(o.advance_amount)).toFixed(0) %></small></div>
+            <% } %>
       <% if (orders.length === 0) { %><tr><td colspan="7">No orders yet.</td></tr><% } %>
     </table>
   </div>
