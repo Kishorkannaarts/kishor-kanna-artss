@@ -37,6 +37,12 @@
       <div class="form-group"><label>Instagram URL</label><input type="text" name="instagram_url" value="<%= settings.instagram_url %>"></div>
       <div class="form-group"><label>Facebook URL</label><input type="text" name="facebook_url" value="<%= settings.facebook_url %>"></div>
       <div class="form-group"><label>WhatsApp Number</label><input type="text" name="whatsapp_number" value="<%= settings.whatsapp_number %>"></div>
+      <h3 style="margin-top:24px;">Website Colors</h3>
+      <div class="form-group"><label>Accent Color (buttons, links, highlights)</label><input type="color" name="theme_accent" value="<%= settings.theme_accent || '#b5451b' %>"></div>
+      <div class="form-group"><label>Accent Hover/Dark Color</label><input type="color" name="theme_accent_dark" value="<%= settings.theme_accent_dark || '#8c3413' %>"></div>
+      <div class="form-group"><label>Gold/Star Color (ratings)</label><input type="color" name="theme_gold" value="<%= settings.theme_gold || '#c99a3a' %>"></div>
+      <div class="form-group"><label>Background Color</label><input type="color" name="theme_paper" value="<%= settings.theme_paper || '#faf6f0' %>"></div>
+      <div class="form-group"><label>Text Color</label><input type="color" name="theme_ink" value="<%= settings.theme_ink || '#221a16' %>"></div>
       <button class="btn btn-primary" type="submit">Save Settings</button>
     </form>
   </div>
