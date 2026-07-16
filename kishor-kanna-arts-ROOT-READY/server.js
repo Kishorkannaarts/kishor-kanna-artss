@@ -172,7 +172,7 @@ app.post('/order', memoryUpload.single('reference_image'), ah(async (req, res) =
     mailer.sendMail({ to: email, subject: renderTemplate(s.tmpl_order_received_subject, data), html: renderTemplate(s.tmpl_order_received_body, data).replace(/\n/g, '<br>') });
   }
 
-  res.render('order', { success: order_code, error: null, blockedDates, old: {} });
+  res.render('order', { success: order_code, error: null, blockedDates, old: {}, services, offerDiscount });
 }));
 
 app.get('/track-order', (req, res) => res.render('track-order', { order: null, searched: false }));
