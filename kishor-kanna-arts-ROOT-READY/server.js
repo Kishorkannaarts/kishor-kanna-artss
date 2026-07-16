@@ -88,7 +88,7 @@ function ah(fn) {
 app.get('/', ah(async (req, res) => {
   const featured  = db.normalize(await db.find('artworks', { featured: true }, { created_at: -1 }, 8));
   const testimonials = db.normalize(await db.find('testimonials', { approved: true }, { created_at: -1 }, 6));
-  const videos    = db.normalize(await db.find('videos', {}, { created_at: -1 }, 4)).map(v => {
+  const videos    = db.normalize(await db.find('videos', {}, { created_at: -1 }, 12)).map(v => {
   let embed = null;
   let m = v.video_url.match(/youtu\.be\/([A-Za-z0-9_-]+)/) || v.video_url.match(/[?&]v=([A-Za-z0-9_-]+)/) || v.video_url.match(/youtube\.com\/shorts\/([A-Za-z0-9_-]+)/);
   if (m) embed = `https://www.youtube.com/embed/${m[1]}?autoplay=1&mute=1&loop=1&playlist=${m[1]}`;
