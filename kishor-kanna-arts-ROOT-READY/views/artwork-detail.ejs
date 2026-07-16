@@ -12,7 +12,7 @@
         <% if (artwork.story) { %><p style="color:var(--muted); font-style:italic;"><%= artwork.story %></p><% } %>
         <p><strong>Size:</strong> <%= artwork.size || '—' %></p>
         <% if (artwork.price) { %><p><strong>Price:</strong> <%= artwork.price %></p><% } %>
-        <a class="btn" href="/order">Order Similar Artwork</a>
+        <a class="btn" href="/order?art_type=<%= encodeURIComponent(artwork.category) %>&size=<%= encodeURIComponent(artwork.size || '') %>&price=<%= encodeURIComponent(artwork.price || '') %>">Order Similar Artwork</a>
       </div>
     </div>
   </div>
