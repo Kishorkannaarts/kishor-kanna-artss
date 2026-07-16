@@ -506,7 +506,8 @@ app.get('/admin/offers', requireAdmin, ah(async (req, res) => {
 }));
 
 app.post('/admin/offers/save', requireAdmin, ah(async (req, res) => {
-  await db.insertOne('offers', { title: req.body.title, message: req.body.message, active: true });
+  const discount = parseFloat(req.body.discount_percent) || 0;
+  await db.insertOne('offers', { title: req.body.title, message: req.body.message, discount_percent: discount, active: true });
   res.redirect('/admin/offers');
 }));
 
