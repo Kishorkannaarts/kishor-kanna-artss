@@ -86,17 +86,11 @@ function ah(fn) {
 // =========================================================
 
 app.get('/', ah(async (req, res) => {
-  const featured  = db.normalize(await db.find('artworks', { featured: true }, { created_at: -1 }, 8));
-  const testimonials = db.normalize(await db.find('testimonials', { approved: true }, { created_at: -1 }, 6))
-  const videos    = db.normalize(await db.find('videos', {}, { created_at: -1 }, 4)).map(v => {
-  let embed = null;
-  let m = v.video_url.match(/youtu\.be\/([A-Za-z0-9_-]+)/) || v.video_url.match(/[?&]v=([A-Za-z0-9_-]+)/) || v.video_url.match(/youtube\.com\/shorts\/([A-Za-z0-9_-]+)/);
-  if (m) embed = `https://www.youtube.com/embed/${m[1]}?autoplay=1&mute=1&loop=1&playlist=${m[1]}`;
-  else { m = v.video_url.match(/drive\.google\.com\/file\/d\/([A-Za-z0-9_-]+)/); if (m) embed = `https://drive.google.com/file/d/${m[1]}/preview`; }
-  return { ...v, embed_url: embed };
-});
+  const featured  = db.normalize(await db.find('artworks', { featured: 1 }, { created_at: -1 }, 8));
+  const testimonials = db.normalize(await db.find('testimonials', { approved: 1 }, { created_at: -1 }, 6));
+  const videos    = db.normalize(await db.find('videos', {}, { created_at: -1 }, 4));
   const services  = db.normalize(await db.find('services', {}, { created_at: -1 }, 4));
-  const offers    = db.normalize(await db.find('offers', { active: true }, { created_at: -1 }));
+  const offers    = db.normalize(await db.find('offers', { active: 1 }, { created_at: -1 }));
   res.render('index', { featured, testimonials, videos, services, offers });
 }));
 
@@ -120,7 +114,7 @@ app.get('/services', ah(async (req, res) => {
 }));
 
 app.get('/about', ah(async (req, res) => {
-  const testimonials = db.normalize(await db.find('testimonials', { approved: true }, { created_at: -1 }));
+  const testimonials = db.normalize(await db.find('testimonials', { approved: 1 }, { created_at: -1 }));
   res.render('about', { testimonials });
 }));
 
@@ -139,31 +133,22 @@ app.post('/newsletter', ah(async (req, res) => {
 
 app.get('/order', ah(async (req, res) => {
   const blocked = await db.find('blocked_dates', {}, { date: 1 });
-  const services = db.normalize(await db.find('services', {}, { created_at: -1 }));
-  const activeOffer = await db.findOne('offers', { active: true });
-  const offerDiscount = activeOffer ? (activeOffer.discount_percent || 0) : 0;
-  const old = {};
-  if (req.query.art_type) old.art_type = req.query.art_type;
-  if (req.query.size) old.size = req.query.size;
-  const presetPrice = req.query.price || '';
-  res.render('order', { success: null, error: null, blockedDates: blocked.map(r => r.date), old, services, offerDiscount, presetPrice });
+  res.render('order', { success: null, error: null, blockedDates: blocked.map(r => r.date), old: {} });
 }));
 
 app.post('/order', memoryUpload.single('reference_image'), ah(async (req, res) => {
-  const { name, phone, email, art_type, size, delivery_date, notes, estimated_price, discount_percent_applied } = req.body;
+  const { name, phone, email, art_type, size, delivery_date, notes } = req.body;
   const blocked = await db.find('blocked_dates', {}, { date: 1 });
   const blockedDates = blocked.map(r => r.date);
-  const services = db.normalize(await db.find('services', {}, { created_at: -1 }));
-  const activeOffer = await db.findOne('offers', { active: true });
-  const offerDiscount = activeOffer ? (activeOffer.discount_percent || 0) : 0;
 
   if (delivery_date && blockedDates.includes(delivery_date)) {
-    return res.render('order', { success: null, error: 'Sorry, that delivery date is not available. Please choose a different date.', blockedDates, old: req.body, services, offerDiscount, presetPrice: req.body.preset_price || '' });
+    return res.render('order', { success: null, error: 'Sorry, that delivery date is not available. Please choose a different date.', blockedDates, old: req.body });
   }
 
   const order_code = genOrderCode();
   const refImage = await uploadImage(req.file, 'orders');
-  await db.insertOne('orders', { order_code, name, phone, email, art_type, size, reference_image: refImage, delivery_date, notes, estimated_price: estimated_price || null, discount_percent_applied: discount_percent_applied || 0, status: 'Received', advance_amount: null, advance_payment_link: null, advance_paid: false, balance_amount: null, balance_payment_link: null, balance_paid: false });
+  await db.insertOne('orders', { order_code, name, phone, email, art_type, size, reference_image: refImage, delivery_date, notes, status: 'Received', advance_amount: null, advance_payment_link: null, advance_paid: false, balance_amount: null, balance_payment_link: null, balance_paid: false });
+
   const s = res.locals.settings;
   const trackUrl = `${req.protocol}://${req.get('host')}/track-order`;
   const data = { name, order_code, art_type, size, notes, track_url: trackUrl, site_name: s.site_name };
@@ -176,7 +161,7 @@ app.post('/order', memoryUpload.single('reference_image'), ah(async (req, res) =
     mailer.sendMail({ to: email, subject: renderTemplate(s.tmpl_order_received_subject, data), html: renderTemplate(s.tmpl_order_received_body, data).replace(/\n/g, '<br>') });
   }
 
-  res.render('order', { success: order_code, error: null, blockedDates, old: {}, services, offerDiscount, presetPrice: '' });
+  res.render('order', { success: order_code, error: null, blockedDates, old: {} });
 }));
 
 app.get('/track-order', (req, res) => res.render('track-order', { order: null, searched: false }));
@@ -226,7 +211,20 @@ app.get('/admin/dashboard', requireAdmin, ah(async (req, res) => {
     subscribers:  await db.count('newsletter')
   };
   const recentOrders = db.normalize(await db.find('orders', {}, { created_at: -1 }, 5));
-  res.render('admin/dashboard', { counts, recentOrders });
+
+  const allOrders = db.normalize(await db.find('orders', {}, { created_at: -1 }));
+  let totalReceived = 0, totalPending = 0, totalExpenses = 0;
+  allOrders.forEach(o => {
+    const adv = parseFloat(o.advance_amount) || 0;
+    const bal = parseFloat(o.balance_amount) || 0;
+    const exp = parseFloat(o.expenses) || 0;
+    if (o.advance_amount) { if (o.advance_paid) totalReceived += adv; else totalPending += adv; }
+    if (o.balance_amount) { if (o.balance_paid) totalReceived += bal; else totalPending += bal; }
+    totalExpenses += exp;
+  });
+  const finance = { totalReceived, totalPending, totalExpenses, totalProfit: totalReceived - totalExpenses };
+
+  res.render('admin/dashboard', { counts, recentOrders, finance });
 }));
 
 // ---- Artworks ----
@@ -319,7 +317,7 @@ app.post('/admin/orders/:id/status', requireAdmin, ah(async (req, res) => {
 app.get('/admin/orders/:id/advance', requireAdmin, ah(async (req, res) => {
   const order = db.normalize(await db.findById('orders', req.params.id));
   if (!order) return res.redirect('/admin/orders');
-  res.render('admin/order-action', { order, actionType: 'advance', title: 'Request Advance Payment', actionUrl: `/admin/orders/${order.id}/advance`, defaultLink: res.locals.settings.default_payment_link , suggestedAmount: null });
+  res.render('admin/order-action', { order, actionType: 'advance', title: 'Request Advance Payment', actionUrl: `/admin/orders/${order.id}/advance`, defaultLink: res.locals.settings.default_payment_link });
 }));
 
 app.post('/admin/orders/:id/advance', requireAdmin, ah(async (req, res) => {
@@ -352,7 +350,7 @@ app.post('/admin/orders/:id/advance-paid', requireAdmin, ah(async (req, res) => 
 app.get('/admin/orders/:id/reject', requireAdmin, ah(async (req, res) => {
   const order = db.normalize(await db.findById('orders', req.params.id));
   if (!order) return res.redirect('/admin/orders');
-  res.render('admin/order-action', { order, actionType: 'reject', title: 'Reject & Ask For a New Date', actionUrl: `/admin/orders/${order.id}/reject`, defaultLink: '', suggestedAmount: null });
+  res.render('admin/order-action', { order, actionType: 'reject', title: 'Reject & Ask For a New Date', actionUrl: `/admin/orders/${order.id}/reject`, defaultLink: '' });
 }));
 
 app.post('/admin/orders/:id/reject', requireAdmin, ah(async (req, res) => {
@@ -372,11 +370,7 @@ app.post('/admin/orders/:id/reject', requireAdmin, ah(async (req, res) => {
 app.get('/admin/orders/:id/balance', requireAdmin, ah(async (req, res) => {
   const order = db.normalize(await db.findById('orders', req.params.id));
   if (!order) return res.redirect('/admin/orders');
-  let suggestedAmount = null;
-  const est = parseFloat(order.estimated_price);
-  const adv = parseFloat(order.advance_amount);
-  if (est && adv) suggestedAmount = (est - adv).toFixed(0);
-  res.render('admin/order-action', { order, actionType: 'balance', title: 'Request Balance (Final) Payment', actionUrl: `/admin/orders/${order.id}/balance`, defaultLink: res.locals.settings.default_payment_link, suggestedAmount });
+  res.render('admin/order-action', { order, actionType: 'balance', title: 'Request Balance (Final) Payment', actionUrl: `/admin/orders/${order.id}/balance`, defaultLink: res.locals.settings.default_payment_link });
 }));
 
 app.post('/admin/orders/:id/balance', requireAdmin, ah(async (req, res) => {
@@ -395,6 +389,11 @@ app.post('/admin/orders/:id/balance', requireAdmin, ah(async (req, res) => {
 
 app.post('/admin/orders/:id/balance-paid', requireAdmin, ah(async (req, res) => {
   await db.updateById('orders', req.params.id, { balance_paid: true });
+  res.redirect('/admin/orders');
+}));
+
+app.post('/admin/orders/:id/expenses', requireAdmin, ah(async (req, res) => {
+  await db.updateById('orders', req.params.id, { expenses: req.body.expenses || 0 });
   res.redirect('/admin/orders');
 }));
 
@@ -476,10 +475,14 @@ app.post('/admin/newsletter/send', requireAdmin, ah(async (req, res) => {
 // ---- Settings ----
 app.get('/admin/settings', requireAdmin, (req, res) => res.render('admin/settings'));
 
-app.post('/admin/settings/save', requireAdmin, memoryUpload.single('logo'), ah(async (req, res) => {
+app.post('/admin/settings/save', requireAdmin, memoryUpload.fields([{ name: 'logo', maxCount: 1 }, { name: 'hero_image', maxCount: 1 }]), ah(async (req, res) => {
   for (const [key, value] of Object.entries(req.body)) await db.setSetting(key, value);
-  const uploadedUrl = await uploadImage(req.file, 'logo');
-  if (uploadedUrl) await db.setSetting('logo_url', uploadedUrl);
+  const logoFile = req.files && req.files.logo && req.files.logo[0];
+  const heroFile = req.files && req.files.hero_image && req.files.hero_image[0];
+  const uploadedLogo = await uploadImage(logoFile, 'logo');
+  if (uploadedLogo) await db.setSetting('logo_url', uploadedLogo);
+  const uploadedHero = await uploadImage(heroFile, 'hero');
+  if (uploadedHero) await db.setSetting('hero_image_url', uploadedHero);
   res.redirect('/admin/settings');
 }));
 
@@ -519,8 +522,7 @@ app.get('/admin/offers', requireAdmin, ah(async (req, res) => {
 }));
 
 app.post('/admin/offers/save', requireAdmin, ah(async (req, res) => {
-  const discount = parseFloat(req.body.discount_percent) || 0;
-  await db.insertOne('offers', { title: req.body.title, message: req.body.message, discount_percent: discount, active: true });
+  await db.insertOne('offers', { title: req.body.title, message: req.body.message, active: true });
   res.redirect('/admin/offers');
 }));
 
