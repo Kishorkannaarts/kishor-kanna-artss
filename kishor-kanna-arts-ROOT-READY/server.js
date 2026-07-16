@@ -146,18 +146,20 @@ app.get('/order', ah(async (req, res) => {
 }));
 
 app.post('/order', memoryUpload.single('reference_image'), ah(async (req, res) => {
-  const { name, phone, email, art_type, size, delivery_date, notes } = req.body;
+  const { name, phone, email, art_type, size, delivery_date, notes, estimated_price, discount_percent_applied } = req.body;
   const blocked = await db.find('blocked_dates', {}, { date: 1 });
   const blockedDates = blocked.map(r => r.date);
+  const services = db.normalize(await db.find('services', {}, { created_at: -1 }));
+  const activeOffer = await db.findOne('offers', { active: true });
+  const offerDiscount = activeOffer ? (activeOffer.discount_percent || 0) : 0;
 
   if (delivery_date && blockedDates.includes(delivery_date)) {
-    return res.render('order', { success: null, error: 'Sorry, that delivery date is not available. Please choose a different date.', blockedDates, old: req.body });
+    return res.render('order', { success: null, error: 'Sorry, that delivery date is not available. Please choose a different date.', blockedDates, old: req.body, services, offerDiscount });
   }
 
   const order_code = genOrderCode();
   const refImage = await uploadImage(req.file, 'orders');
-  await db.insertOne('orders', { order_code, name, phone, email, art_type, size, reference_image: refImage, delivery_date, notes, status: 'Received', advance_amount: null, advance_payment_link: null, advance_paid: false, balance_amount: null, balance_payment_link: null, balance_paid: false });
-
+  await db.insertOne('orders', { order_code, name, phone, email, art_type, size, reference_image: refImage, delivery_date, notes, estimated_price: estimated_price || null, discount_percent_applied: discount_percent_applied || 0, status: 'Received', advance_amount: null, advance_payment_link: null, advance_paid: false, balance_amount: null, balance_payment_link: null, balance_paid: false });
   const s = res.locals.settings;
   const trackUrl = `${req.protocol}://${req.get('host')}/track-order`;
   const data = { name, order_code, art_type, size, notes, track_url: trackUrl, site_name: s.site_name };
