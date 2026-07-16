@@ -32,7 +32,7 @@
     <h2 style="font-size:1.1rem;">Add Offer / Update</h2>
     <form class="admin-form" action="/admin/offers/save" method="POST">
       <div class="form-group"><label>Title</label><input type="text" name="title" required placeholder="e.g. 20% Off This Week"></div>
-      <div class="form-group"><label>Message</label><textarea name="message" placeholder="e.g. Use code ART20 on all canvas orders till Sunday"></textarea></div>
+      <div class="form-group"><label>Discount % (optional)</label><input type="number" name="discount_percent" min="0" max="100" placeholder="e.g. 20"></div>
       <button class="btn btn-primary" type="submit">Publish</button>
     </form>
   </div>
