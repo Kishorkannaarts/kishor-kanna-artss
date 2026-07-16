@@ -10,11 +10,12 @@
     <p style="color:var(--muted); font-size:0.9rem; margin-top:-10px;">These show as a banner on your homepage. Turn one off anytime without deleting it.</p>
 
     <table style="margin-bottom:30px;">
-      <tr><th>Title</th><th>Message</th><th>Status</th><th>Actions</th></tr>
+      <tr><th>Title</th><th>Message</th><th>Discount</th><th>Status</th><th>Actions</th></tr>
       <% offers.forEach(o => { %>
         <tr>
           <td><%= o.title %></td>
           <td><%= o.message %></td>
+          <td><%= o.discount_percent ? o.discount_percent + '%' : '—' %></td>
           <td><span class="badge <%= o.active ? 'badge-ok' : 'badge-new' %>"><%= o.active ? 'Live' : 'Off' %></span></td>
           <td class="actions-row">
             <form action="/admin/offers/<%= o.id %>/toggle" method="POST">
@@ -26,12 +27,13 @@
           </td>
         </tr>
       <% }) %>
-      <% if (offers.length === 0) { %><tr><td colspan="4">No offers yet.</td></tr><% } %>
+      <% if (offers.length === 0) { %><tr><td colspan="5">No offers yet.</td></tr><% } %>
     </table>
 
     <h2 style="font-size:1.1rem;">Add Offer / Update</h2>
     <form class="admin-form" action="/admin/offers/save" method="POST">
       <div class="form-group"><label>Title</label><input type="text" name="title" required placeholder="e.g. 20% Off This Week"></div>
+      <div class="form-group"><label>Message</label><textarea name="message" placeholder="e.g. Use code ART20 on all canvas orders till Sunday"></textarea></div>
       <div class="form-group"><label>Discount % (optional)</label><input type="number" name="discount_percent" min="0" max="100" placeholder="e.g. 20"></div>
       <button class="btn btn-primary" type="submit">Publish</button>
     </form>
