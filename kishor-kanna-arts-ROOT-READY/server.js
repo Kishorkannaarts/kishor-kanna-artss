@@ -352,7 +352,7 @@ app.post('/admin/orders/:id/advance-paid', requireAdmin, ah(async (req, res) => 
 app.get('/admin/orders/:id/reject', requireAdmin, ah(async (req, res) => {
   const order = db.normalize(await db.findById('orders', req.params.id));
   if (!order) return res.redirect('/admin/orders');
-  res.render('admin/order-action', { order, actionType: 'reject', title: 'Reject & Ask For a New Date', actionUrl: `/admin/orders/${order.id}/reject`, defaultLink: '''reject' });
+  res.render('admin/order-action', { order, actionType: 'reject', title: 'Reject & Ask For a New Date', actionUrl: `/admin/orders/${order.id}/reject`, defaultLink: '', suggestedAmount: null });
 }));
 
 app.post('/admin/orders/:id/reject', requireAdmin, ah(async (req, res) => {
