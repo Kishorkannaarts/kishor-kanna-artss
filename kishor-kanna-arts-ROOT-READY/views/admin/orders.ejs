@@ -13,7 +13,7 @@
         <tr>
           <td><%= o.order_code %><br><small style="color:var(--muted);"><%= o.created_at %></small></td>
           <td><%= o.name %><br><small style="color:var(--muted);"><%= o.phone %><br><%= o.email || 'no email' %></small></td>
-          <td><%= o.art_type %> / <%= o.size %></td>
+          <td><%= o.art_type %> / <%= o.size %><% if (o.estimated_price) { %><br><small style="color:var(--muted);">Est. ₹<%= o.estimated_price %><% if (o.discount_percent_applied > 0) { %> (<%= o.discount_percent_applied %>% off)<% } %></small><% } %></td>
           <td><% if (o.reference_image) { %><a href="<%= o.reference_image %>" target="_blank">View photo</a><% } else { %>—<% } %></td>
           <td>
             <span class="badge badge-new" style="display:block; margin-bottom:8px;"><%= o.status %></span>
