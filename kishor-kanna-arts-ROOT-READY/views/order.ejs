@@ -78,10 +78,20 @@ const servicesData = <%- JSON.stringify(services || []) %>;
     return 'price_custom';
   }
 
-  function updatePrice() {
+  const presetPrice = <%- JSON.stringify(presetPrice || '') %>;
+
+  function getBasePrice() {
+    if (presetPrice) {
+      const p = parseFloat(String(presetPrice).replace(/[^0-9.]/g, ''));
+      if (p) return p;
+    }
     const service = servicesData.find(s => s.title === artTypeSelect.value);
     const rawPrice = service ? service[sizeFieldKey(sizeSelect.value)] : null;
-    const numericPrice = parseFloat(String(rawPrice || '').replace(/[^0-9.]/g, ''));
+    return parseFloat(String(rawPrice || '').replace(/[^0-9.]/g, ''));
+  }
+
+  function updatePrice() {
+    const numericPrice = getBasePrice();
     if (!numericPrice) { priceBox.style.display = 'none'; estimatedPriceInput.value = ''; discountAppliedInput.value = ''; return; }
     const discounted = offerDiscount ? numericPrice - (numericPrice * offerDiscount / 100) : numericPrice;
     priceDisplay.textContent = offerDiscount
