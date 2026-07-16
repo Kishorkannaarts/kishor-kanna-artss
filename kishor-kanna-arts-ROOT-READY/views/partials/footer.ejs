@@ -3,6 +3,28 @@
     <div>
       <h4><%= settings.site_name %></h4>
       <p style="color:#cfc3b5; font-size:0.9rem;">Custom hand-made art, crafted with love and shipped anywhere.</p>
+      <div style="display:flex; gap:14px; margin-top:14px;">
+        <% if (settings.instagram_url) { %>
+        <a href="<%= settings.instagram_url %>" target="_blank" rel="noopener" aria-label="Instagram" style="color:#cfc3b5;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg>
+        </a>
+        <% } %>
+        <% if (settings.facebook_url) { %>
+        <a href="<%= settings.facebook_url %>" target="_blank" rel="noopener" aria-label="Facebook" style="color:#cfc3b5;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+        </a>
+        <% } %>
+        <% if (settings.youtube_url) { %>
+        <a href="<%= settings.youtube_url %>" target="_blank" rel="noopener" aria-label="YouTube" style="color:#cfc3b5;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="4"/><polygon points="10 9 15 12 10 15" fill="currentColor" stroke="none"/></svg>
+        </a>
+        <% } %>
+        <% if (settings.whatsapp_number) { %>
+        <a href="https://wa.me/<%= settings.whatsapp_number.replace(/[^0-9]/g,'') %>" target="_blank" rel="noopener" aria-label="WhatsApp" style="color:#cfc3b5;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 22l1.3-3.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        </a>
+        <% } %>
+      </div>
     </div>
     <div>
       <h4>Explore</h4>
