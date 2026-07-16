@@ -142,7 +142,11 @@ app.get('/order', ah(async (req, res) => {
   const services = db.normalize(await db.find('services', {}, { created_at: -1 }));
   const activeOffer = await db.findOne('offers', { active: true });
   const offerDiscount = activeOffer ? (activeOffer.discount_percent || 0) : 0;
-  res.render('order', { success: null, error: null, blockedDates: blocked.map(r => r.date), old: {}, services, offerDiscount });
+  const old = {};
+  if (req.query.art_type) old.art_type = req.query.art_type;
+  if (req.query.size) old.size = req.query.size;
+  const presetPrice = req.query.price || '';
+  res.render('order', { success: null, error: null, blockedDates: blocked.map(r => r.date), old, services, offerDiscount, presetPrice });
 }));
 
 app.post('/order', memoryUpload.single('reference_image'), ah(async (req, res) => {
