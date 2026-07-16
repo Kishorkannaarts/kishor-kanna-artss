@@ -139,7 +139,10 @@ app.post('/newsletter', ah(async (req, res) => {
 
 app.get('/order', ah(async (req, res) => {
   const blocked = await db.find('blocked_dates', {}, { date: 1 });
-  res.render('order', { success: null, error: null, blockedDates: blocked.map(r => r.date), old: {} });
+  const services = db.normalize(await db.find('services', {}, { created_at: -1 }));
+  const activeOffer = await db.findOne('offers', { active: true });
+  const offerDiscount = activeOffer ? (activeOffer.discount_percent || 0) : 0;
+  res.render('order', { success: null, error: null, blockedDates: blocked.map(r => r.date), old: {}, services, offerDiscount });
 }));
 
 app.post('/order', memoryUpload.single('reference_image'), ah(async (req, res) => {
