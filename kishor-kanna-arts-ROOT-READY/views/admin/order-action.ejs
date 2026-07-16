@@ -20,8 +20,11 @@
           <input type="text" name="amount" placeholder="e.g. ₹800" required>
         </div>
         <div class="form-group">
-          <label>Payment Link</label>
-          <input type="text" name="payment_link" value="<%= defaultLink %>" placeholder="Paste your UPI / payment link here" required>
+          <label>Amount</label>
+          <input type="text" name="amount" value="<%= (actionType === 'balance' && suggestedAmount) ? suggestedAmount : '' %>" placeholder="e.g. ₹800" required>
+          <% if (actionType === 'balance' && suggestedAmount) { %>
+            <small style="color:var(--muted);">Auto-calculated: Estimated Price − Advance received. Edit if you need to adjust it.</small>
+          <% } %>
         </div>
       <% } %>
       <% if (actionType === 'reject') { %>
