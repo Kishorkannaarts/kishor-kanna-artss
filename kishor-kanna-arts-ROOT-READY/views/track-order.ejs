@@ -19,6 +19,7 @@
         <p><strong>Status:</strong> <span class="status-badge status-<%= order.status.replace(/ /g,'-') %>"><%= order.status %></span></p>
         <p><strong>Art Type:</strong> <%= order.art_type %> &nbsp; | &nbsp; <strong>Size:</strong> <%= order.size %></p>
         <p><strong>Placed on:</strong> <%= order.created_at %></p>
+   <% if (order.estimated_price) { %><p><strong>Estimated Price:</strong> ₹<%= order.estimated_price %><% if (order.discount_percent_applied > 0) { %> (<%= order.discount_percent_applied %>% off applied)<% } %></p><% } %>
         <% if (order.delivery_date) { %><p><strong>Preferred Delivery:</strong> <%= order.delivery_date %></p><% } %>
         <% if (order.notes) { %><p><strong>Notes:</strong> <%= order.notes %></p><% } %>
 
