@@ -70,49 +70,78 @@
 <section class="section" style="background:#fff;">
   <h2>Videos</h2>
   <p class="sub">Watch the artwork process</p>
-  <div class="grid">
-    <% videos.forEach(v => { %>
-      <div class="card"><div class="card-body">
-        <h3><%= v.title %></h3>
-<% if (v.embed_url) { %>
-  <div style="position:relative; padding-bottom:56.25%; height:0; overflow:hidden; border-radius:8px;">
-    <iframe src="<%= v.embed_url %>" style="position:absolute; top:0; left:0; width:100%; height:100%;" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-  </div>
-<% } else { %>
-  <% if (v.embed_url) { %>
-  <div style="position:relative; padding-bottom:56.25%; height:0; overflow:hidden; border-radius:8px;">
-    <iframe src="<%= v.embed_url %>" style="position:absolute; top:0; left:0; width:100%; height:100%;" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-  </div>
-<% } else { %>
-  <% if (v.embed_url) { %>
-  <div style="position:relative; padding-bottom:56.25%; height:0; overflow:hidden; border-radius:8px;">
-    <iframe src="<%= v.embed_url %>" style="position:absolute; top:0; left:0; width:100%; height:100%;" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-  </div>
-<% } else { %>
-  <a class="btn btn-outline" href="<%= v.video_url %>" target="_blank" rel="noopener">Watch Video</a>
-<% } %>
-<% } %>
-<% } %>
-      </div></div>
-    <% }) %>
+
+  <div class="videos-carousel-wrap">
+    <button class="carousel-arrow prev" id="videosPrev" aria-label="Scroll left">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+
+    <div class="videos-track" id="videosTrack">
+      <% videos.forEach(v => { %>
+        <div class="video-card">
+          <div class="card">
+            <div class="card-body">
+              <h3><%= v.title %></h3>
+              <% if (v.embed_url) { %>
+                <div style="position:relative; padding-bottom:56.25%; height:0; overflow:hidden; border-radius:8px;">
+                  <iframe src="<%= v.embed_url %>" style="position:absolute; top:0; left:0; width:100%; height:100%;" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                </div>
+              <% } else { %>
+                <a class="btn btn-outline" href="<%= v.video_url %>" target="_blank" rel="noopener">Watch Video</a>
+              <% } %>
+            </div>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+
+    <button class="carousel-arrow next" id="videosNext" aria-label="Scroll right">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
   </div>
 </section>
+<script>
+  (function () {
+    const track = document.getElementById('videosTrack');
+    const prevBtn = document.getElementById('videosPrev');
+    const nextBtn = document.getElementById('videosNext');
+    if (!track || !prevBtn || !nextBtn) return;
+
+    function cardScrollAmount() {
+      const card = track.querySelector('.video-card');
+      if (!card) return 300;
+      const gap = parseFloat(getComputedStyle(track).gap) || 24;
+      return card.getBoundingClientRect().width + gap;
+    }
+    prevBtn.addEventListener('click', () => track.scrollBy({ left: -cardScrollAmount(), behavior: 'smooth' }));
+    nextBtn.addEventListener('click', () => track.scrollBy({ left: cardScrollAmount(), behavior: 'smooth' }));
+  })();
+</script>
 <% } %>
 
 <% if (testimonials.length) { %>
 <section class="section">
   <h2>Reviews</h2>
   <p class="sub">What our customers say</p>
-  <div class="grid">
-    <% testimonials.forEach(t => { %>
-      <div class="testimonial">
-        <div class="stars"><%= '★'.repeat(t.rating) %><%= '☆'.repeat(5 - t.rating) %></div>
-        <p>"<%= t.message %>"</p>
-        <div class="who">— <%= t.name %></div>
-      </div>
-    <% }) %>
+  <div class="reviews-marquee">
+    <div class="reviews-track" id="reviewsTrack">
+      <% testimonials.forEach(t => { %>
+        <div class="testimonial">
+          <div class="stars"><%= '★'.repeat(t.rating) %><%= '☆'.repeat(5 - t.rating) %></div>
+          <p>"<%= t.message %>"</p>
+          <div class="who">— <%= t.name %></div>
+        </div>
+      <% }) %>
+    </div>
   </div>
 </section>
+<script>
+  (function () {
+    const track = document.getElementById('reviewsTrack');
+    if (!track) return;
+    Array.from(track.children).forEach(card => track.appendChild(card.cloneNode(true)));
+  })();
+</script>
 <% } %>
 
 <section class="section" style="text-align:center; background:#fff;">
