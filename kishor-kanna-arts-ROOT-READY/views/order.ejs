@@ -6,308 +6,124 @@
   <p class="sub">Fill in the details below — we'll confirm your order shortly</p>
 
   <div class="form-box">
-
     <% if (success) { %>
-
       <div class="alert alert-success">
         Order placed successfully! Your Order ID is:<br>
         <span class="order-code"><%= success %></span><br><br>
-
         Save this ID — you'll need it (with your phone number) to track your order on the
         <a href="/track-order">Track Order</a> page.
       </div>
-
     <% } else { %>
-
-      <% if (error) { %>
-        <div class="alert alert-error"><%= error %></div>
-      <% } %>
-
+      <% if (error) { %><div class="alert alert-error"><%= error %></div><% } %>
       <form action="/order" method="POST" enctype="multipart/form-data" id="orderForm">
-
         <div class="form-row">
-
-          <div class="form-group">
-            <label>Full Name</label>
-            <input
-              type="text"
-              name="name"
-              value="<%= old.name || '' %>"
-              required>
-          </div>
-
-          <div class="form-group">
-            <label>Phone Number</label>
-            <input
-              type="text"
-              name="phone"
-              value="<%= old.phone || '' %>"
-              required>
-          </div>
-
+          <div class="form-group"><label>Full Name</label><input type="text" name="name" value="<%= old.name || '' %>" required></div>
+          <div class="form-group"><label>Phone Number</label><input type="text" name="phone" value="<%= old.phone || '' %>" required></div>
         </div>
-
-        <div class="form-group">
-          <label>Email</label>
-          <input
-            type="email"
-            name="email"
-            value="<%= old.email || '' %>">
-        </div>
-
-        <div class="form-row">
-
+        <div class="form-group"><label>Email</label><input type="email" name="email" value="<%= old.email || '' %>"></div>
+          <div class="form-row">
           <div class="form-group">
             <label>Art Type</label>
-
             <select name="art_type" id="artTypeSelect" required>
-
-              <% ['Pencil Art','Pen Art','Blood Art','Colour Art','Canvas Art'].forEach(function(t){ %>
-
-                <option
-                  value="<%= t %>"
-                  <%= old.art_type === t ? 'selected' : '' %>>
-                  <%= t %>
-                </option>
-
+              <% ['Pencil Art','Pen Art','Blood Art','Colour Art','Canvas Art'].forEach(t => { %>
+                <option value="<%= t %>" <%= old.art_type === t ? 'selected' : '' %>><%= t %></option>
               <% }) %>
-
             </select>
-
           </div>
-
           <div class="form-group">
-
             <label>Size</label>
-
             <select name="size" id="sizeSelect" required>
-
-              <% ['A5','A4','A3','Custom'].forEach(function(sz){ %>
-
-                <option
-                  value="<%= sz %>"
-                  <%= old.size === sz ? 'selected' : '' %>>
-                  <%= sz %>
-                </option>
-
+              <% ['A5','A4','A3','Custom'].forEach(sz => { %>
+                <option value="<%= sz %>" <%= old.size === sz ? 'selected' : '' %>><%= sz %></option>
               <% }) %>
-
             </select>
-
           </div>
-
         </div>
-
-        <!-- Price Box -->
-
-        <div
-          class="form-group"
-          id="priceBox"
-          style="display:none;background:#f7f7f7;border-radius:8px;padding:12px 16px;">
-
-          <strong>
-            Estimated Price:
-            <span id="priceDisplay"></span>
-          </strong>
-
+        <div class="form-group" id="priceBox" style="background:#f7f7f7; border-radius:8px; padding:12px 16px; display:none;">
+          <strong>Estimated Price: <span id="priceDisplay"></span></strong>
         </div>
-
-        <input
-          type="hidden"
-          name="estimated_price"
-          id="estimatedPriceInput">
-
-        <input
-          type="hidden"
-          name="discount_percent_applied"
-          id="discountAppliedInput">
-
-        <input
-          type="hidden"
-          name="preset_price"
-          id="presetPriceInput"
-          value="<%= typeof presetPrice !== 'undefined' ? presetPrice : '' %>">
-
+        <input type="hidden" name="estimated_price" id="estimatedPriceInput">
+        <input type="hidden" name="discount_percent_applied" id="discountAppliedInput">
+    <div class="form-group" id="priceBox" style="background:#f7f7f7; border-radius:8px; padding:12px 16px; display:none;">
+          <strong>Estimated Price: <span id="priceDisplay"></span></strong>
+        </div>
+        <input type="hidden" name="estimated_price" id="estimatedPriceInput">
+        <input type="hidden" name="discount_percent_applied" id="discountAppliedInput">
+        <input type="hidden" name="preset_price" id="presetPriceInput" value="<%= typeof presetPrice !== 'undefined' ? presetPrice : '' %>"
         <div class="form-group">
-
           <label>Upload Reference Photo</label>
-
-          <input
-            type="file"
-            name="reference_image"
-            accept="image/*">
-
+          <input type="file" name="reference_image" accept="image/*">
         </div>
-
         <div class="form-group">
-
           <label>Preferred Delivery Date</label>
-
-          <input
-            type="date"
-            name="delivery_date"
-            id="deliveryDate"
-            value="<%= old.delivery_date || '' %>">
-
-          <small
-            id="dateWarning"
-            style="display:none;color:#a2231d;">
-
-            That date isn't available — please pick another.
-
-          </small>
-
+          <input type="date" name="delivery_date" id="deliveryDate" value="<%= old.delivery_date || '' %>">
+          <small id="dateWarning" style="color:#a2231d; display:none;">That date isn't available — please pick another.</small>
         </div>
-
-        <div class="form-group">
-
-          <label>Notes / Special Instructions</label>
-
-          <textarea name="notes"><%= old.notes || '' %></textarea>
-
-        </div>
-
-        <button
-          class="btn"
-          type="submit"
-          id="orderSubmitBtn">
-
-          Place Order
-
-        </button>
-
+        <div class="form-group"><label>Notes / Special Instructions</label><textarea name="notes"><%= old.notes || '' %></textarea></div>
+        <button class="btn" type="submit" id="orderSubmitBtn">Place Order</button>
       </form>
-
     <% } %>
-
   </div>
-
 </section>
 
 <script>
-
 const servicesData = <%- JSON.stringify(services || []) %>;
+  const offerDiscount = <%- offerDiscount || 0 %>;
+  const artTypeSelect = document.getElementById('artTypeSelect');
+  const sizeSelect = document.getElementById('sizeSelect');
+  const priceBox = document.getElementById('priceBox');
+  const priceDisplay = document.getElementById('priceDisplay');
+  const estimatedPriceInput = document.getElementById('estimatedPriceInput');
+  const discountAppliedInput = document.getElementById('discountAppliedInput');
 
-const offerDiscount = <%- offerDiscount || 0 %>;
+  function sizeFieldKey(size) {
+    if (size === 'A5') return 'price_a5';
+    if (size === 'A4') return 'price_a4';
+    if (size === 'A3') return 'price_a3';
+    return 'price_custom';
+  }
 
-const presetPrice = <%- JSON.stringify(typeof presetPrice !== 'undefined' ? presetPrice : '') %>;
+  const presetPrice = <%- JSON.stringify(typeof presetPrice !== 'undefined' ? presetPrice : '') %>;
 
-const artTypeSelect = document.getElementById("artTypeSelect");
-
-const sizeSelect = document.getElementById("sizeSelect");
-
-const priceBox = document.getElementById("priceBox");
-
-const priceDisplay = document.getElementById("priceDisplay");
-
-const estimatedPriceInput = document.getElementById("estimatedPriceInput");
-
-const discountAppliedInput = document.getElementById("discountAppliedInput");
-
-function sizeFieldKey(size){
-
-    if(size==="A5") return "price_a5";
-
-    if(size==="A4") return "price_a4";
-
-    if(size==="A3") return "price_a3";
-
-    return "price_custom";
-
-}
-
-function getBasePrice(){
-
-    if(presetPrice){
-
-        const p=parseFloat(String(presetPrice).replace(/[^0-9.]/g,""));
-
-        if(!isNaN(p)) return p;
-
+  function getBasePrice() {
+    if (presetPrice) {
+      const p = parseFloat(String(presetPrice).replace(/[^0-9.]/g, ''));
+      if (p) return p;
     }
+    const service = servicesData.find(s => s.title === artTypeSelect.value);
+    const rawPrice = service ? service[sizeFieldKey(sizeSelect.value)] : null;
+    return parseFloat(String(rawPrice || '').replace(/[^0-9.]/g, ''));
+  }
 
-    const service=servicesData.find(s=>s.title===artTypeSelect.value);
-
-    if(!service) return null;
-
-    const raw=service[sizeFieldKey(sizeSelect.value)];
-
-    return parseFloat(String(raw||"").replace(/[^0-9.]/g,""));
-
-}
-
-function updatePrice(){
-
-    const price=getBasePrice();
-
-    if(!price){
-
-        priceBox.style.display="none";
-
-        estimatedPriceInput.value="";
-
-        discountAppliedInput.value="";
-
-        return;
-
-    }
-
-    const finalPrice=offerDiscount
-        ? price-(price*offerDiscount/100)
-        : price;
-
-    priceDisplay.textContent=offerDiscount
-        ? `₹${finalPrice.toFixed(0)} (was ₹${price.toFixed(0)}, ${offerDiscount}% off)`
-        : `₹${price.toFixed(0)}`;
-
-    priceBox.style.display="block";
-
-    estimatedPriceInput.value=finalPrice.toFixed(0);
-
-    discountAppliedInput.value=offerDiscount;
-
-}
-
-if(artTypeSelect && sizeSelect){
-
-    artTypeSelect.addEventListener("change",updatePrice);
-
-    sizeSelect.addEventListener("change",updatePrice);
-
-    updatePrice();
-
-}
-
-const blockedDates=<%- JSON.stringify(blockedDates || []) %>;
-
-const dateInput=document.getElementById("deliveryDate");
-
-const warning=document.getElementById("dateWarning");
-
-const submitBtn=document.getElementById("orderSubmitBtn");
-
-if(dateInput){
-
-    dateInput.addEventListener("change",function(){
-
-        if(blockedDates.includes(dateInput.value)){
-
-            warning.style.display="block";
-
-            submitBtn.disabled=true;
-
-        }else{
-
-            warning.style.display="none";
-
-            submitBtn.disabled=false;
-
-        }
-
+  function updatePrice() {
+    const numericPrice = getBasePrice();
+    if (!numericPrice) { priceBox.style.display = 'none'; estimatedPriceInput.value = ''; discountAppliedInput.value = ''; return; }
+    const discounted = offerDiscount ? numericPrice - (numericPrice * offerDiscount / 100) : numericPrice;
+    priceDisplay.textContent = offerDiscount
+      ? `₹${discounted.toFixed(0)} (was ₹${numericPrice.toFixed(0)}, ${offerDiscount}% off)`
+      : `₹${numericPrice.toFixed(0)}`;
+    priceBox.style.display = 'block';
+    estimatedPriceInput.value = discounted.toFixed(0);
+    discountAppliedInput.value = offerDiscount;
+  }
+  artTypeSelect.addEventListener('change', updatePrice);
+  sizeSelect.addEventListener('change', updatePrice);
+  updatePrice();
+  const blockedDates = <%- JSON.stringify(blockedDates || []) %>;
+  const dateInput = document.getElementById('deliveryDate');
+  const warning = document.getElementById('dateWarning');
+  const submitBtn = document.getElementById('orderSubmitBtn');
+  if (dateInput) {
+    dateInput.addEventListener('change', function () {
+      if (blockedDates.includes(dateInput.value)) {
+        warning.style.display = 'block';
+        submitBtn.disabled = true;
+      } else {
+        warning.style.display = 'none';
+        submitBtn.disabled = false;
+      }
     });
-
-}
-
+  }
 </script>
 
 <%- include('partials/footer') %>
