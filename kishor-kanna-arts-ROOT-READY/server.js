@@ -158,7 +158,7 @@ app.post('/order', memoryUpload.single('reference_image'), ah(async (req, res) =
   const offerDiscount = activeOffer ? (activeOffer.discount_percent || 0) : 0;
 
   if (delivery_date && blockedDates.includes(delivery_date)) {
-    return res.render('order', { success: null, error: 'Sorry, that delivery date is not available. Please choose a different date.', blockedDates, old: req.body, services, offerDiscount });
+    return res.render('order', { success: null, error: 'Sorry, that delivery date is not available. Please choose a different date.', blockedDates, old: req.body, services, offerDiscount, presetPrice: req.body.preset_price || '' });
   }
 
   const order_code = genOrderCode();
