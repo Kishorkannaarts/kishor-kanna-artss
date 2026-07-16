@@ -372,7 +372,11 @@ app.post('/admin/orders/:id/reject', requireAdmin, ah(async (req, res) => {
 app.get('/admin/orders/:id/balance', requireAdmin, ah(async (req, res) => {
   const order = db.normalize(await db.findById('orders', req.params.id));
   if (!order) return res.redirect('/admin/orders');
-  res.render('admin/order-action', { order, actionType: 'balance', title: 'Request Balance (Final) Payment', actionUrl: `/admin/orders/${order.id}/balance`, defaultLink: res.locals.settings.default_payment_link });
+  let suggestedAmount = null;
+  const est = parseFloat(order.estimated_price);
+  const adv = parseFloat(order.advance_amount);
+  if (est && adv) suggestedAmount = (est - adv).toFixed(0);
+  res.render('admin/order-action', { order, actionType: 'balance', title: 'Request Balance (Final) Payment', actionUrl: `/admin/orders/${order.id}/balance`, defaultLink: res.locals.settings.default_payment_link, suggestedAmount });
 }));
 
 app.post('/admin/orders/:id/balance', requireAdmin, ah(async (req, res) => {
