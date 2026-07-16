@@ -8,7 +8,7 @@
   <div class="admin-main">
     <div class="admin-topbar"><h1>Orders</h1></div>
     <table>
-      <tr><th>Order ID</th><th>Customer</th><th>Type / Size</th><th>Reference</th><th>Status</th><th>Payments</th><th>Actions</th></tr>
+      <tr><th>Order ID</th><th>Customer</th><th>Type / Size</th><th>Reference</th><th>Status</th><th>Payments</th><th>Expenses</th><th>Actions</th></tr>
       <% orders.forEach(o => { %>
         <tr>
           <td><%= o.order_code %><br><small style="color:var(--muted);"><%= o.created_at %></small></td>
@@ -51,6 +51,12 @@
             <% } %>
             <% if (!o.advance_amount && !o.balance_amount) { %><span style="color:var(--muted); font-size:0.85rem;">No payment requested yet</span><% } %>
           </td>
+          <td style="min-width:140px;">
+            <form action="/admin/orders/<%= o.id %>/expenses" method="POST" style="display:flex; gap:4px;">
+              <input type="text" name="expenses" value="<%= o.expenses || '' %>" placeholder="e.g. 300" style="width:70px; padding:6px; border-radius:6px; background:var(--panel-2); color:var(--text); border:1px solid var(--border);">
+              <button class="btn btn-ghost btn-sm" type="submit">Save</button>
+            </form>
+          </td>
           <td class="actions-row" style="flex-wrap:wrap;">
             <a class="btn btn-success btn-sm" href="/admin/orders/<%= o.id %>/advance">Request Advance</a>
             <a class="btn btn-ghost btn-sm" href="/admin/orders/<%= o.id %>/reject">Reject / New Date</a>
@@ -61,7 +67,7 @@
           </td>
         </tr>
       <% }) %>
-      <% if (orders.length === 0) { %><tr><td colspan="7">No orders yet.</td></tr><% } %>
+      <% if (orders.length === 0) { %><tr><td colspan="8">No orders yet.</td></tr><% } %>
     </table>
   </div>
 </div>
