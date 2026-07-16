@@ -24,7 +24,7 @@
         <div class="form-row">
           <div class="form-group">
             <label>Art Type</label>
-            <select name="art_type" required>
+            <select name="art_type" id="artTypeSelect" required>
               <% ['Pencil Art','Pen Art','Blood Art','Colour Art','Canvas Art'].forEach(t => { %>
                 <option value="<%= t %>" <%= old.art_type === t ? 'selected' : '' %>><%= t %></option>
               <% }) %>
@@ -32,13 +32,18 @@
           </div>
           <div class="form-group">
             <label>Size</label>
-            <select name="size" required>
+            <select name="size" id="sizeSelect" required>
               <% ['A5','A4','A3','Custom'].forEach(sz => { %>
                 <option value="<%= sz %>" <%= old.size === sz ? 'selected' : '' %>><%= sz %></option>
               <% }) %>
             </select>
           </div>
         </div>
+        <div class="form-group" id="priceBox" style="background:#f7f7f7; border-radius:8px; padding:12px 16px; display:none;">
+          <strong>Estimated Price: <span id="priceDisplay"></span></strong>
+        </div>
+        <input type="hidden" name="estimated_price" id="estimatedPriceInput">
+        <input type="hidden" name="discount_percent_applied" id="discountAppliedInput">
         <div class="form-group">
           <label>Upload Reference Photo</label>
           <input type="file" name="reference_image" accept="image/*">
@@ -56,6 +61,38 @@
 </section>
 
 <script>
+const servicesData = <%- JSON.stringify(services || []) %>;
+  const offerDiscount = <%- offerDiscount || 0 %>;
+  const artTypeSelect = document.getElementById('artTypeSelect');
+  const sizeSelect = document.getElementById('sizeSelect');
+  const priceBox = document.getElementById('priceBox');
+  const priceDisplay = document.getElementById('priceDisplay');
+  const estimatedPriceInput = document.getElementById('estimatedPriceInput');
+  const discountAppliedInput = document.getElementById('discountAppliedInput');
+
+  function sizeFieldKey(size) {
+    if (size === 'A5') return 'price_a5';
+    if (size === 'A4') return 'price_a4';
+    if (size === 'A3') return 'price_a3';
+    return 'price_custom';
+  }
+
+  function updatePrice() {
+    const service = servicesData.find(s => s.title === artTypeSelect.value);
+    const rawPrice = service ? service[sizeFieldKey(sizeSelect.value)] : null;
+    const numericPrice = parseFloat(String(rawPrice || '').replace(/[^0-9.]/g, ''));
+    if (!numericPrice) { priceBox.style.display = 'none'; estimatedPriceInput.value = ''; discountAppliedInput.value = ''; return; }
+    const discounted = offerDiscount ? numericPrice - (numericPrice * offerDiscount / 100) : numericPrice;
+    priceDisplay.textContent = offerDiscount
+      ? `₹${discounted.toFixed(0)} (was ₹${numericPrice.toFixed(0)}, ${offerDiscount}% off)`
+      : `₹${numericPrice.toFixed(0)}`;
+    priceBox.style.display = 'block';
+    estimatedPriceInput.value = discounted.toFixed(0);
+    discountAppliedInput.value = offerDiscount;
+  }
+  artTypeSelect.addEventListener('change', updatePrice);
+  sizeSelect.addEventListener('change', updatePrice);
+  updatePrice();
   const blockedDates = <%- JSON.stringify(blockedDates || []) %>;
   const dateInput = document.getElementById('deliveryDate');
   const warning = document.getElementById('dateWarning');
