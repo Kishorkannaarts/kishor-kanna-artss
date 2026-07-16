@@ -9,6 +9,14 @@
     <div class="admin-topbar"><h1>Dashboard</h1></div>
 
     <div class="stat-grid">
+      <div class="stat-card"><div class="num">₹<%= finance.totalReceived.toFixed(0) %></div><div class="label">Total Received</div></div>
+      <div class="stat-card"><div class="num">₹<%= finance.totalPending.toFixed(0) %></div><div class="label">Pending Payments</div></div>
+      <div class="stat-card"><div class="num">₹<%= finance.totalExpenses.toFixed(0) %></div><div class="label">Total Expenses</div></div>
+      <div class="stat-card"><div class="num">₹<%= finance.totalProfit.toFixed(0) %></div><div class="label">Net Profit</div></div>
+    </div>
+    <p style="color:var(--muted); font-size:0.85rem; margin-top:-14px;">Add expenses per order on the Orders page — profit here is Total Received minus Total Expenses across all orders.</p>
+
+    <div class="stat-grid">
       <div class="stat-card"><div class="num"><%= counts.artworks %></div><div class="label">Artworks</div></div>
       <div class="stat-card"><div class="num"><%= counts.orders %></div><div class="label">Total Orders</div></div>
       <div class="stat-card"><div class="num"><%= counts.newOrders %></div><div class="label">New Orders</div></div>
