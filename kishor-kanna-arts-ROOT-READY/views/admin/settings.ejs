@@ -13,6 +13,11 @@
         <% if (settings.logo_url) { %><img src="<%= settings.logo_url %>" style="height:50px; margin-bottom:10px; display:block;"><% } %>
         <input type="file" name="logo" accept="image/*">
       </div>
+      <div class="form-group">
+        <label>Hero Background Image (shown behind "Art That Tells Your Story")</label>
+        <% if (settings.hero_image_url) { %><img src="<%= settings.hero_image_url %>" style="max-width:260px; margin-bottom:10px; display:block; border-radius:8px;"><% } %>
+        <input type="file" name="hero_image" accept="image/*">
+      </div>
       <div class="form-group"><label>Site Name</label><input type="text" name="site_name" value="<%= settings.site_name %>"></div>
       <div class="form-group"><label>Home Banner Title</label><input type="text" name="hero_title" value="<%= settings.hero_title %>"></div>
       <div class="form-group"><label>Home Banner Subtitle</label><input type="text" name="hero_subtitle" value="<%= settings.hero_subtitle %>"></div>
@@ -34,15 +39,18 @@
         <input type="text" name="google_business_url" value="<%= settings.google_business_url %>" placeholder="https://g.page/r/....">
       </div>
 
-      <div class="form-group"><label>Instagram URL</label><input type="text" name="instagram_url" value="<%= settings.instagram_url %>"></div>
-      <div class="form-group"><label>Facebook URL</label><input type="text" name="facebook_url" value="<%= settings.facebook_url %>"></div>
+      <div class="form-group"><label>Instagram URL</label><input type="text" name="instagram_url" value="<%= settings.instagram_url %>" placeholder="https://instagram.com/yourpage"></div>
+      <div class="form-group"><label>Facebook URL</label><input type="text" name="facebook_url" value="<%= settings.facebook_url %>" placeholder="https://facebook.com/yourpage"></div>
+      <div class="form-group"><label>YouTube Channel URL</label><input type="text" name="youtube_url" value="<%= settings.youtube_url %>" placeholder="https://youtube.com/@yourchannel"></div>
       <div class="form-group"><label>WhatsApp Number</label><input type="text" name="whatsapp_number" value="<%= settings.whatsapp_number %>"></div>
+
       <h3 style="margin-top:24px;">Website Colors</h3>
       <div class="form-group"><label>Accent Color (buttons, links, highlights)</label><input type="color" name="theme_accent" value="<%= settings.theme_accent || '#b5451b' %>"></div>
       <div class="form-group"><label>Accent Hover/Dark Color</label><input type="color" name="theme_accent_dark" value="<%= settings.theme_accent_dark || '#8c3413' %>"></div>
       <div class="form-group"><label>Gold/Star Color (ratings)</label><input type="color" name="theme_gold" value="<%= settings.theme_gold || '#c99a3a' %>"></div>
       <div class="form-group"><label>Background Color</label><input type="color" name="theme_paper" value="<%= settings.theme_paper || '#faf6f0' %>"></div>
       <div class="form-group"><label>Text Color</label><input type="color" name="theme_ink" value="<%= settings.theme_ink || '#221a16' %>"></div>
+
       <button class="btn btn-primary" type="submit">Save Settings</button>
     </form>
   </div>
