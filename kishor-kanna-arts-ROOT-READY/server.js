@@ -498,18 +498,30 @@ app.get('/admin/newsletter/export', requireAdmin, ah(async (req, res) => {
   res.send(csv);
 }));
 
-app.post('/admin/newsletter/send', requireAdmin, ah(async (req, res) => {
+app.post('/admin/newsletter/send', requireAdmin, memoryUpload.single('image'), ah(async (req, res) => {
   const { subject, message } = req.body;
   const subscribers = await db.find('newsletter', {}, { created_at: -1 });
   const siteName = res.locals.settings.site_name;
+  const imageUrl = await uploadImage(req.file, 'newsletter');
+  const imageHtml = imageUrl ? `<img src="${imageUrl}" alt="" style="max-width:100%; border-radius:8px; margin-bottom:18px; display:block;">` : '';
   let sentCount = 0;
+  let firstError = null;
   for (const s of subscribers) {
-    const result = await mailer.sendMail({ to: s.email, subject, html: `<div>${message.replace(/\n/g, '<br>')}</div><p style="margin-top:20px;color:#888;font-size:12px;">— ${siteName}</p>` });
+    const result = await mailer.sendMail({ to: s.email, subject, html: `${imageHtml}<div>${message.replace(/\n/g, '<br>')}</div><p style="margin-top:20px;color:#888;font-size:12px;">— ${siteName}</p>` });
     if (result && result.sent) sentCount++;
+    else if (result && result.error && !firstError) firstError = result.error;
+  }
+  let notice;
+  if (!mailer.isConfigured()) {
+    notice = 'Email not configured yet — nothing was sent.';
+  } else if (firstError) {
+    notice = `Sent to ${sentCount} of ${subscribers.length} subscribers. Error on the rest: ${firstError}`;
+  } else {
+    notice = `Sent to ${sentCount} of ${subscribers.length} subscribers.`;
   }
   res.render('admin/newsletter', {
     subscribers: db.normalize(await db.find('newsletter', {}, { created_at: -1 })),
-    notice: mailer.isConfigured() ? `Sent to ${sentCount} of ${subscribers.length} subscribers.` : 'Email not configured yet — nothing was sent.'
+    notice
   });
 }));
 
