@@ -10,22 +10,63 @@
 
 <section class="section section-tint">
   <h2>Reviews</h2>
-  <div class="grid">
-    <% testimonials.forEach(t => { %>
-      <div class="testimonial">
-        <div class="stars"><%= '★'.repeat(t.rating) %><%= '☆'.repeat(5 - t.rating) %></div>
-        <p>"<%= t.message %>"</p>
-        <div class="who">— <%= t.name %></div>
-      </div>
-    <% }) %>
-    <% if (testimonials.length === 0) { %><p class="sub">No reviews yet.</p><% } %>
+  <p class="sub">What our customers say</p>
+  <div class="reviews-marquee">
+    <div class="reviews-track" id="reviewsTrack">
+      <% testimonials.forEach(t => {
+        const headline = t.message.length > 55 ? t.message.slice(0, 55).trim() + '…' : t.message;
+        const needsReadMore = t.message.length > 140;
+      %>
+        <div class="testimonial">
+          <div class="quote-mark">&ldquo;</div>
+          <div class="review-title"><%= headline %></div>
+          <div class="review-body"><%= t.message %></div>
+          <% if (needsReadMore) { %>
+            <button type="button" class="read-more" onclick="const c=this.closest('.testimonial'); c.classList.toggle('expanded'); this.textContent = c.classList.contains('expanded') ? 'READ LESS' : 'READ MORE';">READ MORE</button>
+          <% } %>
+          <div class="stars"><%= '★'.repeat(t.rating) %><%= '☆'.repeat(5 - t.rating) %></div>
+          <div class="who-row"><span class="who"><%= t.name %></span></div>
+          <div class="meta-row">
+            <span class="verified">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              Verified
+            </span>
+            <span class="review-date" data-created="<%= t.created_at %>">just now</span>
+          </div>
+        </div>
+      <% }) %>
+    </div>
   </div>
+  <% if (testimonials.length === 0) { %><p class="sub">No reviews yet.</p><% } %>
   <% if (settings.google_business_url) { %>
     <div style="text-align:center; margin-top:24px;">
       <a class="btn btn-outline" href="<%= settings.google_business_url %>" target="_blank" rel="noopener">See All Our Reviews on Google</a>
     </div>
   <% } %>
 </section>
+<script>
+  (function () {
+    function timeAgo(iso) {
+      const diff = Date.now() - new Date(iso).getTime();
+      const day = 86400000;
+      const days = Math.floor(diff / day);
+      if (days <= 0) return 'Today';
+      if (days === 1) return '1 day ago';
+      if (days < 30) return days + ' days ago';
+      const months = Math.floor(days / 30);
+      if (months < 12) return months + (months === 1 ? ' month ago' : ' months ago');
+      const years = Math.floor(months / 12);
+      return years + (years === 1 ? ' year ago' : ' years ago');
+    }
+    document.querySelectorAll('.review-date[data-created]').forEach(el => {
+      el.textContent = timeAgo(el.getAttribute('data-created'));
+    });
+
+    const track = document.getElementById('reviewsTrack');
+    if (!track) return;
+    Array.from(track.children).forEach(card => track.appendChild(card.cloneNode(true)));
+  })();
+</script>
 
 <section class="section">
   <h2>Leave a Review</h2>
