@@ -1,20 +1,11 @@
 <% pageTitle = 'Home' %>
 <%- include('partials/header') %>
 
-<section class="hero<%= settings.hero_image_url ? ' hero-with-image' : '' %>" <% if (settings.hero_image_url) { %>style="background-image: linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.25)), url('<%= settings.hero_image_url %>');"<% } %>>
-  <% if (settings.hero_image_url) { %>
-    <div class="hero-box">
-      <h1><%= settings.hero_title %></h1>
-      <p><%= settings.hero_subtitle %></p>
-      <a class="btn" href="/order">Order Your Artwork</a>
-      <a class="btn btn-outline" style="margin-left:10px;" href="/portfolio">View Portfolio</a>
-    </div>
-  <% } else { %>
-    <h1><%= settings.hero_title %></h1>
-    <p><%= settings.hero_subtitle %></p>
-    <a class="btn" href="/order">Order Your Artwork</a>
-    <a class="btn btn-outline" style="margin-left:10px;" href="/portfolio">View Portfolio</a>
-  <% } %>
+<section class="hero<%= settings.hero_image_url ? ' hero-with-image' : '' %>" <% if (settings.hero_image_url) { %>style="background-image: linear-gradient(rgba(0,0,0,0.25), rgba(0,0,0,0.4)), url('<%= settings.hero_image_url %>');"<% } %>>
+  <h1><%= settings.hero_title %></h1>
+  <p><%= settings.hero_subtitle %></p>
+  <a class="btn" href="/order">Order Your Artwork</a>
+  <a class="btn btn-outline<%= settings.hero_image_url ? ' btn-outline-onimage' : '' %>" style="margin-left:10px;" href="/portfolio">View Portfolio</a>
 </section>
 
 <% if (offers.length) { %>
