@@ -1,11 +1,20 @@
 <% pageTitle = 'Home' %>
 <%- include('partials/header') %>
 
-<section class="hero<%= settings.hero_image_url ? ' hero-with-image' : '' %>" <% if (settings.hero_image_url) { %>style="background-image: linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45)), url('<%= settings.hero_image_url %>'); background-size: cover; background-position: center;"<% } %>>
-  <h1><%= settings.hero_title %></h1>
-  <p><%= settings.hero_subtitle %></p>
-  <a class="btn" href="/order">Order Your Artwork</a>
-  <a class="btn btn-outline" style="margin-left:10px;" href="/portfolio">View Portfolio</a>
+<section class="hero<%= settings.hero_image_url ? ' hero-with-image' : '' %>" <% if (settings.hero_image_url) { %>style="background-image: linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.25)), url('<%= settings.hero_image_url %>');"<% } %>>
+  <% if (settings.hero_image_url) { %>
+    <div class="hero-box">
+      <h1><%= settings.hero_title %></h1>
+      <p><%= settings.hero_subtitle %></p>
+      <a class="btn" href="/order">Order Your Artwork</a>
+      <a class="btn btn-outline" style="margin-left:10px;" href="/portfolio">View Portfolio</a>
+    </div>
+  <% } else { %>
+    <h1><%= settings.hero_title %></h1>
+    <p><%= settings.hero_subtitle %></p>
+    <a class="btn" href="/order">Order Your Artwork</a>
+    <a class="btn btn-outline" style="margin-left:10px;" href="/portfolio">View Portfolio</a>
+  <% } %>
 </section>
 
 <% if (offers.length) { %>
@@ -39,7 +48,7 @@
   </div>
 </section>
 
-<section class="section" style="background:#fff;">
+<section class="section section-tint">
   <h2>Services</h2>
   <p class="sub">Custom art made to order</p>
   <div class="grid">
@@ -67,7 +76,7 @@
 </section>
 
 <% if (videos.length) { %>
-<section class="section" style="background:#fff;">
+<section class="section section-tint">
   <h2>Videos</h2>
   <p class="sub">Watch the artwork process</p>
 
@@ -157,7 +166,7 @@
 </script>
 <% } %>
 
-<section class="section" style="text-align:center; background:#fff;">
+<section class="section section-tint" style="text-align:center;">
   <h2>Ready to Order Your Custom Artwork?</h2>
   <p class="sub">Tell us your idea — we'll bring it to life.</p>
   <a class="btn" href="/order">Start Your Order</a>
