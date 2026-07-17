@@ -55,7 +55,7 @@ img { max-width: 100%; display: block; }
   align-items: flex-end;
   justify-content: center;
   padding: 40px 20px 56px;
-  background-position: center top;
+  background-position: center 20%;
   background-size: cover;
   background-repeat: no-repeat;
   text-align: center;
@@ -75,6 +75,10 @@ img { max-width: 100%; display: block; }
 }
 .hero-buttons {
   display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap;
+}
+
+@media (min-width: 1400px) {
+  .hero-with-image { min-height: 680px; }
 }
 
 @media (max-width: 780px) {
