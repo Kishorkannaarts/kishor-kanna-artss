@@ -472,7 +472,27 @@ app.post('/admin/testimonials/:id/delete', requireAdmin, ah(async (req, res) => 
   await db.deleteById('testimonials', req.params.id);
   res.redirect('/admin/testimonials');
 }));
+// ---- FAQs ----
+app.get('/admin/faqs', requireAdmin, ah(async (req, res) => {
+  res.render('admin/faqs', { faqs: db.normalize(await db.find('faqs', {}, { created_at: 1 })) });
+}));
 
+app.post('/admin/faqs/add', requireAdmin, ah(async (req, res) => {
+  const { question, answer } = req.body;
+  await db.insertOne('faqs', { question, answer });
+  res.redirect('/admin/faqs');
+}));
+
+app.post('/admin/faqs/:id/update', requireAdmin, ah(async (req, res) => {
+  const { question, answer } = req.body;
+  await db.updateById('faqs', req.params.id, { question, answer });
+  res.redirect('/admin/faqs');
+}));
+
+app.post('/admin/faqs/:id/delete', requireAdmin, ah(async (req, res) => {
+  await db.deleteById('faqs', req.params.id);
+  res.redirect('/admin/faqs');
+}));
 // ---- Messages ----
 app.get('/admin/messages', requireAdmin, ah(async (req, res) => {
   const mdb = await db.getDB();
