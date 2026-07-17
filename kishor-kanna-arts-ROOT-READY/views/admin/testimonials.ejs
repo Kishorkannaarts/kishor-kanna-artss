@@ -1,99 +1,85 @@
-<style>
-  .reviews-section {
-    padding: 60px 0;
-    text-align: center;
-  }
-  .reviews-section h2 {
-    font-family: Georgia, serif;
-    font-size: 2.2rem;
-    margin-bottom: 6px;
-  }
-  .reviews-section .sub {
-    color: #8a8a8a;
-    margin-bottom: 40px;
-  }
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reviews / Comments | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
+<body class="admin">
+<div class="admin-shell">
+  <% active = 'testimonials' %>
+  <%- include('partials/sidebar') %>
+  <div class="admin-main">
+    <div class="admin-topbar"><h1>Reviews / Comments</h1></div>
+    <p style="color:var(--muted); font-size:0.9rem; margin-top:-16px; margin-bottom:20px;">
+      Approved reviews show on the live site. Pending ones stay hidden until you approve them.
+    </p>
 
-  .reviews-marquee {
-    overflow: hidden;
-    position: relative;
-    -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
-    mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
-  }
-
-  .reviews-track {
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 24px;
-    width: max-content;
-    animation: scroll-left 35s linear infinite;
-  }
-
-  .reviews-marquee {
-    white-space: nowrap;
-  }
-
-  .reviews-marquee:hover .reviews-track {
-    animation-play-state: paused;
-  }
-
-  @keyframes scroll-left {
-    from { transform: translateX(0); }
-    to   { transform: translateX(-50%); }
-  }
-
-  .review-card {
-    flex: 0 0 auto;
-    width: 300px;
-    border: 1px solid #e6e0d8;
-    border-radius: 12px;
-    padding: 24px;
-    text-align: left;
-    background: #fff;
-  }
-
-  .review-card .stars {
-    color: #c8992e;
-    letter-spacing: 2px;
-    margin-bottom: 14px;
-  }
-
-  .review-card .quote {
-    font-style: italic;
-    font-size: 1.15rem;
-    margin-bottom: 18px;
-    color: #1a1a1a;
-  }
-
-  .review-card .reviewer {
-    color: #1ea7d6;
-    font-weight: 700;
-  }
-</style>
-
-<section class="reviews-section">
-  <h2>Reviews</h2>
-  <p class="sub">What our customers say</p>
-
-  <div class="reviews-marquee">
-    <div class="reviews-track" id="reviewsTrack">
-      <% testimonials.filter(t => t.approved).forEach(t => { %>
-        <div class="review-card">
-          <div class="stars"><%= '★'.repeat(t.rating) %><%= '☆'.repeat(5 - t.rating) %></div>
-          <div class="quote">"<%= t.message %>"</div>
-          <div class="reviewer">— <%= t.name %></div>
-        </div>
+    <table style="margin-bottom:30px;">
+      <tr><th>Rating</th><th>Name</th><th>Review</th><th>Status</th><th>Actions</th></tr>
+      <% testimonials.forEach(t => { %>
+        <tr id="view-<%= t.id %>">
+          <td><%= '★'.repeat(t.rating) %><%= '☆'.repeat(5 - t.rating) %></td>
+          <td><%= t.name %></td>
+          <td style="max-width:340px;"><%= t.message %></td>
+          <td><span class="badge <%= t.approved ? 'badge-ok' : 'badge-new' %>"><%= t.approved ? 'Approved' : 'Pending' %></span></td>
+          <td class="actions-row">
+            <% if (!t.approved) { %>
+              <form action="/admin/testimonials/<%= t.id %>/approve" method="POST">
+                <button class="btn btn-success btn-sm" type="submit">Approve</button>
+              </form>
+            <% } else { %>
+              <form action="/admin/testimonials/<%= t.id %>/unapprove" method="POST">
+                <button class="btn btn-ghost btn-sm" type="submit">Unapprove</button>
+              </form>
+            <% } %>
+            <button class="btn btn-ghost btn-sm" type="button" onclick="document.getElementById('edit-<%= t.id %>').style.display='table-row'; this.closest('tr').style.display='none';">Edit</button>
+            <form action="/admin/testimonials/<%= t.id %>/delete" method="POST" onsubmit="return confirm('Delete this review?');">
+              <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+        <tr id="edit-<%= t.id %>" style="display:none;">
+          <td colspan="5">
+            <form action="/admin/testimonials/<%= t.id %>/update" method="POST" style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+              <div class="form-group" style="min-width:140px; margin-bottom:0;">
+                <label>Name</label>
+                <input type="text" name="name" value="<%= t.name %>" required>
+              </div>
+              <div class="form-group" style="min-width:100px; margin-bottom:0;">
+                <label>Rating</label>
+                <select name="rating">
+                  <% [5,4,3,2,1].forEach(n => { %>
+                    <option value="<%= n %>" <%= t.rating === n ? 'selected' : '' %>><%= n %> star<%= n === 1 ? '' : 's' %></option>
+                  <% }) %>
+                </select>
+              </div>
+              <div class="form-group" style="flex:1; min-width:220px; margin-bottom:0;">
+                <label>Review</label>
+                <textarea name="message" style="min-height:44px;" required><%= t.message %></textarea>
+              </div>
+              <button class="btn btn-primary btn-sm" type="submit">Save</button>
+              <button class="btn btn-ghost btn-sm" type="button" onclick="document.getElementById('edit-<%= t.id %>').style.display='none'; document.getElementById('view-<%= t.id %>').style.display='table-row';">Cancel</button>
+            </form>
+          </td>
+        </tr>
       <% }) %>
-    </div>
-  </div>
-</section>
+      <% if (testimonials.length === 0) { %><tr><td colspan="5">No reviews yet.</td></tr><% } %>
+    </table>
 
-<script>
-  // Duplicate the cards once so the loop is seamless (track scrolls -50%, i.e. exactly one full set)
-  const track = document.getElementById('reviewsTrack');
-  if (track) {
-    const originalCards = Array.from(track.children);
-    originalCards.forEach(card => {
-      track.appendChild(card.cloneNode(true));
-    });
-  }
-</script>
+    <h2 style="font-size:1.1rem;">Add a Review</h2>
+    <p style="color:var(--muted); font-size:0.85rem; margin-top:-10px;">For adding reviews yourself (e.g. from Google/WhatsApp) — these are auto-approved.</p>
+    <form class="admin-form" action="/admin/testimonials/add" method="POST">
+      <div class="form-group"><label>Customer Name</label><input type="text" name="name" required></div>
+      <div class="form-group">
+        <label>Rating</label>
+        <select name="rating">
+          <option value="5" selected>5 stars</option>
+          <option value="4">4 stars</option>
+          <option value="3">3 stars</option>
+          <option value="2">2 stars</option>
+          <option value="1">1 star</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Review Message</label><textarea name="message" required></textarea></div>
+      <button class="btn btn-primary" type="submit">Add Review</button>
+    </form>
+  </div>
+</div>
+</body></html>
