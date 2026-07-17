@@ -320,20 +320,20 @@ textarea { resize: vertical; min-height: 100px; }
   to   { transform: translateX(-50%); }
 }
 .video-card {
-  flex: 0 0 340px;
+  flex: 0 0 420px;
   white-space: normal;
   box-sizing: border-box;
 }
 .video-card .card {
-  padding: 22px;
+  padding: 10px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 .video-card .card-body { padding: 0; }
-.video-card .card-body h3 { font-size: 1.05rem; margin-bottom: 14px; }
+.video-card .card-body h3 { font-size: 1.05rem; margin: 2px 0 8px; }
 .video-card .video-frame,
 .video-card video { width: 100%; aspect-ratio: 16 / 9; border-radius: 8px; background: #000; display: block; }
 @media (max-width: 600px) {
-  .video-card { flex: 0 0 260px; }
+  .video-card { flex: 0 0 88vw; }
 }
 
 /* Offer popup */
