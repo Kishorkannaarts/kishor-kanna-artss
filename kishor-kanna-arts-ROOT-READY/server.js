@@ -42,7 +42,7 @@ app.use(async (req, res, next) => {
   try {
     res.locals.settings = await db.getAllSettings();
     res.locals.isAdmin = !!(req.session && req.session.isAdmin);
-    res.locals.popupOffer = await db.findOne('offers', { active: true });
+    res.locals.popupOffer = db.normalize(await db.findOne('offers', { active: true }));
     next();
   } catch (err) { next(err); }
 });
@@ -134,8 +134,17 @@ app.post('/contact', ah(async (req, res) => {
 }));
 
 app.post('/newsletter', ah(async (req, res) => {
-  try { await db.insertOne('newsletter', { email: req.body.email }); } catch (e) {}
-  res.redirect(req.get('Referrer') || '/');
+  const isFromOfferPopup = req.body.source === 'offer_popup';
+  try {
+    const doc = { email: req.body.email, source: isFromOfferPopup ? 'offer_popup' : 'footer' };
+    if (req.body.purchased_before === 'yes' || req.body.purchased_before === 'no') {
+      doc.purchased_before = req.body.purchased_before;
+    }
+    await db.insertOne('newsletter', doc);
+  } catch (e) {}
+  const back = req.get('Referrer') || '/';
+  const sep = back.includes('?') ? '&' : '?';
+  res.redirect(isFromOfferPopup ? back + sep + 'offerClaimed=1' : back);
 }));
 
 app.get('/order', ah(async (req, res) => {
