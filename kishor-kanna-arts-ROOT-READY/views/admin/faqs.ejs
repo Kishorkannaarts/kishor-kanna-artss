@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FAQs | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
+<body class="admin">
+<div class="admin-shell">
+  <% active = 'faqs' %>
+  <%- include('partials/sidebar') %>
+  <div class="admin-main">
+    <div class="admin-topbar"><h1>FAQs</h1></div>
+    <p style="color:var(--muted); font-size:0.9rem; margin-top:-16px; margin-bottom:20px;">
+      These show on your About Us page, in the order added below.
+    </p>
+
+    <table style="margin-bottom:30px;">
+      <tr><th>Question</th><th>Answer</th><th>Actions</th></tr>
+      <% faqs.forEach(f => { %>
+        <tr id="view-<%= f.id %>">
+          <td style="max-width:260px;"><%= f.question %></td>
+          <td style="max-width:340px;"><%= f.answer %></td>
+          <td class="actions-row">
+            <button class="btn btn-ghost btn-sm" type="button" onclick="document.getElementById('edit-<%= f.id %>').style.display='table-row'; this.closest('tr').style.display='none';">Edit</button>
+            <form action="/admin/faqs/<%= f.id %>/delete" method="POST" onsubmit="return confirm('Delete this FAQ?');">
+              <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+        <tr id="edit-<%= f.id %>" style="display:none;">
+          <td colspan="3">
+            <form action="/admin/faqs/<%= f.id %>/update" method="POST" style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+              <div class="form-group" style="flex:1; min-width:220px; margin-bottom:0;">
+                <label>Question</label>
+                <input type="text" name="question" value="<%= f.question %>" required>
+              </div>
+              <div class="form-group" style="flex:1; min-width:220px; margin-bottom:0;">
+                <label>Answer</label>
+                <textarea name="answer" style="min-height:44px;" required><%= f.answer %></textarea>
+              </div>
+              <button class="btn btn-primary btn-sm" type="submit">Save</button>
+              <button class="btn btn-ghost btn-sm" type="button" onclick="document.getElementById('edit-<%= f.id %>').style.display='none'; document.getElementById('view-<%= f.id %>').style.display='table-row';">Cancel</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+      <% if (faqs.length === 0) { %><tr><td colspan="3">No FAQs yet.</td></tr><% } %>
+    </table>
+
+    <h2 style="font-size:1.1rem;">Add FAQ</h2>
+    <form class="admin-form" action="/admin/faqs/add" method="POST">
+      <div class="form-group"><label>Question</label><input type="text" name="question" required></div>
+      <div class="form-group"><label>Answer</label><textarea name="answer" required></textarea></div>
+      <button class="btn btn-primary" type="submit">Add FAQ</button>
+    </form>
+  </div>
+</div>
+</body></html>
