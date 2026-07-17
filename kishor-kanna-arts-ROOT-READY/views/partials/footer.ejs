@@ -75,7 +75,7 @@
       <h4>Contact</h4>
       <a href="tel:<%= settings.contact_phone %>"><%= settings.contact_phone %></a>
       <a href="mailto:<%= settings.contact_email %>"><%= settings.contact_email %></a>
-      <a href="https://www.google.com/maps/search/?api=1&query=<%= encodeURIComponent(settings.contact_address) %>" target="_blank" rel="noopener" style="color:#cfc3b5; font-size:0.9rem; text-decoration:underline; display:block; margin:4px 0;"><%= settings.contact_address %></a>
+      <a href="https://www.google.com/maps/dir/?api=1&destination=<%= encodeURIComponent(settings.contact_address) %>" target="_blank" rel="noopener" style="color:#cfc3b5; font-size:0.9rem; text-decoration:none; display:block; margin:4px 0;"><%= settings.contact_address %></a>
       <a href="/privacy-policy">Privacy Policy</a>
       <a href="/terms">Terms &amp; Conditions</a>
     </div>
