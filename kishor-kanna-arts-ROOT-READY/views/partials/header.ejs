@@ -49,17 +49,14 @@
 </div>
 <script>
   (function () {
-    if (!sessionStorage.getItem('offerPopupDismissed')) {
-      setTimeout(function () {
-        var el = document.getElementById('offerPopupOverlay');
-        if (el) el.style.display = 'flex';
-      }, 900);
-    }
+    setTimeout(function () {
+      var el = document.getElementById('offerPopupOverlay');
+      if (el) el.style.display = 'flex';
+    }, 900);
   })();
   function closeOfferPopup() {
     var el = document.getElementById('offerPopupOverlay');
     if (el) el.style.display = 'none';
-    sessionStorage.setItem('offerPopupDismissed', '1');
   }
   document.addEventListener('DOMContentLoaded', function () {
     var overlay = document.getElementById('offerPopupOverlay');
