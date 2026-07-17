@@ -11,11 +11,16 @@
       <a class="btn btn-primary" href="/admin/newsletter/export">Export CSV</a>
     </div>
     <table style="margin-bottom:30px;">
-      <tr><th>Email</th><th>Subscribed On</th></tr>
+      <tr><th>Email</th><th>Source</th><th>Purchased Before?</th><th>Subscribed On</th></tr>
       <% subscribers.forEach(s => { %>
-        <tr><td><%= s.email %></td><td><%= s.created_at %></td></tr>
+        <tr>
+          <td><%= s.email %></td>
+          <td><%= s.source === 'offer_popup' ? 'Offer Popup' : 'Footer' %></td>
+          <td><%= s.purchased_before ? (s.purchased_before === 'yes' ? 'Yes' : 'No') : '—' %></td>
+          <td><%= s.created_at %></td>
+        </tr>
       <% }) %>
-      <% if (subscribers.length === 0) { %><tr><td colspan="2">No subscribers yet.</td></tr><% } %>
+      <% if (subscribers.length === 0) { %><tr><td colspan="4">No subscribers yet.</td></tr><% } %>
     </table>
 
     <h2 style="font-size:1.1rem;">Send Newsletter Update</h2>
