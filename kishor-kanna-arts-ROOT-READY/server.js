@@ -139,21 +139,31 @@ app.post('/newsletter', ah(async (req, res) => {
 
 app.get('/order', ah(async (req, res) => {
   const blocked = await db.find('blocked_dates', {}, { date: 1 });
-  res.render('order', { success: null, error: null, blockedDates: blocked.map(r => r.date), old: {} });
+  const services = db.normalize(await db.find('services', {}, { created_at: -1 }));
+  const activeOffer = await db.findOne('offers', { active: true });
+  const offerDiscount = activeOffer ? (activeOffer.discount_percent || 0) : 0;
+  const old = {};
+  if (req.query.art_type) old.art_type = req.query.art_type;
+  if (req.query.size) old.size = req.query.size;
+  const presetPrice = req.query.price || '';
+  res.render('order', { success: null, error: null, blockedDates: blocked.map(r => r.date), old, services, offerDiscount, presetPrice });
 }));
 
 app.post('/order', memoryUpload.single('reference_image'), ah(async (req, res) => {
-  const { name, phone, email, art_type, size, delivery_date, notes } = req.body;
+  const { name, phone, email, art_type, size, delivery_date, notes, estimated_price, discount_percent_applied } = req.body;
   const blocked = await db.find('blocked_dates', {}, { date: 1 });
   const blockedDates = blocked.map(r => r.date);
+  const services = db.normalize(await db.find('services', {}, { created_at: -1 }));
+  const activeOffer = await db.findOne('offers', { active: true });
+  const offerDiscount = activeOffer ? (activeOffer.discount_percent || 0) : 0;
 
   if (delivery_date && blockedDates.includes(delivery_date)) {
-    return res.render('order', { success: null, error: 'Sorry, that delivery date is not available. Please choose a different date.', blockedDates, old: req.body });
+    return res.render('order', { success: null, error: 'Sorry, that delivery date is not available. Please choose a different date.', blockedDates, old: req.body, services, offerDiscount, presetPrice: req.body.preset_price || '' });
   }
 
   const order_code = genOrderCode();
   const refImage = await uploadImage(req.file, 'orders');
-  await db.insertOne('orders', { order_code, name, phone, email, art_type, size, reference_image: refImage, delivery_date, notes, status: 'Received', advance_amount: null, advance_payment_link: null, advance_paid: false, balance_amount: null, balance_payment_link: null, balance_paid: false });
+  await db.insertOne('orders', { order_code, name, phone, email, art_type, size, reference_image: refImage, delivery_date, notes, estimated_price: estimated_price || null, discount_percent_applied: discount_percent_applied || 0, status: 'Received', advance_amount: null, advance_payment_link: null, advance_paid: false, balance_amount: null, balance_payment_link: null, balance_paid: false });
 
   const s = res.locals.settings;
   const trackUrl = `${req.protocol}://${req.get('host')}/track-order`;
@@ -167,7 +177,7 @@ app.post('/order', memoryUpload.single('reference_image'), ah(async (req, res) =
     mailer.sendMail({ to: email, subject: renderTemplate(s.tmpl_order_received_subject, data), html: renderTemplate(s.tmpl_order_received_body, data).replace(/\n/g, '<br>') });
   }
 
-  res.render('order', { success: order_code, error: null, blockedDates, old: {} });
+  res.render('order', { success: order_code, error: null, blockedDates, old: {}, services, offerDiscount, presetPrice: '' });
 }));
 
 app.get('/track-order', (req, res) => res.render('track-order', { order: null, searched: false }));
@@ -323,7 +333,7 @@ app.post('/admin/orders/:id/status', requireAdmin, ah(async (req, res) => {
 app.get('/admin/orders/:id/advance', requireAdmin, ah(async (req, res) => {
   const order = db.normalize(await db.findById('orders', req.params.id));
   if (!order) return res.redirect('/admin/orders');
-  res.render('admin/order-action', { order, actionType: 'advance', title: 'Request Advance Payment', actionUrl: `/admin/orders/${order.id}/advance`, defaultLink: res.locals.settings.default_payment_link });
+  res.render('admin/order-action', { order, actionType: 'advance', title: 'Request Advance Payment', actionUrl: `/admin/orders/${order.id}/advance`, defaultLink: res.locals.settings.default_payment_link, suggestedAmount: null });
 }));
 
 app.post('/admin/orders/:id/advance', requireAdmin, ah(async (req, res) => {
@@ -356,7 +366,7 @@ app.post('/admin/orders/:id/advance-paid', requireAdmin, ah(async (req, res) => 
 app.get('/admin/orders/:id/reject', requireAdmin, ah(async (req, res) => {
   const order = db.normalize(await db.findById('orders', req.params.id));
   if (!order) return res.redirect('/admin/orders');
-  res.render('admin/order-action', { order, actionType: 'reject', title: 'Reject & Ask For a New Date', actionUrl: `/admin/orders/${order.id}/reject`, defaultLink: '' });
+  res.render('admin/order-action', { order, actionType: 'reject', title: 'Reject & Ask For a New Date', actionUrl: `/admin/orders/${order.id}/reject`, defaultLink: '', suggestedAmount: null });
 }));
 
 app.post('/admin/orders/:id/reject', requireAdmin, ah(async (req, res) => {
@@ -376,7 +386,11 @@ app.post('/admin/orders/:id/reject', requireAdmin, ah(async (req, res) => {
 app.get('/admin/orders/:id/balance', requireAdmin, ah(async (req, res) => {
   const order = db.normalize(await db.findById('orders', req.params.id));
   if (!order) return res.redirect('/admin/orders');
-  res.render('admin/order-action', { order, actionType: 'balance', title: 'Request Balance (Final) Payment', actionUrl: `/admin/orders/${order.id}/balance`, defaultLink: res.locals.settings.default_payment_link });
+  let suggestedAmount = null;
+  const est = parseFloat(order.estimated_price);
+  const adv = parseFloat(order.advance_amount);
+  if (est && adv) suggestedAmount = (est - adv).toFixed(0);
+  res.render('admin/order-action', { order, actionType: 'balance', title: 'Request Balance (Final) Payment', actionUrl: `/admin/orders/${order.id}/balance`, defaultLink: res.locals.settings.default_payment_link, suggestedAmount });
 }));
 
 app.post('/admin/orders/:id/balance', requireAdmin, ah(async (req, res) => {
@@ -528,7 +542,8 @@ app.get('/admin/offers', requireAdmin, ah(async (req, res) => {
 }));
 
 app.post('/admin/offers/save', requireAdmin, ah(async (req, res) => {
-  await db.insertOne('offers', { title: req.body.title, message: req.body.message, active: true });
+  const discount = parseFloat(req.body.discount_percent) || 0;
+  await db.insertOne('offers', { title: req.body.title, message: req.body.message, discount_percent: discount, active: true });
   res.redirect('/admin/offers');
 }));
 
