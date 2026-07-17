@@ -100,15 +100,19 @@ img { max-width: 100%; display: block; }
 @media (max-width: 780px) {
   .hero { padding: 60px 20px; }
   .hero h1 { font-size: 1.9rem; }
-  .hero-with-image { min-height: 460px; padding: 24px 16px 40px; align-items: flex-end; }
-  .hero-with-image h1 { font-size: 1.9rem; }
+  .hero-with-image { min-height: 78vh; padding: 24px 20px 44px; align-items: flex-end; }
+  .hero-with-image .hero-photo { object-fit: cover; }
+  .hero-with-image .hero-overlay {
+    background: linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.05) 30%, rgba(0,0,0,0.75) 100%);
+  }
+  .hero-with-image h1 { font-size: 2rem; }
   .hero-with-image p { font-size: 1rem; margin-bottom: 22px; }
 }
 
 @media (max-width: 480px) {
-  .hero-with-image { min-height: 420px; padding: 20px 14px 32px; }
-  .hero-with-image h1 { font-size: 1.5rem; margin-bottom: 10px; }
-  .hero-with-image p { font-size: 0.92rem; margin-bottom: 18px; }
+  .hero-with-image { min-height: 72vh; padding: 20px 18px 36px; }
+  .hero-with-image h1 { font-size: 1.65rem; margin-bottom: 10px; }
+  .hero-with-image p { font-size: 0.95rem; margin-bottom: 18px; }
   .hero-buttons { flex-direction: column; width: 100%; gap: 10px; }
   .hero-buttons .btn { width: 100%; }
 }
