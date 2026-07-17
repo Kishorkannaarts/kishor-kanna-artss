@@ -49,6 +49,7 @@
       <% } %>
       <% if (popupOffer.message) { %><p style="color:var(--muted); text-align:center; margin:0 0 20px; line-height:1.5;"><%= popupOffer.message %></p><% } %>
       <form action="/newsletter" method="POST">
+        <input type="hidden" name="source" value="offer_popup">
         <input type="email" name="email" placeholder="Email address" required>
         <p class="purchased-q">Have you purchased original art before?</p>
         <div class="purchased-options">
@@ -63,15 +64,34 @@
 </div>
 <script>
   (function () {
-    setTimeout(function () {
+    var dismissKey = 'offerPopupDismissedAt_<%= popupOffer.id %>';
+    var params = new URLSearchParams(window.location.search);
+
+    if (params.get('offerClaimed') === '1') {
+      // They just submitted the form — don't show it again, and clean the URL.
+      localStorage.setItem(dismissKey, String(Date.now()));
+      params.delete('offerClaimed');
+      var cleanUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+      window.history.replaceState({}, '', cleanUrl);
+    }
+
+    var dismissedAt = localStorage.getItem(dismissKey);
+    var oneDay = 24 * 60 * 60 * 1000;
+    var recentlyDismissed = dismissedAt && (Date.now() - parseInt(dismissedAt, 10) < oneDay);
+
+    if (!recentlyDismissed) {
+      setTimeout(function () {
+        var el = document.getElementById('offerPopupOverlay');
+        if (el) el.style.display = 'flex';
+      }, 900);
+    }
+
+    window.closeOfferPopup = function () {
       var el = document.getElementById('offerPopupOverlay');
-      if (el) el.style.display = 'flex';
-    }, 900);
+      if (el) el.style.display = 'none';
+      localStorage.setItem(dismissKey, String(Date.now()));
+    };
   })();
-  function closeOfferPopup() {
-    var el = document.getElementById('offerPopupOverlay');
-    if (el) el.style.display = 'none';
-  }
   document.addEventListener('DOMContentLoaded', function () {
     var overlay = document.getElementById('offerPopupOverlay');
     if (overlay) overlay.addEventListener('click', function (e) { if (e.target === overlay) closeOfferPopup(); });
