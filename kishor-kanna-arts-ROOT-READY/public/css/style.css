@@ -31,7 +31,7 @@ img { max-width: 100%; display: block; }
   padding: 18px 20px; background: var(--paper); border-bottom: 1px solid var(--border);
   position: sticky; top: 0; z-index: 50;
 }
-.logo { font-size: 1.4rem; font-weight: bold; color: var(--accent-dark); letter-spacing: 0.5px; }
+.logo { font-size: 1.4rem; font-weight: bold; color: #1a2b6b; letter-spacing: 0.5px; }
 .nav { display: flex; gap: 22px; flex-wrap: wrap; font-size: 0.95rem; }
 .nav a:hover { color: var(--accent); }
 .nav-cta {
