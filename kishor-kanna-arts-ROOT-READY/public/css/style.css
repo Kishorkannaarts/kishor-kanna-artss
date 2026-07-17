@@ -51,36 +51,26 @@ img { max-width: 100%; display: block; }
   position: relative;
   min-height: 560px;
   display: flex;
-  align-items: flex-end;
-  justify-content: flex-end;
-  padding: 0;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
   background-position: center;
   background-size: cover;
+  text-align: center;
 }
-.hero-with-image .hero-box {
-  background: rgba(255,255,255,0.88);
-  padding: 40px 44px;
-  margin: 0 60px 60px 0;
-  max-width: 420px;
-  border-radius: 4px;
-  text-align: left;
+.hero-with-image h1 {
+  color: #fff; font-size: 2.6rem; max-width: 720px; margin: 0 auto 14px;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.35);
 }
-.hero-with-image .hero-box h1 {
-  color: var(--ink); font-size: 1.9rem; margin: 0 0 10px; max-width: none; text-align: left;
+.hero-with-image p {
+  color: #fff; font-size: 1.1rem; max-width: 560px; margin: 0 auto 30px;
+  text-shadow: 0 1px 8px rgba(0,0,0,0.35);
 }
-.hero-with-image .hero-box p {
-  color: var(--muted); font-size: 1rem; margin: 0 0 22px; max-width: none; text-align: left;
-}
-.hero-with-image .hero-box .btn { background: var(--ink); }
-.hero-with-image .hero-box .btn:hover { background: #000; }
 
 @media (max-width: 780px) {
-  .hero-with-image { min-height: 440px; align-items: flex-end; justify-content: center; }
-  .hero-with-image .hero-box {
-    margin: 0; max-width: none; width: 100%; border-radius: 0;
-    padding: 28px 24px; text-align: center;
-  }
-  .hero-with-image .hero-box h1, .hero-with-image .hero-box p { text-align: center; }
+  .hero-with-image { min-height: 440px; padding: 30px 20px; }
+  .hero-with-image h1 { font-size: 1.9rem; }
+  .hero-with-image p { font-size: 1rem; }
 }
 
 .btn {
@@ -92,6 +82,7 @@ img { max-width: 100%; display: block; }
   background: transparent; border: 2px solid var(--accent); color: var(--accent);
 }
 .btn-outline:hover { background: var(--accent); color: #fff; }
+.btn-outline-onimage { background: rgba(255,255,255,0.9); }
 .btn-sm { padding: 8px 18px; font-size: 0.85rem; white-space: nowrap; }
 
 /* Section */
