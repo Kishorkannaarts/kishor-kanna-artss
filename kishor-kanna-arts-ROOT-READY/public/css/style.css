@@ -113,8 +113,8 @@ img { max-width: 100%; display: block; }
   .hero-with-image { min-height: 72vh; padding: 20px 18px 36px; }
   .hero-with-image h1 { font-size: 1.65rem; margin-bottom: 10px; }
   .hero-with-image p { font-size: 0.95rem; margin-bottom: 18px; }
-  .hero-buttons { flex-wrap: nowrap; width: 100%; gap: 10px; }
-  .hero-buttons .btn { width: 100%; flex: 1 1 0; padding-left: 10px; padding-right: 10px; white-space: nowrap; text-align: center; }
+  .hero-buttons { flex-direction: column; width: 100%; gap: 10px; }
+  .hero-buttons .btn { width: 100%; }
 }
 
 .btn {
@@ -173,8 +173,6 @@ img { max-width: 100%; display: block; }
     flex-direction: column; align-items: stretch; gap: 8px; margin-top: 8px;
   }
   .grid-arts .card-footer .btn-sm { width: 100%; text-align: center; }
-  .grid-arts .card-body table { font-size: 0.75rem !important; margin-bottom: 10px !important; }
-  .grid-arts .card-body .btn { width: 100%; text-align: center; }
 }
 
 @media (max-width: 480px) {
@@ -365,4 +363,4 @@ textarea { resize: vertical; min-height: 100px; }
 @media (max-width: 720px) {
   .offer-popup { grid-template-columns: 1fr; max-height: 95vh; overflow-y: auto; }
   .offer-popup-right { min-height: 200px; order: -1; }
-                            }
+}
