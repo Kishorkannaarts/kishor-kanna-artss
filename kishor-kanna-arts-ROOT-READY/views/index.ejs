@@ -1,7 +1,11 @@
 <% pageTitle = 'Home' %>
 <%- include('partials/header') %>
 
-<section class="hero<%= settings.hero_image_url ? ' hero-with-image' : '' %>" <% if (settings.hero_image_url) { %>style="background-image: linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.1) 35%, rgba(0,0,0,0.55) 100%), url('<%= settings.hero_image_url %>');"<% } %>>
+<section class="hero<%= settings.hero_image_url ? ' hero-with-image' : '' %>">
+  <% if (settings.hero_image_url) { %>
+    <img class="hero-photo" src="<%= settings.hero_image_url %>" alt="">
+    <div class="hero-overlay"></div>
+  <% } %>
   <div class="hero-inner">
     <h1><%= settings.hero_title %></h1>
     <p><%= settings.hero_subtitle %></p>
