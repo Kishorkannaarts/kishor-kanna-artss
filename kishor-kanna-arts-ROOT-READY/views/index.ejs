@@ -87,8 +87,8 @@
             <div class="card-body">
               <h3><%= v.title %></h3>
               <% if (v.embed_url) { %>
-                <div style="position:relative; padding-bottom:56.25%; height:0; overflow:hidden; border-radius:8px;">
-                  <iframe src="<%= v.embed_url %>" style="position:absolute; top:0; left:0; width:100%; height:100%;" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+                <div style="position:relative; padding-bottom:56.25%; height:0; overflow:hidden; border-radius:8px; background:#000;">
+                  <iframe data-src="<%= v.embed_url %>" class="yt-lazy" style="position:absolute; top:0; left:0; width:100%; height:100%;" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
                 </div>
               <% } else { %>
                 <a class="btn btn-outline" href="<%= v.video_url %>" target="_blank" rel="noopener">Watch Video</a>
@@ -105,6 +105,26 @@
     const track = document.getElementById('videosTrack');
     if (!track) return;
     Array.from(track.children).forEach(card => track.appendChild(card.cloneNode(true)));
+
+    // Only load/play each video's iframe once it's about to scroll into the
+    // visible strip. This avoids trying to autoplay 20+ YouTube players at
+    // once (which is what was causing videos to get stuck blank/black).
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        const iframe = entry.target;
+        if (entry.isIntersecting) {
+          if (!iframe.src && iframe.dataset.src) {
+            iframe.src = iframe.dataset.src;
+          }
+        }
+      });
+    }, {
+      root: null,
+      rootMargin: '0px 300px 0px 300px', // start loading a bit before it's on screen
+      threshold: 0.01
+    });
+
+    document.querySelectorAll('#videosTrack iframe.yt-lazy').forEach(iframe => io.observe(iframe));
   })();
 </script>
 <% } %>
