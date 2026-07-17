@@ -14,14 +14,23 @@
 
   <div class="grid">
     <% artworks.forEach(a => { %>
-      <a class="card" href="/portfolio/<%= a.id %>">
-        <img src="<%= a.image || 'https://placehold.co/400x300?text=Artwork' %>" alt="<%= a.title %>">
+      <div class="card">
+        <a href="/portfolio/<%= a.id %>">
+          <img src="<%= a.image || 'https://placehold.co/400x300?text=Artwork' %>" alt="<%= a.title %>">
+        </a>
         <div class="card-body">
           <span class="tag"><%= a.category %></span>
-          <h3><%= a.title %></h3>
+          <h3><a href="/portfolio/<%= a.id %>" style="color:inherit; text-decoration:none;"><%= a.title %></a></h3>
           <p><%= a.description %></p>
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-top:14px; gap:10px; flex-wrap:wrap;">
+            <div style="font-size:0.9rem; color:var(--muted);">
+              <% if (a.size) { %><span>Size: <strong style="color:var(--ink);"><%= a.size %></strong></span><% } %>
+              <% if (a.price) { %><span style="margin-left:10px;">₹<strong style="color:var(--ink);"><%= a.price %></strong></span><% } %>
+            </div>
+            <a class="btn btn-sm" href="/order?art_type=<%= encodeURIComponent(a.category) %>&size=<%= encodeURIComponent(a.size || '') %>&price=<%= encodeURIComponent(a.price || '') %>">Order This</a>
+          </div>
         </div>
-      </a>
+      </div>
     <% }) %>
     <% if (artworks.length === 0) { %>
       <p class="sub">No artworks in this category yet.</p>
