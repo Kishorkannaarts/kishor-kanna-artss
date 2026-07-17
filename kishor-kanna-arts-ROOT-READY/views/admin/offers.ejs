@@ -7,12 +7,13 @@
   <%- include('partials/sidebar') %>
   <div class="admin-main">
     <div class="admin-topbar"><h1>Offers / Updates</h1></div>
-    <p style="color:var(--muted); font-size:0.9rem; margin-top:-10px;">These show as a banner on your homepage. Turn one off anytime without deleting it.</p>
+    <p style="color:var(--muted); font-size:0.9rem; margin-top:-10px;">These show as a banner on your homepage, and as a popup when a customer first visits your site. Turn one off anytime without deleting it.</p>
 
     <table style="margin-bottom:30px;">
-      <tr><th>Title</th><th>Message</th><th>Discount</th><th>Status</th><th>Actions</th></tr>
+      <tr><th>Image</th><th>Title</th><th>Message</th><th>Discount</th><th>Status</th><th>Actions</th></tr>
       <% offers.forEach(o => { %>
         <tr>
+          <td><% if (o.image) { %><img class="thumb" src="<%= o.image %>"><% } else { %>—<% } %></td>
           <td><%= o.title %></td>
           <td><%= o.message %></td>
           <td><%= o.discount_percent ? o.discount_percent + '%' : '—' %></td>
@@ -27,14 +28,19 @@
           </td>
         </tr>
       <% }) %>
-      <% if (offers.length === 0) { %><tr><td colspan="5">No offers yet.</td></tr><% } %>
+      <% if (offers.length === 0) { %><tr><td colspan="6">No offers yet.</td></tr><% } %>
     </table>
 
     <h2 style="font-size:1.1rem;">Add Offer / Update</h2>
-    <form class="admin-form" action="/admin/offers/save" method="POST">
+    <form class="admin-form" action="/admin/offers/save" method="POST" enctype="multipart/form-data">
       <div class="form-group"><label>Title</label><input type="text" name="title" required placeholder="e.g. 20% Off This Week"></div>
       <div class="form-group"><label>Message</label><textarea name="message" placeholder="e.g. Use code ART20 on all canvas orders till Sunday"></textarea></div>
       <div class="form-group"><label>Discount % (optional)</label><input type="number" name="discount_percent" min="0" max="100" placeholder="e.g. 20"></div>
+      <div class="form-group">
+        <label>Popup Image (optional)</label>
+        <small style="color:var(--muted); display:block; margin-bottom:6px;">Shown at the top of the popup when a customer first visits your site. A bright, eye-catching artwork photo works well — recommended size around 800x500px.</small>
+        <input type="file" name="image" accept="image/*">
+      </div>
       <button class="btn btn-primary" type="submit">Publish</button>
     </form>
   </div>
