@@ -70,33 +70,30 @@
 </div>
 <script>
   (function () {
-    var dismissKey = 'offerPopupDismissedAt_<%= popupOffer.id %>';
-    var params = new URLSearchParams(window.location.search);
+    var dismissKey = 'offerPopupDismissedThisVisit_<%= popupOffer.id %>';
+var params = new URLSearchParams(window.location.search);
 
-    if (params.get('offerClaimed') === '1') {
-      // They just submitted the form — don't show it again, and clean the URL.
-      localStorage.setItem(dismissKey, String(Date.now()));
-      params.delete('offerClaimed');
-      var cleanUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
-      window.history.replaceState({}, '', cleanUrl);
-    }
+if (params.get('offerClaimed') === '1') {
+  sessionStorage.setItem(dismissKey, '1');
+  params.delete('offerClaimed');
+  var cleanUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+  window.history.replaceState({}, '', cleanUrl);
+}
 
-    var dismissedAt = localStorage.getItem(dismissKey);
-    var oneDay = 24 * 60 * 60 * 1000;
-    var recentlyDismissed = dismissedAt && (Date.now() - parseInt(dismissedAt, 10) < oneDay);
+var dismissedThisVisit = sessionStorage.getItem(dismissKey) === '1';
 
-    if (!recentlyDismissed) {
-      setTimeout(function () {
-        var el = document.getElementById('offerPopupOverlay');
-        if (el) el.style.display = 'flex';
-      }, 900);
-    }
+if (!dismissedThisVisit) {
+  setTimeout(function () {
+    var el = document.getElementById('offerPopupOverlay');
+    if (el) el.style.display = 'flex';
+  }, 900);
+}
 
-    window.closeOfferPopup = function () {
-      var el = document.getElementById('offerPopupOverlay');
-      if (el) el.style.display = 'none';
-      localStorage.setItem(dismissKey, String(Date.now()));
-    };
+window.closeOfferPopup = function () {
+  var el = document.getElementById('offerPopupOverlay');
+  if (el) el.style.display = 'none';
+  sessionStorage.setItem(dismissKey, '1');
+};
   })();
   document.addEventListener('DOMContentLoaded', function () {
     var overlay = document.getElementById('offerPopupOverlay');
