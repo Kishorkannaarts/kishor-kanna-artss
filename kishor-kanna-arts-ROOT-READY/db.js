@@ -86,6 +86,8 @@ async function initSchema() {
     hero_title: 'Handcrafted Art That Tells Your Story',
     hero_subtitle: 'Custom pencil, pen, colour & canvas artworks made with love',
     about_text: 'Kishor Kanna Arts creates custom hand-drawn portraits and artworks for people who want something truly personal. Every piece is made by hand, with care, from your photos and ideas.',
+    meta_description: 'Kishor Kanna Arts offers custom pencil art, pen art, blood art, canvas paintings, acrylic paintings and string art in A2, A3, A4 and custom sizes. Perfect for personal gifts, weddings, corporate gifting and business orders. Order handmade art online across India.',
+    meta_keywords: 'custom art online, pencil sketch artist, pen art India, blood art portrait, canvas painting online, acrylic painting artist, string art custom, corporate gifting art, personalised portrait gift, handmade art India, custom portrait from photo, A3 A4 canvas art',
     contact_phone: '+91 00000 00000',
     contact_email: 'hello@kishorkannaarts.in',
     contact_address: 'India',
