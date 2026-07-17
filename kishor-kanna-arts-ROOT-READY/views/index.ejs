@@ -50,14 +50,14 @@
 <section class="section section-tint">
   <h2>Services</h2>
   <p class="sub">Custom art made to order</p>
-  <div class="grid grid-arts">
+  <div class="grid">
     <% services.forEach(s => { %>
       <div class="card">
         <img src="<%= s.image || 'https://placehold.co/400x300?text=Service' %>" alt="<%= s.title %>">
         <div class="card-body">
           <h3><%= s.title %></h3>
           <p><%= s.description %></p>
-          <a class="btn btn-outline btn-sm" href="/order">Order This</a>
+          <a class="btn btn-outline" href="/order">Order This</a>
         </div>
       </div>
     <% }) %>
