@@ -456,6 +456,17 @@ app.post('/admin/testimonials/:id/approve', requireAdmin, ah(async (req, res) =>
   res.redirect('/admin/testimonials');
 }));
 
+app.post('/admin/testimonials/:id/unapprove', requireAdmin, ah(async (req, res) => {
+  await db.updateById('testimonials', req.params.id, { approved: false });
+  res.redirect('/admin/testimonials');
+}));
+
+app.post('/admin/testimonials/:id/update', requireAdmin, ah(async (req, res) => {
+  const { name, message, rating } = req.body;
+  await db.updateById('testimonials', req.params.id, { name, message, rating: parseInt(rating) || 5 });
+  res.redirect('/admin/testimonials');
+}));
+
 app.post('/admin/testimonials/:id/delete', requireAdmin, ah(async (req, res) => {
   await db.deleteById('testimonials', req.params.id);
   res.redirect('/admin/testimonials');
