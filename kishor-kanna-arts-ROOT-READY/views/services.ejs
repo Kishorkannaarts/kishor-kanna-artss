@@ -4,7 +4,7 @@
 <section class="section">
   <h2>Services</h2>
   <p class="sub">Choose a service and size to get started</p>
-  <div class="grid grid-arts">
+  <div class="grid">
     <% services.forEach(s => { %>
       <div class="card">
         <img src="<%= s.image || 'https://placehold.co/400x300?text=Service' %>" alt="<%= s.title %>">
@@ -17,7 +17,7 @@
             <% if (s.price_a3) { %><tr><td>A3</td><td style="text-align:right;"><%= s.price_a3 %></td></tr><% } %>
             <% if (s.price_custom) { %><tr><td>Custom</td><td style="text-align:right;"><%= s.price_custom %></td></tr><% } %>
           </table>
-          <a class="btn btn-sm" href="/order">Order</a>
+          <a class="btn" href="/order">Order</a>
         </div>
       </div>
     <% }) %>
