@@ -67,7 +67,36 @@
     Array.from(track.children).forEach(card => track.appendChild(card.cloneNode(true)));
   })();
 </script>
+<section class="section section-tint">
+  <div class="container" style="max-width:760px;">
+    <h2>Frequently Asked Questions</h2>
+    <p class="sub">Things people usually ask before ordering</p>
 
+    <div class="faq-list">
+      <% faqs.forEach(f => { %>
+        <details class="faq-item">
+          <summary><%= f.question %></summary>
+          <p><%= f.answer %></p>
+        </details>
+      <% }) %>
+      <% if (faqs.length === 0) { %><p class="sub">No FAQs added yet.</p><% } %>
+    </div>
+  </div>
+</section>
+
+<% if (faqs.length) { %>
+<script type="application/ld+json">
+<%- JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": faqs.map(f => ({
+    "@type": "Question",
+    "name": f.question,
+    "acceptedAnswer": { "@type": "Answer", "text": f.answer }
+  }))
+}) %>
+</script>
+<% } %>
 <section class="section">
   <h2>Leave a Review</h2>
   <p class="sub">Reviews are shown after approval by the team</p>
