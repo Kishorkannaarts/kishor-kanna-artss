@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><%= typeof pageTitle !== 'undefined' ? pageTitle + ' | ' + settings.site_name : settings.site_name %></title>
+<meta name="description" content="<%= (typeof pageMetaDescription !== 'undefined' && pageMetaDescription) ? pageMetaDescription : settings.meta_description %>">
+<meta name="keywords" content="<%= (typeof pageMetaKeywords !== 'undefined' && pageMetaKeywords) ? pageMetaKeywords : settings.meta_keywords %>">
+<meta property="og:title" content="<%= typeof pageTitle !== 'undefined' ? pageTitle + ' | ' + settings.site_name : settings.site_name %>">
+<meta property="og:description" content="<%= (typeof pageMetaDescription !== 'undefined' && pageMetaDescription) ? pageMetaDescription : settings.meta_description %>">
+<meta property="og:type" content="website">
+<% if (settings.hero_image_url) { %><meta property="og:image" content="<%= settings.hero_image_url %>"><% } %>
 <link rel="stylesheet" href="/public/css/style.css">
 <style>
   :root {
