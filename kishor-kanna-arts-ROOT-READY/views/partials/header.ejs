@@ -4,12 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><%= typeof pageTitle !== 'undefined' ? pageTitle + ' | ' + settings.site_name : settings.site_name %></title>
-<meta name="description" content="<%= (typeof pageMetaDescription !== 'undefined' && pageMetaDescription) ? pageMetaDescription : settings.meta_description %>">
-<meta name="keywords" content="<%= (typeof pageMetaKeywords !== 'undefined' && pageMetaKeywords) ? pageMetaKeywords : settings.meta_keywords %>">
-<meta property="og:title" content="<%= typeof pageTitle !== 'undefined' ? pageTitle + ' | ' + settings.site_name : settings.site_name %>">
-<meta property="og:description" content="<%= (typeof pageMetaDescription !== 'undefined' && pageMetaDescription) ? pageMetaDescription : settings.meta_description %>">
-<meta property="og:type" content="website">
-<% if (settings.hero_image_url) { %><meta property="og:image" content="<%= settings.hero_image_url %>"><% } %>
 <link rel="stylesheet" href="/public/css/style.css">
 <style>
   :root {
@@ -32,6 +26,7 @@
     <a href="/">Home</a>
     <a href="/portfolio">Portfolio</a>
     <a href="/services">Services</a>
+    <a href="/blog">Blog</a>
     <a href="/about">About Us</a>
     <a href="/contact">Contact</a>
     <a href="/track-order">Track Order</a>
@@ -40,61 +35,34 @@
 </header>
 
 <% if (typeof popupOffer !== 'undefined' && popupOffer && !isAdmin) { %>
-<div id="offerPopupOverlay" class="offer-popup-overlay" style="display:none;">
-  <div class="offer-popup">
-    <button onclick="closeOfferPopup()" aria-label="Close" class="offer-popup-close">
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-    </button>
-    <div class="offer-popup-left">
-      <% if (popupOffer.discount_percent) { %>
-        <p class="eyebrow">Unlock</p>
-        <h2 class="headline"><%= popupOffer.discount_percent %>% Off</h2>
-        <p class="subline"><%= popupOffer.title %></p>
-      <% } else { %>
-        <h2 class="headline" style="font-size:1.9rem;"><%= popupOffer.title %></h2>
-      <% } %>
-      <% if (popupOffer.message) { %><p style="color:var(--muted); text-align:center; margin:0 0 20px; line-height:1.5;"><%= popupOffer.message %></p><% } %>
-      <form action="/newsletter" method="POST">
-        <input type="hidden" name="source" value="offer_popup">
-        <input type="email" name="email" placeholder="Email address" required>
-        <p class="purchased-q">Have you purchased original art before?</p>
-        <div class="purchased-options">
-          <label><input type="radio" name="purchased_before" value="yes"> Yes</label>
-          <label><input type="radio" name="purchased_before" value="no"> No</label>
-        </div>
-        <button class="btn" type="submit">Unlock My Offer</button>
-      </form>
+<div id="offerPopupOverlay" style="display:none; position:fixed; inset:0; background:rgba(10,8,6,0.7); z-index:9999; align-items:center; justify-content:center; padding:20px;">
+  <div style="background:#151110; border-radius:18px; max-width:420px; width:100%; overflow:hidden; position:relative; box-shadow:0 24px 70px rgba(0,0,0,0.5); <% if (popupOffer.image) { %>min-height:440px; display:flex; flex-direction:column; justify-content:flex-end;<% } %>">
+    <button onclick="closeOfferPopup()" aria-label="Close" style="position:absolute; top:12px; right:12px; z-index:2; background:rgba(255,255,255,0.15); backdrop-filter:blur(4px); border:none; border-radius:50%; width:34px; height:34px; font-size:1.3rem; line-height:1; cursor:pointer; color:#fff;">&times;</button>
+    <% if (popupOffer.image) { %>
+      <img src="<%= popupOffer.image %>" alt="<%= popupOffer.title %>" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover;">
+      <div style="position:absolute; inset:0; background:linear-gradient(180deg, rgba(0,0,0,0) 35%, rgba(10,8,6,0.92) 100%);"></div>
+    <% } %>
+    <div style="position:relative; padding:26px 24px 30px; text-align:center; <% if (!popupOffer.image) { %>padding-top:36px;<% } %>">
+      <h3 style="margin:0 0 10px; font-size:1.5rem; color:#fff;"><%= popupOffer.title %></h3>
+      <% if (popupOffer.message) { %><p style="color:rgba(255,255,255,0.85); margin:0 0 20px; line-height:1.5;"><%= popupOffer.message %></p><% } %>
+      <a href="/order" class="btn" style="display:inline-block;">Order Now</a>
     </div>
-    <div class="offer-popup-right" style="background-image: url('<%= popupOffer.image || settings.hero_image_url || 'https://placehold.co/700x800?text=Art' %>');"></div>
   </div>
 </div>
 <script>
   (function () {
-    var dismissKey = 'offerPopupDismissedThisVisit_<%= popupOffer.id %>';
-var params = new URLSearchParams(window.location.search);
-
-if (params.get('offerClaimed') === '1') {
-  sessionStorage.setItem(dismissKey, '1');
-  params.delete('offerClaimed');
-  var cleanUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
-  window.history.replaceState({}, '', cleanUrl);
-}
-
-var dismissedThisVisit = sessionStorage.getItem(dismissKey) === '1';
-
-if (!dismissedThisVisit) {
-  setTimeout(function () {
-    var el = document.getElementById('offerPopupOverlay');
-    if (el) el.style.display = 'flex';
-  }, 900);
-}
-
-window.closeOfferPopup = function () {
-  var el = document.getElementById('offerPopupOverlay');
-  if (el) el.style.display = 'none';
-  sessionStorage.setItem(dismissKey, '1');
-};
+    if (!sessionStorage.getItem('offerPopupShown')) {
+      setTimeout(function () {
+        var el = document.getElementById('offerPopupOverlay');
+        if (el) el.style.display = 'flex';
+        sessionStorage.setItem('offerPopupShown', '1');
+      }, 900);
+    }
   })();
+  function closeOfferPopup() {
+    var el = document.getElementById('offerPopupOverlay');
+    if (el) el.style.display = 'none';
+  }
   document.addEventListener('DOMContentLoaded', function () {
     var overlay = document.getElementById('offerPopupOverlay');
     if (overlay) overlay.addEventListener('click', function (e) { if (e.target === overlay) closeOfferPopup(); });
