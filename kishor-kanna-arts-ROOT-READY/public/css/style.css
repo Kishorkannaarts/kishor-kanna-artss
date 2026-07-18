@@ -187,6 +187,10 @@ img { max-width: 100%; display: block; }
     flex-direction: column; align-items: stretch; gap: 8px; margin-top: 8px;
   }
   .grid-arts .card-footer .btn-sm { width: 100%; text-align: center; }
+
+  .grid-services .card-body table { font-size: 0.78rem; margin-bottom: 10px; }
+  .grid-services .card-body table td { padding: 2px 0; }
+  .grid-services .card-body .btn { width: 100%; text-align: center; padding: 10px 14px; font-size: 0.88rem; }
 }
 
 @media (max-width: 480px) {
