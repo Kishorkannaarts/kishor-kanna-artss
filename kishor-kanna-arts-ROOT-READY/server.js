@@ -131,7 +131,8 @@ app.get('/services', ah(async (req, res) => {
 
 app.get('/about', ah(async (req, res) => {
   const testimonials = db.normalize(await db.find('testimonials', { approved: true }, { created_at: -1 }));
-  res.render('about', { testimonials });
+  const faqs = db.normalize(await db.find('faqs', {}, { created_at: 1 }));
+  res.render('about', { testimonials, faqs });
 }));
 
 app.get('/contact', (req, res) => res.render('contact', { sent: false }));
