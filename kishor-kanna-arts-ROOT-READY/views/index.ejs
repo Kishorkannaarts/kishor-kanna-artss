@@ -28,8 +28,8 @@
 <% } %>
 
 <section class="section">
-  <h2>Featured Portfolio</h2>
-  <p class="sub">A glimpse of recent handcrafted pieces</p>
+  <h2><%= settings.featured_heading || 'Featured Portfolio' %></h2>
+  <p class="sub"><%= settings.featured_sub || 'A glimpse of recent handcrafted pieces' %></p>
   <div class="grid grid-arts">
     <% featured.forEach(a => { %>
       <a class="card" href="/portfolio/<%= a.id %>">
@@ -48,8 +48,8 @@
 </section>
 
 <section class="section section-tint">
-  <h2>Services</h2>
-  <p class="sub">Custom art made to order</p>
+  <h2><%= settings.services_heading || 'Services' %></h2>
+  <p class="sub"><%= settings.services_sub || 'Custom art made to order' %></p>
   <div class="grid">
     <% services.forEach(s => { %>
       <div class="card">
@@ -65,21 +65,30 @@
 </section>
 
 <section class="section">
-  <h2>Why Choose Us</h2>
+  <h2><%= settings.why_heading || 'Why Choose Us' %></h2>
   <div class="grid">
-    <div class="card"><div class="card-body"><h3>100% Hand-made</h3><p>Every artwork is drawn or painted by hand, never printed.</p></div></div>
-    <div class="card"><div class="card-body"><h3>Made From Your Photos</h3><p>Send a photo and we turn it into a keepsake artwork.</p></div></div>
-    <div class="card"><div class="card-body"><h3>Tracked Orders</h3><p>Follow your order status from start to delivery.</p></div></div>
-    <div class="card"><div class="card-body"><h3>Nationwide Delivery</h3><p>Carefully packed and shipped anywhere in India.</p></div></div>
-<div class="card"><div class="card-body"><h3>Corporate Gifting</h3><p>From client gifts to employee milestone awards, we handle custom art orders — with consistent quality across every piece..</p></div></div>
-  </div>
+    <div class="card"><div class="card-body"><h3><%= settings.why1_title || '100% Hand-made' %></h3><p><%= settings.why1_text || 'Every artwork is drawn or painted by hand, never printed.' %></p></div></div>
+    <div class="card"><div class="card-body"><h3><%= settings.why2_title || 'Made From Your Photos' %></h3><p><%= settings.why2_text || 'Send a photo and we turn it into a keepsake artwork.' %></p></div></div>
+    <div class="card"><div class="card-body"><h3><%= settings.why3_title || 'Tracked Orders' %></h3><p><%= settings.why3_text || 'Follow your order status from start to delivery.' %></p></div></div>
+    <div class="card"><div class="card-body"><h3><%= settings.why4_title || 'Nationwide Delivery' %></h3><p><%= settings.why4_text || 'Carefully packed and shipped anywhere in India.' %></p></div></div>
   </div>
 </section>
 
+<% if (typeof blocks !== 'undefined' && blocks.length) { %>
+<section class="section section-tint">
+  <h2>More From Us</h2>
+  <div class="grid">
+    <% blocks.forEach(b => { %>
+      <div class="card"><div class="card-body"><h3><%= b.title %></h3><p><%= b.text %></p></div></div>
+    <% }) %>
+  </div>
+</section>
+<% } %>
+
 <% if (videos.length) { %>
 <section class="section section-tint">
-  <h2>Videos</h2>
-  <p class="sub">Watch the artwork process</p>
+  <h2><%= settings.videos_heading || 'Videos' %></h2>
+  <p class="sub"><%= settings.videos_sub || 'Watch the artwork process' %></p>
 
   <div class="videos-marquee">
     <div class="videos-track" id="videosTrack">
@@ -89,8 +98,8 @@
             <div class="card-body">
               <h3><%= v.title %></h3>
               <% if (v.embed_url) { %>
-                <div style="position:relative; padding-bottom:56.25%; height:0; overflow:hidden; border-radius:8px; background:#000;">
-                  <iframe data-src="<%= v.embed_url %>" class="yt-lazy" style="position:absolute; top:0; left:0; width:100%; height:100%;" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+                <div style="position:relative; padding-bottom:56.25%; height:0; overflow:hidden; border-radius:8px;">
+                  <iframe src="<%= v.embed_url %>" style="position:absolute; top:0; left:0; width:100%; height:100%;" frameborder="0" loading="lazy" allow="autoplay; encrypted-media" allowfullscreen></iframe>
                 </div>
               <% } else { %>
                 <a class="btn btn-outline" href="<%= v.video_url %>" target="_blank" rel="noopener">Watch Video</a>
@@ -107,34 +116,14 @@
     const track = document.getElementById('videosTrack');
     if (!track) return;
     Array.from(track.children).forEach(card => track.appendChild(card.cloneNode(true)));
-
-    // Only load/play each video's iframe once it's about to scroll into the
-    // visible strip. This avoids trying to autoplay 20+ YouTube players at
-    // once (which is what was causing videos to get stuck blank/black).
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        const iframe = entry.target;
-        if (entry.isIntersecting) {
-          if (!iframe.src && iframe.dataset.src) {
-            iframe.src = iframe.dataset.src;
-          }
-        }
-      });
-    }, {
-      root: null,
-      rootMargin: '0px 300px 0px 300px', // start loading a bit before it's on screen
-      threshold: 0.01
-    });
-
-    document.querySelectorAll('#videosTrack iframe.yt-lazy').forEach(iframe => io.observe(iframe));
   })();
 </script>
 <% } %>
 
 <% if (testimonials.length) { %>
 <section class="section">
-  <h2>Reviews</h2>
-  <p class="sub">What our customers say</p>
+  <h2><%= settings.reviews_heading || 'Reviews' %></h2>
+  <p class="sub"><%= settings.reviews_sub || 'What our customers say' %></p>
   <div class="reviews-marquee">
     <div class="reviews-track" id="reviewsTrack">
       <% testimonials.forEach(t => {
@@ -187,10 +176,29 @@
 </script>
 <% } %>
 
+<% if (typeof recentPosts !== 'undefined' && recentPosts.length) { %>
+<section class="section section-tint">
+  <h2>From the Blog</h2>
+  <p class="sub">Tips, stories, and behind-the-scenes</p>
+  <div class="grid">
+    <% recentPosts.forEach(p => { %>
+      <a class="card" href="/blog/<%= p.slug %>" style="text-decoration:none; color:inherit;">
+        <img src="<%= p.cover_image || 'https://placehold.co/400x300?text=Blog' %>" alt="<%= p.title %>">
+        <div class="card-body">
+          <h3><%= p.title %></h3>
+          <p><%= p.excerpt %></p>
+        </div>
+      </a>
+    <% }) %>
+  </div>
+  <div style="text-align:center; margin-top:10px;"><a class="btn btn-outline" href="/blog">View All Posts</a></div>
+</section>
+<% } %>
+
 <section class="section section-tint" style="text-align:center;">
-  <h2>Ready to Order Your Custom Artwork?</h2>
-  <p class="sub">Tell us your idea — we'll bring it to life.</p>
-  <a class="btn" href="/order">Start Your Order</a>
+  <h2><%= settings.cta_title || 'Ready to Order Your Custom Artwork?' %></h2>
+  <p class="sub"><%= settings.cta_subtitle || "Tell us your idea — we'll bring it to life." %></p>
+  <a class="btn" href="/order"><%= settings.cta_button_text || 'Start Your Order' %></a>
 </section>
 
 <%- include('partials/footer') %>
