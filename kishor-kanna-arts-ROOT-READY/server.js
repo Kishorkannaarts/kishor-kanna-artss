@@ -42,7 +42,7 @@ app.use(async (req, res, next) => {
   try {
     res.locals.settings = await db.getAllSettings();
     res.locals.isAdmin = !!(req.session && req.session.isAdmin);
-    res.locals.popupOffer = db.normalize(await db.findOne('offers', { active: true }));
+    res.locals.popupOffer = await db.findOne('offers', { active: true });
     next();
   } catch (err) { next(err); }
 });
@@ -66,6 +66,13 @@ async function uploadImage(file, folder) {
 function genOrderCode() {
   const rand = Math.random().toString(36).slice(2, 7).toUpperCase();
   return 'KKA-' + Date.now().toString().slice(-6) + '-' + rand;
+}
+
+function slugify(str) {
+  const base = String(str || '').toLowerCase().trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return base || 'post';
 }
 
 function renderTemplate(str, data) {
@@ -92,13 +99,15 @@ app.get('/', ah(async (req, res) => {
   const videos    = db.normalize(await db.find('videos', {}, { created_at: -1 }, 12)).map(v => {
   let embed = null;
   let m = v.video_url.match(/youtu\.be\/([A-Za-z0-9_-]+)/) || v.video_url.match(/[?&]v=([A-Za-z0-9_-]+)/) || v.video_url.match(/youtube\.com\/shorts\/([A-Za-z0-9_-]+)/);
-  if (m) embed = `https://www.youtube-nocookie.com/embed/${m[1]}?autoplay=1&mute=1&loop=1&playlist=${m[1]}&controls=1&rel=0&modestbranding=1&iv_load_policy=3&playsinline=1&fs=1`;
+  if (m) embed = `https://www.youtube.com/embed/${m[1]}?autoplay=1&mute=1&loop=1&playlist=${m[1]}`;
   else { m = v.video_url.match(/drive\.google\.com\/file\/d\/([A-Za-z0-9_-]+)/); if (m) embed = `https://drive.google.com/file/d/${m[1]}/preview`; }
   return { ...v, embed_url: embed };
 });
   const services  = db.normalize(await db.find('services', {}, { created_at: -1 }, 4));
   const offers    = db.normalize(await db.find('offers', { active: true }, { created_at: -1 }));
-  res.render('index', { featured, testimonials, videos, services, offers });
+  const blocks    = db.normalize(await db.find('blocks', {}, { created_at: 1 }));
+  const recentPosts = db.normalize(await db.find('posts', { published: true }, { created_at: -1 }, 3));
+  res.render('index', { featured, testimonials, videos, services, offers, blocks, recentPosts });
 }));
 
 app.get('/portfolio', ah(async (req, res) => {
@@ -122,8 +131,7 @@ app.get('/services', ah(async (req, res) => {
 
 app.get('/about', ah(async (req, res) => {
   const testimonials = db.normalize(await db.find('testimonials', { approved: true }, { created_at: -1 }));
-  const faqs = db.normalize(await db.find('faqs', {}, { created_at: 1 }));
-  res.render('about', { testimonials, faqs });
+  res.render('about', { testimonials });
 }));
 
 app.get('/contact', (req, res) => res.render('contact', { sent: false }));
@@ -135,17 +143,8 @@ app.post('/contact', ah(async (req, res) => {
 }));
 
 app.post('/newsletter', ah(async (req, res) => {
-  const isFromOfferPopup = req.body.source === 'offer_popup';
-  try {
-    const doc = { email: req.body.email, source: isFromOfferPopup ? 'offer_popup' : 'footer' };
-    if (req.body.purchased_before === 'yes' || req.body.purchased_before === 'no') {
-      doc.purchased_before = req.body.purchased_before;
-    }
-    await db.insertOne('newsletter', doc);
-  } catch (e) {}
-  const back = req.get('Referrer') || '/';
-  const sep = back.includes('?') ? '&' : '?';
-  res.redirect(isFromOfferPopup ? back + sep + 'offerClaimed=1' : back);
+  try { await db.insertOne('newsletter', { email: req.body.email }); } catch (e) {}
+  res.redirect(req.get('Referrer') || '/');
 }));
 
 app.get('/order', ah(async (req, res) => {
@@ -203,6 +202,17 @@ app.post('/testimonials', ah(async (req, res) => {
   const { name, message, rating } = req.body;
   await db.insertOne('testimonials', { name, message, rating: parseInt(rating) || 5, approved: false });
   res.redirect('/about?thanks=1');
+}));
+
+app.get('/blog', ah(async (req, res) => {
+  const posts = db.normalize(await db.find('posts', { published: true }, { created_at: -1 }));
+  res.render('blog', { posts });
+}));
+
+app.get('/blog/:slug', ah(async (req, res) => {
+  const post = db.normalize(await db.findOne('posts', { slug: req.params.slug, published: true }));
+  if (!post) return res.status(404).send('Post not found');
+  res.render('blog-post', { post });
 }));
 
 app.get('/privacy-policy', (req, res) => res.render('privacy-policy'));
@@ -457,42 +467,11 @@ app.post('/admin/testimonials/:id/approve', requireAdmin, ah(async (req, res) =>
   res.redirect('/admin/testimonials');
 }));
 
-app.post('/admin/testimonials/:id/unapprove', requireAdmin, ah(async (req, res) => {
-  await db.updateById('testimonials', req.params.id, { approved: false });
-  res.redirect('/admin/testimonials');
-}));
-
-app.post('/admin/testimonials/:id/update', requireAdmin, ah(async (req, res) => {
-  const { name, message, rating } = req.body;
-  await db.updateById('testimonials', req.params.id, { name, message, rating: parseInt(rating) || 5 });
-  res.redirect('/admin/testimonials');
-}));
-
 app.post('/admin/testimonials/:id/delete', requireAdmin, ah(async (req, res) => {
   await db.deleteById('testimonials', req.params.id);
   res.redirect('/admin/testimonials');
 }));
-// ---- FAQs ----
-app.get('/admin/faqs', requireAdmin, ah(async (req, res) => {
-  res.render('admin/faqs', { faqs: db.normalize(await db.find('faqs', {}, { created_at: 1 })) });
-}));
 
-app.post('/admin/faqs/add', requireAdmin, ah(async (req, res) => {
-  const { question, answer } = req.body;
-  await db.insertOne('faqs', { question, answer });
-  res.redirect('/admin/faqs');
-}));
-
-app.post('/admin/faqs/:id/update', requireAdmin, ah(async (req, res) => {
-  const { question, answer } = req.body;
-  await db.updateById('faqs', req.params.id, { question, answer });
-  res.redirect('/admin/faqs');
-}));
-
-app.post('/admin/faqs/:id/delete', requireAdmin, ah(async (req, res) => {
-  await db.deleteById('faqs', req.params.id);
-  res.redirect('/admin/faqs');
-}));
 // ---- Messages ----
 app.get('/admin/messages', requireAdmin, ah(async (req, res) => {
   const mdb = await db.getDB();
@@ -519,31 +498,77 @@ app.get('/admin/newsletter/export', requireAdmin, ah(async (req, res) => {
   res.send(csv);
 }));
 
-app.post('/admin/newsletter/send', requireAdmin, memoryUpload.single('image'), ah(async (req, res) => {
+app.post('/admin/newsletter/send', requireAdmin, ah(async (req, res) => {
   const { subject, message } = req.body;
   const subscribers = await db.find('newsletter', {}, { created_at: -1 });
   const siteName = res.locals.settings.site_name;
-  const imageUrl = await uploadImage(req.file, 'newsletter');
-  const imageHtml = imageUrl ? `<img src="${imageUrl}" alt="" style="max-width:100%; border-radius:8px; margin-bottom:18px; display:block;">` : '';
   let sentCount = 0;
-  let firstError = null;
   for (const s of subscribers) {
-    const result = await mailer.sendMail({ to: s.email, subject, html: `${imageHtml}<div>${message.replace(/\n/g, '<br>')}</div><p style="margin-top:20px;color:#888;font-size:12px;">— ${siteName}</p>` });
+    const result = await mailer.sendMail({ to: s.email, subject, html: `<div>${message.replace(/\n/g, '<br>')}</div><p style="margin-top:20px;color:#888;font-size:12px;">— ${siteName}</p>` });
     if (result && result.sent) sentCount++;
-    else if (result && result.error && !firstError) firstError = result.error;
-  }
-  let notice;
-  if (!mailer.isConfigured()) {
-    notice = 'Email not configured yet — nothing was sent.';
-  } else if (firstError) {
-    notice = `Sent to ${sentCount} of ${subscribers.length} subscribers. Error on the rest: ${firstError}`;
-  } else {
-    notice = `Sent to ${sentCount} of ${subscribers.length} subscribers.`;
   }
   res.render('admin/newsletter', {
     subscribers: db.normalize(await db.find('newsletter', {}, { created_at: -1 })),
-    notice
+    notice: mailer.isConfigured() ? `Sent to ${sentCount} of ${subscribers.length} subscribers.` : 'Email not configured yet — nothing was sent.'
   });
+}));
+
+// ---- Homepage Content ----
+app.get('/admin/homepage-content', requireAdmin, (req, res) => res.render('admin/homepage-content'));
+
+// ---- Blog ----
+app.get('/admin/blog', requireAdmin, ah(async (req, res) => {
+  res.render('admin/blog', { posts: db.normalize(await db.find('posts', {}, { created_at: -1 })) });
+}));
+
+app.get('/admin/blog/new', requireAdmin, (req, res) => res.render('admin/blog-form', { post: null }));
+
+app.get('/admin/blog/:id/edit', requireAdmin, ah(async (req, res) => {
+  const post = db.normalize(await db.findById('posts', req.params.id));
+  if (!post) return res.redirect('/admin/blog');
+  res.render('admin/blog-form', { post });
+}));
+
+app.post('/admin/blog/save', requireAdmin, memoryUpload.single('cover_image'), ah(async (req, res) => {
+  const { id, title, excerpt, content, published } = req.body;
+  const uploadedUrl = await uploadImage(req.file, 'blog');
+  if (id) {
+    const existing = await db.findById('posts', id);
+    const cover_image = uploadedUrl || (existing ? existing.cover_image : null);
+    await db.updateById('posts', id, { title, excerpt, content, cover_image, published: !!published });
+  } else {
+    let slug = slugify(title);
+    const clash = await db.findOne('posts', { slug });
+    if (clash) slug = slug + '-' + Date.now().toString().slice(-5);
+    await db.insertOne('posts', { title, slug, excerpt, content, cover_image: uploadedUrl, published: !!published });
+  }
+  res.redirect('/admin/blog');
+}));
+
+app.post('/admin/blog/:id/publish-toggle', requireAdmin, ah(async (req, res) => {
+  const post = await db.findById('posts', req.params.id);
+  if (post) await db.updateById('posts', req.params.id, { published: !post.published });
+  res.redirect('/admin/blog');
+}));
+
+app.post('/admin/blog/:id/delete', requireAdmin, ah(async (req, res) => {
+  await db.deleteById('posts', req.params.id);
+  res.redirect('/admin/blog');
+}));
+
+// ---- Custom Content Blocks (free-form fields, no code needed) ----
+app.get('/admin/blocks', requireAdmin, ah(async (req, res) => {
+  res.render('admin/blocks', { blocks: db.normalize(await db.find('blocks', {}, { created_at: 1 })) });
+}));
+
+app.post('/admin/blocks/save', requireAdmin, ah(async (req, res) => {
+  await db.insertOne('blocks', { title: req.body.title, text: req.body.text });
+  res.redirect('/admin/blocks');
+}));
+
+app.post('/admin/blocks/:id/delete', requireAdmin, ah(async (req, res) => {
+  await db.deleteById('blocks', req.params.id);
+  res.redirect('/admin/blocks');
 }));
 
 // ---- Settings ----
