@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Custom Content Blocks | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
+<body class="admin">
+<div class="admin-shell">
+  <% active = 'blocks' %>
+  <%- include('partials/sidebar') %>
+  <div class="admin-main">
+    <div class="admin-topbar"><h1>Custom Content Blocks</h1></div>
+    <p style="color:var(--muted); font-size:0.9rem; margin-top:-10px;">
+      Add any extra text block you want — not covered by another admin page. Each one you add automatically shows as its own card in a "More From Us" section on your homepage, no code changes needed.
+    </p>
+
+    <table style="margin-bottom:30px;">
+      <tr><th>Title</th><th>Text</th><th>Actions</th></tr>
+      <% blocks.forEach(b => { %>
+        <tr>
+          <td><%= b.title %></td>
+          <td><%= b.text %></td>
+          <td>
+            <form action="/admin/blocks/<%= b.id %>/delete" method="POST" onsubmit="return confirm('Delete this block?');">
+              <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+      <% if (blocks.length === 0) { %><tr><td colspan="3">No custom blocks yet.</td></tr><% } %>
+    </table>
+
+    <h2 style="font-size:1.1rem;">Add a Content Block</h2>
+    <form class="admin-form" action="/admin/blocks/save" method="POST">
+      <div class="form-group"><label>Title</label><input type="text" name="title" required placeholder="e.g. Shipping Info, Our Guarantee, Festival Note"></div>
+      <div class="form-group"><label>Text</label><textarea name="text" required placeholder="Write anything you want here."></textarea></div>
+      <button class="btn btn-primary" type="submit">Add Block</button>
+    </form>
+  </div>
+</div>
+</body></html>
