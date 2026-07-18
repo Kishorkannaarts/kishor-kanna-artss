@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title><%= post ? 'Edit Post' : 'New Post' %> | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
+<body class="admin">
+<div class="admin-shell">
+  <% active = 'blog' %>
+  <%- include('partials/sidebar') %>
+  <div class="admin-main">
+    <div class="admin-topbar"><h1><%= post ? 'Edit Post' : 'New Post' %></h1></div>
+    <form class="admin-form" action="/admin/blog/save" method="POST" enctype="multipart/form-data">
+      <% if (post) { %><input type="hidden" name="id" value="<%= post.id %>"><% } %>
+      <div class="form-group"><label>Title</label><input type="text" name="title" value="<%= post ? post.title : '' %>" required></div>
+      <div class="form-group">
+        <label>Cover Image</label>
+        <% if (post && post.cover_image) { %><img src="<%= post.cover_image %>" style="height:80px; display:block; margin-bottom:10px; border-radius:8px;"><% } %>
+        <input type="file" name="cover_image" accept="image/*">
+      </div>
+      <div class="form-group"><label>Short Excerpt (shown on the blog list page)</label><textarea name="excerpt" required><%= post ? post.excerpt : '' %></textarea></div>
+      <div class="form-group">
+        <label>Full Content</label>
+        <small style="color:var(--muted); display:block; margin-bottom:6px;">Leave a blank line between paragraphs — that's all the formatting you need.</small>
+        <textarea name="content" rows="14" required><%= post ? post.content : '' %></textarea>
+      </div>
+      <div class="form-group">
+        <label style="display:flex; align-items:center; gap:8px; font-weight:normal;">
+          <input type="checkbox" name="published" value="1" <%= (post && post.published) ? 'checked' : '' %> style="width:auto;">
+          Published (visible on the live site)
+        </label>
+      </div>
+      <button class="btn btn-primary" type="submit">Save Post</button>
+      <a class="btn btn-ghost" href="/admin/blog">Cancel</a>
+    </form>
+  </div>
+</div>
+</body></html>
