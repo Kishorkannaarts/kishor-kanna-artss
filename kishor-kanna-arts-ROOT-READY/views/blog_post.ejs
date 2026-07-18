@@ -1,0 +1,23 @@
+<% pageTitle = post.title %>
+<%- include('partials/header') %>
+
+<section class="section" style="max-width:760px; margin:0 auto;">
+  <% if (post.cover_image) { %>
+    <img src="<%= post.cover_image %>" alt="<%= post.title %>" style="width:100%; max-height:420px; object-fit:cover; border-radius:12px; margin-bottom:24px;">
+  <% } %>
+  <h1 style="text-align:center; margin-bottom:8px;"><%= post.title %></h1>
+  <p style="text-align:center; color:var(--muted); margin-bottom:30px;"><%= post.created_at %></p>
+
+  <div style="font-size:1.05rem; line-height:1.75; color:var(--ink);">
+    <% (post.content || '').split(/\n\s*\n/).forEach(paragraph => { %>
+      <p style="margin-bottom:20px;"><%= paragraph.trim() %></p>
+    <% }) %>
+  </div>
+
+  <div style="text-align:center; margin-top:36px;">
+    <a class="btn" href="/order">Order Custom Art</a>
+    <a class="btn btn-outline" href="/blog" style="margin-left:10px;">Back to Blog</a>
+  </div>
+</section>
+
+<%- include('partials/footer') %>
