@@ -103,7 +103,7 @@ app.get('/', ah(async (req, res) => {
   else { m = v.video_url.match(/drive\.google\.com\/file\/d\/([A-Za-z0-9_-]+)/); if (m) embed = `https://drive.google.com/file/d/${m[1]}/preview`; }
   return { ...v, embed_url: embed };
 });
-  const services  = db.normalize(await db.find('services', {}, { created_at: -1 }, 4));
+  const services  = db.normalize(await db.find('services', {}, { created_at: -1 }));
   const offers    = db.normalize(await db.find('offers', { active: true }, { created_at: -1 }));
   const blocks    = db.normalize(await db.find('blocks', {}, { created_at: 1 }));
   const recentPosts = db.normalize(await db.find('posts', { published: true }, { created_at: -1 }, 3));
@@ -675,3 +675,4 @@ db.initSchema().then(() => {
   console.error('Database connection failed:', err.message);
   process.exit(1);
 });
+
