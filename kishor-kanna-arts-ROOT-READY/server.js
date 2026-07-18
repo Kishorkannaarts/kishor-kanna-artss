@@ -207,13 +207,13 @@ app.post('/testimonials', ah(async (req, res) => {
 
 app.get('/blog', ah(async (req, res) => {
   const posts = db.normalize(await db.find('posts', { published: true }, { created_at: -1 }));
-  res.render('blog', { posts });
+  res.render('blog_list', { posts });
 }));
 
 app.get('/blog/:slug', ah(async (req, res) => {
   const post = db.normalize(await db.findOne('posts', { slug: req.params.slug, published: true }));
   if (!post) return res.status(404).send('Post not found');
-  res.render('blog-post', { post });
+  res.render('blog_post', { post });
 }));
 
 app.get('/privacy-policy', (req, res) => res.render('privacy-policy'));
@@ -637,6 +637,28 @@ app.post('/admin/offers/:id/toggle', requireAdmin, ah(async (req, res) => {
 app.post('/admin/offers/:id/delete', requireAdmin, ah(async (req, res) => {
   await db.deleteById('offers', req.params.id);
   res.redirect('/admin/offers');
+}));
+// ---- FAQs ----
+app.get('/admin/faqs', requireAdmin, ah(async (req, res) => {
+  const faqs = db.normalize(await db.find('faqs', {}, { created_at: 1 }));
+  res.render('admin/faqs', { faqs });
+}));
+
+app.post('/admin/faqs/add', requireAdmin, ah(async (req, res) => {
+  const { question, answer } = req.body;
+  await db.insertOne('faqs', { question, answer });
+  res.redirect('/admin/faqs');
+}));
+
+app.post('/admin/faqs/:id/update', requireAdmin, ah(async (req, res) => {
+  const { question, answer } = req.body;
+  await db.updateById('faqs', req.params.id, { question, answer });
+  res.redirect('/admin/faqs');
+}));
+
+app.post('/admin/faqs/:id/delete', requireAdmin, ah(async (req, res) => {
+  await db.deleteById('faqs', req.params.id);
+  res.redirect('/admin/faqs');
 }));
 
 // ---------- 404 + Error handler ----------
