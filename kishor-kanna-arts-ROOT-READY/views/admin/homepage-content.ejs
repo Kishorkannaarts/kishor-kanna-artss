@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Homepage Content | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
+<body class="admin">
+<div class="admin-shell">
+  <% active = 'homepage-content' %>
+  <%- include('partials/sidebar') %>
+  <div class="admin-main">
+    <div class="admin-topbar"><h1>Homepage Content</h1></div>
+    <p style="color:var(--muted); font-size:0.9rem; margin-top:-10px;">Edit any text on your homepage here — no code needed. Leave a field blank to keep the current default wording.</p>
+
+    <form class="admin-form" action="/admin/settings/save" method="POST">
+
+      <h3>Why Choose Us Section</h3>
+      <div class="form-group"><label>Section Heading</label><input type="text" name="why_heading" value="<%= settings.why_heading %>" placeholder="Why Choose Us"></div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+        <div class="form-group"><label>Box 1 Title</label><input type="text" name="why1_title" value="<%= settings.why1_title %>" placeholder="100% Hand-made"></div>
+        <div class="form-group"><label>Box 1 Text</label><input type="text" name="why1_text" value="<%= settings.why1_text %>" placeholder="Every artwork is drawn or painted by hand, never printed."></div>
+
+        <div class="form-group"><label>Box 2 Title</label><input type="text" name="why2_title" value="<%= settings.why2_title %>" placeholder="Made From Your Photos"></div>
+        <div class="form-group"><label>Box 2 Text</label><input type="text" name="why2_text" value="<%= settings.why2_text %>" placeholder="Send a photo and we turn it into a keepsake artwork."></div>
+
+        <div class="form-group"><label>Box 3 Title</label><input type="text" name="why3_title" value="<%= settings.why3_title %>" placeholder="Tracked Orders"></div>
+        <div class="form-group"><label>Box 3 Text</label><input type="text" name="why3_text" value="<%= settings.why3_text %>" placeholder="Follow your order status from start to delivery."></div>
+
+        <div class="form-group"><label>Box 4 Title</label><input type="text" name="why4_title" value="<%= settings.why4_title %>" placeholder="Nationwide Delivery"></div>
+        <div class="form-group"><label>Box 4 Text</label><input type="text" name="why4_text" value="<%= settings.why4_text %>" placeholder="Carefully packed and shipped anywhere in India."></div>
+      </div>
+
+      <h3 style="margin-top:28px;">Section Headings</h3>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+        <div class="form-group"><label>Featured Portfolio Heading</label><input type="text" name="featured_heading" value="<%= settings.featured_heading %>" placeholder="Featured Portfolio"></div>
+        <div class="form-group"><label>Featured Portfolio Subtitle</label><input type="text" name="featured_sub" value="<%= settings.featured_sub %>" placeholder="A glimpse of recent handcrafted pieces"></div>
+
+        <div class="form-group"><label>Services Heading</label><input type="text" name="services_heading" value="<%= settings.services_heading %>" placeholder="Services"></div>
+        <div class="form-group"><label>Services Subtitle</label><input type="text" name="services_sub" value="<%= settings.services_sub %>" placeholder="Custom art made to order"></div>
+
+        <div class="form-group"><label>Reviews Heading</label><input type="text" name="reviews_heading" value="<%= settings.reviews_heading %>" placeholder="Reviews"></div>
+        <div class="form-group"><label>Reviews Subtitle</label><input type="text" name="reviews_sub" value="<%= settings.reviews_sub %>" placeholder="What our customers say"></div>
+
+        <div class="form-group"><label>Videos Heading</label><input type="text" name="videos_heading" value="<%= settings.videos_heading %>" placeholder="Videos"></div>
+        <div class="form-group"><label>Videos Subtitle</label><input type="text" name="videos_sub" value="<%= settings.videos_sub %>" placeholder="Watch the artwork process"></div>
+      </div>
+
+      <h3 style="margin-top:28px;">Bottom "Ready to Order" Section</h3>
+      <div class="form-group"><label>Heading</label><input type="text" name="cta_title" value="<%= settings.cta_title %>" placeholder="Ready to Order Your Custom Artwork?"></div>
+      <div class="form-group"><label>Subtitle</label><input type="text" name="cta_subtitle" value="<%= settings.cta_subtitle %>" placeholder="Tell us your idea — we'll bring it to life."></div>
+      <div class="form-group"><label>Button Text</label><input type="text" name="cta_button_text" value="<%= settings.cta_button_text %>" placeholder="Start Your Order"></div>
+
+      <button class="btn btn-primary" type="submit" style="margin-top:20px;">Save Homepage Content</button>
+    </form>
+  </div>
+</div>
+</body></html>
