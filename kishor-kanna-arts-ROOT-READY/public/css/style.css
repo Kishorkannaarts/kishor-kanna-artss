@@ -143,9 +143,15 @@ img { max-width: 100%; display: block; }
 }
 .card:hover { transform: translateY(-4px); }
 .card img { width: 100%; height: 260px; object-fit: cover; object-position: top center; background: #eee; }
+.grid-arts .card img { height: 320px; }
 .card-body { padding: 14px 16px; }
 .card-body h3 { margin: 0 0 6px; font-size: 1.1rem; }
 .card-body p { color: var(--muted); font-size: 0.92rem; margin: 0 0 10px; }
+
+/* Services grid: fixed 3-up on desktop, auto-fits down from there */
+@media (min-width: 781px) {
+  .grid-services { grid-template-columns: repeat(3, 1fr); }
+}
 .tag {
   display: inline-block; font-size: 0.75rem; background: #f3e6da; color: var(--accent-dark);
   padding: 3px 10px; border-radius: 20px; margin-bottom: 8px;
@@ -169,7 +175,7 @@ img { max-width: 100%; display: block; }
   }
   .grid-arts { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .grid-arts .card { border-radius: 10px; }
-  .grid-arts .card img { height: 170px; }
+  .grid-arts .card img { height: 190px; }
   .grid-arts .card-body { padding: 10px 12px 12px; }
   .grid-arts .tag { font-size: 0.65rem; padding: 2px 8px; margin-bottom: 6px; }
   .grid-arts .card-body h3 { font-size: 0.92rem; margin-bottom: 4px; line-height: 1.25; }
@@ -187,7 +193,7 @@ img { max-width: 100%; display: block; }
   .grid { gap: 8px; }
   .grid .card img { height: 145px; }
   .grid-arts { gap: 8px; }
-  .grid-arts .card img { height: 145px; }
+  .grid-arts .card img { height: 160px; }
   .grid-arts .card-body { padding: 8px 10px 10px; }
   .grid-arts .card-body h3 { font-size: 0.85rem; }
   .grid-arts .card-body p { font-size: 0.72rem; }
