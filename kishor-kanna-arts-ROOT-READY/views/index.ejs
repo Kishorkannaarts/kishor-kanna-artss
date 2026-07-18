@@ -32,14 +32,23 @@
   <p class="sub"><%= settings.featured_sub || 'A glimpse of recent handcrafted pieces' %></p>
   <div class="grid grid-arts">
     <% featured.forEach(a => { %>
-      <a class="card" href="/portfolio/<%= a.id %>">
-        <img src="<%= a.image || 'https://placehold.co/400x300?text=Artwork' %>" alt="<%= a.title %>">
+      <div class="card">
+        <a href="/portfolio/<%= a.id %>">
+          <img src="<%= a.image || 'https://placehold.co/400x300?text=Artwork' %>" alt="<%= a.title %>">
+        </a>
         <div class="card-body">
           <span class="tag"><%= a.category %></span>
-          <h3><%= a.title %></h3>
+          <h3><a href="/portfolio/<%= a.id %>" style="color:inherit; text-decoration:none;"><%= a.title %></a></h3>
           <p><%= a.description %></p>
+          <div class="card-footer">
+            <div class="meta">
+              <% if (a.size) { %><span>Size: <strong><%= a.size %></strong></span><% } %>
+              <% if (a.price) { %><span style="margin-left:10px;">₹<strong><%= a.price %></strong></span><% } %>
+            </div>
+            <a class="btn btn-sm" href="/order?art_type=<%= encodeURIComponent(a.category) %>&size=<%= encodeURIComponent(a.size || '') %>&price=<%= encodeURIComponent(a.price || '') %>">Order This</a>
+          </div>
         </div>
-      </a>
+      </div>
     <% }) %>
     <% if (featured.length === 0) { %>
       <p class="sub">No artworks added yet — add some from the admin panel.</p>
@@ -50,7 +59,7 @@
 <section class="section section-tint">
   <h2><%= settings.services_heading || 'Services' %></h2>
   <p class="sub"><%= settings.services_sub || 'Custom art made to order' %></p>
-  <div class="grid">
+  <div class="grid grid-services">
     <% services.forEach(s => { %>
       <div class="card">
         <img src="<%= s.image || 'https://placehold.co/400x300?text=Service' %>" alt="<%= s.title %>">
