@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blog | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
+<body class="admin">
+<div class="admin-shell">
+  <% active = 'blog' %>
+  <%- include('partials/sidebar') %>
+  <div class="admin-main">
+    <div class="admin-topbar"><h1>Blog</h1><a class="btn btn-primary" href="/admin/blog/new">+ New Post</a></div>
+    <table>
+      <tr><th>Cover</th><th>Title</th><th>Status</th><th>Date</th><th>Actions</th></tr>
+      <% posts.forEach(p => { %>
+        <tr>
+          <td><img class="thumb" src="<%= p.cover_image || 'https://placehold.co/60x60' %>"></td>
+          <td><%= p.title %></td>
+          <td><span class="badge <%= p.published ? 'badge-ok' : 'badge-new' %>"><%= p.published ? 'Published' : 'Draft' %></span></td>
+          <td><small style="color:var(--muted);"><%= p.created_at %></small></td>
+          <td class="actions-row">
+            <a class="btn btn-ghost btn-sm" href="/admin/blog/<%= p.id %>/edit">Edit</a>
+            <form action="/admin/blog/<%= p.id %>/publish-toggle" method="POST">
+              <button class="btn btn-success btn-sm" type="submit"><%= p.published ? 'Unpublish' : 'Publish' %></button>
+            </form>
+            <form action="/admin/blog/<%= p.id %>/delete" method="POST" onsubmit="return confirm('Delete this post?');">
+              <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+      <% if (posts.length === 0) { %><tr><td colspan="5">No blog posts yet.</td></tr><% } %>
+    </table>
+  </div>
+</div>
+</body></html>
