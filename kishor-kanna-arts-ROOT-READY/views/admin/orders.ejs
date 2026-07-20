@@ -14,12 +14,17 @@
           <td><%= o.order_code %><br><small style="color:var(--muted);"><%= o.created_at %></small></td>
           <td><%= o.name %><br><small style="color:var(--muted);"><%= o.phone %><br><%= o.email || 'no email' %></small></td>
           <td><%= o.art_type %> / <%= o.size %><% if (o.estimated_price) { %><br><small style="color:var(--muted);">Est. ₹<%= o.estimated_price %><% if (o.discount_percent_applied > 0) { %> (<%= o.discount_percent_applied %>% off)<% } %></small><% } %></td>
-          <td><% if (o.reference_image) { %><a href="<%= o.reference_image %>" target="_blank">View photo</a><% } else { %>—<% } %></td>
+          <td><% if (o.reference_image) { %><a href="<%= o.reference_image %>" target="_blank">View photo</a><% } else { %>—<% } %>
+            <% if (o.final_artwork_image) { %>
+              <br><a href="<%= o.final_artwork_image %>" target="_blank" style="color:var(--accent, #b5451b);">View final artwork</a>
+              <br><span class="badge <%= o.customer_confirmed ? 'badge-ok' : 'badge-new' %>" style="margin-top:4px; display:inline-block;"><%= o.customer_confirmed ? '✓ Customer Confirmed' : 'Awaiting Customer Confirmation' %></span>
+            <% } %>
+          </td>
           <td>
             <span class="badge badge-new" style="display:block; margin-bottom:8px;"><%= o.status %></span>
             <form action="/admin/orders/<%= o.id %>/status" method="POST">
               <select name="status" onchange="this.form.submit()" style="width:100%; padding:6px; border-radius:6px; background:var(--panel-2); color:var(--text); border:1px solid var(--border);">
-                <% ['Received','Confirmed','In Progress','Completed','Delivered','Cancelled'].forEach(s => { %>
+                <% ['Received','Confirmed','In Progress','Completed','Artwork Sent - Awaiting Confirmation','Customer Confirmed','Delivered','Cancelled'].forEach(s => { %>
                   <option value="<%= s %>" <%= o.status === s ? 'selected' : '' %>><%= s %></option>
                 <% }) %>
               </select>
@@ -61,6 +66,7 @@
             <a class="btn btn-success btn-sm" href="/admin/orders/<%= o.id %>/advance">Request Advance</a>
             <a class="btn btn-ghost btn-sm" href="/admin/orders/<%= o.id %>/reject">Reject / New Date</a>
             <a class="btn btn-success btn-sm" href="/admin/orders/<%= o.id %>/balance">Request Balance</a>
+            <a class="btn btn-primary btn-sm" href="/admin/orders/<%= o.id %>/send-artwork"><%= o.final_artwork_image ? 'Resend Final Artwork' : 'Send Final Artwork' %></a>
             <form action="/admin/orders/<%= o.id %>/shipped" method="POST" onsubmit="return confirm('Mark this order as sent and email the customer?');">
               <button class="btn btn-primary btn-sm" type="submit">Mark as Sent</button>
             </form>
