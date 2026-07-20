@@ -44,7 +44,25 @@
             <% } %>
           </div>
         <% } %>
+      <% } %>
 
+        <% if (order.final_artwork_image) { %>
+          <div style="margin-top:20px; padding:18px; border-radius:10px; background:#f4efe8; border:1px solid var(--border);">
+            <h3 style="margin-top:0;">Your Finished Artwork</h3>
+            <img src="<%= order.final_artwork_image %>" alt="Your finished artwork" style="max-width:100%; border-radius:10px; display:block; margin-bottom:12px;">
+            <% if (order.final_artwork_note) { %><p style="margin-bottom:14px;"><%= order.final_artwork_note %></p><% } %>
+            <% if (order.customer_confirmed) { %>
+              <div class="alert" style="background:#e6f4ea; border:1px solid #b7e0c4; padding:12px 14px; border-radius:8px;">✓ You confirmed this artwork on <%= new Date(order.customer_confirmed_at).toLocaleDateString() %>. We'll proceed with packing &amp; delivery!</div>
+            <% } else { %>
+              <p style="color:var(--muted); font-size:0.9rem; margin-bottom:10px;">Please review the photo above. If it looks good, tap the button below to confirm — we'll then proceed with packing &amp; delivery.</p>
+              <form action="/track-order/confirm" method="POST">
+                <input type="hidden" name="order_code" value="<%= order.order_code %>">
+                <input type="hidden" name="phone" value="<%= order.phone %>">
+                <button class="btn" type="submit">✓ Confirm Artwork</button>
+              </form>
+            <% } %>
+          </div>
+        <% } %>
       <% } else { %>
         <div class="alert alert-error" style="margin-top:20px;">No order found with that Order ID and phone number. Please check and try again.</div>
       <% } %>
