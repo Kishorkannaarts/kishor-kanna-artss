@@ -94,6 +94,7 @@ async function initSchema() {
     instagram_url: '',
     facebook_url: '',
     whatsapp_number: '',
+    whatsapp_default_message: 'Hi! I\'m interested in getting a custom artwork made. Can you help me?',
     logo_url: '',
     google_maps_embed: '',
     google_business_url: '',
