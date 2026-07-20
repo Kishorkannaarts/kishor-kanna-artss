@@ -33,7 +33,7 @@
           <div class="form-group">
             <label>Size</label>
             <select name="size" id="sizeSelect" required>
-              <% ['A5','A4','A3','Custom'].forEach(sz => { %>
+              <% ['A5','A4','A3','A2','Custom'].forEach(sz => { %>
                 <option value="<%= sz %>" <%= old.size === sz ? 'selected' : '' %>><%= sz %></option>
               <% }) %>
             </select>
@@ -42,6 +42,9 @@
 
         <div class="form-group" id="priceBox" style="background:#f7f7f7; border-radius:8px; padding:12px 16px; display:none;">
           <strong>Estimated Price: <span id="priceDisplay"></span></strong>
+        </div>
+        <div class="form-group" id="customNote" style="background:#fff2cc; border:1px solid #e6cf87; border-radius:8px; padding:12px 16px; display:none;">
+          Picked Custom? Tell us the size or idea in the notes below — we'll confirm the price with you before your order is final.
         </div>
         <input type="hidden" name="estimated_price" id="estimatedPriceInput">
         <input type="hidden" name="discount_percent_applied" id="discountAppliedInput">
@@ -70,6 +73,7 @@
   const sizeSelect = document.getElementById('sizeSelect');
   const priceBox = document.getElementById('priceBox');
   const priceDisplay = document.getElementById('priceDisplay');
+  const customNote = document.getElementById('customNote');
   const estimatedPriceInput = document.getElementById('estimatedPriceInput');
   const discountAppliedInput = document.getElementById('discountAppliedInput');
 
@@ -77,6 +81,7 @@
     if (size === 'A5') return 'price_a5';
     if (size === 'A4') return 'price_a4';
     if (size === 'A3') return 'price_a3';
+    if (size === 'A2') return 'price_a2';
     return 'price_custom';
   }
 
@@ -93,6 +98,14 @@
   }
 
   function updatePrice() {
+    if (sizeSelect.value === 'Custom') {
+      priceBox.style.display = 'none';
+      customNote.style.display = 'block';
+      estimatedPriceInput.value = '';
+      discountAppliedInput.value = '';
+      return;
+    }
+    customNote.style.display = 'none';
     const numericPrice = getBasePrice();
     if (!numericPrice) { priceBox.style.display = 'none'; estimatedPriceInput.value = ''; discountAppliedInput.value = ''; return; }
     const discounted = offerDiscount ? numericPrice - (numericPrice * offerDiscount / 100) : numericPrice;
