@@ -191,12 +191,31 @@ app.post('/order', memoryUpload.single('reference_image'), ah(async (req, res) =
   res.render('order', { success: order_code, error: null, blockedDates, old: {}, services, offerDiscount, presetPrice: '' });
 }));
 
-app.get('/track-order', (req, res) => res.render('track-order', { order: null, searched: false }));
+app.get('/track-order', (req, res) => res.render('track-order', { order: null, searched: false, presetOrderCode: req.query.order_code || '' }));
 
 app.post('/track-order', ah(async (req, res) => {
   const { order_code, phone } = req.body;
   const order = db.normalize(await db.findOne('orders', { order_code, phone }));
-  res.render('track-order', { order: order || undefined, searched: true });
+  res.render('track-order', { order: order || undefined, searched: true, presetOrderCode: order_code || '' });
+}));
+
+app.post('/track-order/confirm', ah(async (req, res) => {
+  const { order_code, phone } = req.body;
+  const order = db.normalize(await db.findOne('orders', { order_code, phone }));
+  if (order && order.final_artwork_image && !order.customer_confirmed) {
+    await db.updateById('orders', order.id, {
+      customer_confirmed: true,
+      customer_confirmed_at: new Date().toISOString(),
+      status: 'Customer Confirmed'
+    });
+    if (process.env.NOTIFY_EMAIL) {
+      const s = res.locals.settings;
+      const data = { name: order.name, order_code: order.order_code, site_name: s.site_name };
+      mailer.sendMail({ to: process.env.NOTIFY_EMAIL, subject: renderTemplate(s.tmpl_customer_confirmed_subject, data), html: renderTemplate(s.tmpl_customer_confirmed_body, data).replace(/\n/g, '<br>') });
+    }
+  }
+  const refreshed = db.normalize(await db.findOne('orders', { order_code, phone }));
+  res.render('track-order', { order: refreshed || undefined, searched: true, presetOrderCode: order_code || '' });
 }));
 
 app.post('/testimonials', ah(async (req, res) => {
