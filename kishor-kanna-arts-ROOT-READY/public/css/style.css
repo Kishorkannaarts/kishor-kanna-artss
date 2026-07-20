@@ -31,7 +31,7 @@ img { max-width: 100%; display: block; }
   padding: 18px 20px; background: var(--paper); border-bottom: 1px solid var(--border);
   position: sticky; top: 0; z-index: 50;
 }
-.logo { font-size: 1.4rem; font-weight: bold; color: var(--accent-dark); letter-spacing: 0.5px; }
+.logo { font-size: 1.4rem; font-weight: bold; color: #0b2a4a; letter-spacing: 0.5px; }
 .nav { display: flex; gap: 22px; flex-wrap: wrap; font-size: 0.95rem; }
 .nav a:hover { color: var(--accent); }
 .nav-cta {
@@ -113,8 +113,8 @@ img { max-width: 100%; display: block; }
   .hero-with-image { min-height: 72vh; padding: 20px 18px 36px; }
   .hero-with-image h1 { font-size: 1.65rem; margin-bottom: 10px; }
   .hero-with-image p { font-size: 0.95rem; margin-bottom: 18px; }
-  .hero-buttons { flex-direction: column; width: 100%; gap: 10px; }
-  .hero-buttons .btn { width: 100%; }
+  .hero-buttons { flex-direction: row; flex-wrap: nowrap; width: 100%; gap: 10px; }
+  .hero-buttons .btn { flex: 1 1 0; width: auto; padding: 12px 8px; font-size: 0.82rem; text-align: center; }
 }
 
 .btn {
