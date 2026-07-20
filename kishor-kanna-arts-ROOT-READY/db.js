@@ -148,11 +148,31 @@ Your artwork for order {{order_code}} is complete!
 To arrange delivery, please pay the remaining balance of {{amount}} using the link below:
 {{payment_link}}
 
-— {{site_name}}`,
-    tmpl_shipped_subject: 'Order {{order_code}} is On Its Way!',
+tmpl_shipped_subject: 'Order {{order_code}} is On Its Way!',
     tmpl_shipped_body: `Hi {{name}},
 
 Your order {{order_code}} has been sent out for delivery. We hope you love it!
+
+— {{site_name}}`,
+    tmpl_artwork_ready_subject: 'Your Artwork is Ready - {{order_code}} 🎨',
+    tmpl_artwork_ready_body: `Hi {{name}},
+
+Great news — your {{art_type}} is complete! Please take a look at the photo of your finished artwork here:
+
+{{artwork_image}}
+
+{{artwork_note}}
+
+Please review it and confirm so we can proceed with packing & delivery:
+{{track_url}}
+
+(Enter your Order ID {{order_code}} and your phone number to view and confirm.)
+
+— {{site_name}}`,
+    tmpl_customer_confirmed_subject: 'Customer Confirmed Artwork - {{order_code}}',
+    tmpl_customer_confirmed_body: `Hi,
+
+{{name}} has reviewed and confirmed the finished artwork for order {{order_code}}. You can proceed with packing & delivery.
 
 — {{site_name}}`
   };
