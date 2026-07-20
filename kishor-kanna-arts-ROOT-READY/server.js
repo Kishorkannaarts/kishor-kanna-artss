@@ -453,6 +453,36 @@ app.post('/admin/orders/:id/balance-paid', requireAdmin, ah(async (req, res) => 
   res.redirect('/admin/orders');
 }));
 
+// ---- Send Finished Artwork for Customer Confirmation ----
+app.get('/admin/orders/:id/send-artwork', requireAdmin, ah(async (req, res) => {
+  const order = db.normalize(await db.findById('orders', req.params.id));
+  if (!order) return res.redirect('/admin/orders');
+  res.render('admin/send-artwork', { order });
+}));
+
+app.post('/admin/orders/:id/send-artwork', requireAdmin, memoryUpload.single('artwork_image'), ah(async (req, res) => {
+  const order = db.normalize(await db.findById('orders', req.params.id));
+  if (!order) return res.redirect('/admin/orders');
+  const uploadedUrl = await uploadImage(req.file, 'final-artwork');
+  const final_artwork_image = uploadedUrl || order.final_artwork_image || null;
+  const update = {
+    final_artwork_image,
+    final_artwork_note: req.body.note || '',
+    status: 'Artwork Sent - Awaiting Confirmation',
+    artwork_sent_at: new Date().toISOString(),
+    customer_confirmed: false,
+    customer_confirmed_at: null
+  };
+  await db.updateById('orders', req.params.id, update);
+  if (order.email && final_artwork_image) {
+    const s = res.locals.settings;
+    const trackUrl = `${req.protocol}://${req.get('host')}/track-order?order_code=${encodeURIComponent(order.order_code)}`;
+    const data = { name: order.name, order_code: order.order_code, art_type: order.art_type, artwork_image: final_artwork_image, artwork_note: req.body.note || '', track_url: trackUrl, site_name: s.site_name };
+    await mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_artwork_ready_subject, data), html: renderTemplate(s.tmpl_artwork_ready_body, data).replace(/\n/g, '<br>') });
+  }
+  res.redirect('/admin/orders');
+}));
+
 app.post('/admin/orders/:id/expenses', requireAdmin, ah(async (req, res) => {
   await db.updateById('orders', req.params.id, { expenses: req.body.expenses || 0 });
   res.redirect('/admin/orders');
