@@ -50,6 +50,12 @@
       <div class="form-group"><label>Subject</label><input type="text" name="tmpl_shipped_subject" value="<%= settings.tmpl_shipped_subject %>"></div>
       <div class="form-group"><label>Message</label><textarea name="tmpl_shipped_body" style="min-height:100px;"><%= settings.tmpl_shipped_body %></textarea></div>
 
+      <hr style="border-color:var(--border); margin:24px 0;">
+      <h3 style="font-size:1rem;">7. Artwork Ready for Confirmation (sent when you click "Send Final Artwork")</h3>
+      <p style="color:var(--muted); font-size:0.85rem; margin-top:-8px;">Extra placeholders for this one: <code>{{artwork_image}} {{artwork_note}}</code></p>
+      <div class="form-group"><label>Subject</label><input type="text" name="tmpl_artwork_ready_subject" value="<%= settings.tmpl_artwork_ready_subject %>"></div>
+      <div class="form-group"><label>Message</label><textarea name="tmpl_artwork_ready_body" style="min-height:160px;"><%= settings.tmpl_artwork_ready_body %></textarea></div>
+
       <br>
       <button class="btn btn-primary" type="submit">Save All Templates</button>
     </form>
