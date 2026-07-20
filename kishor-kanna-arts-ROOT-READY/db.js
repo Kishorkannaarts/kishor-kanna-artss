@@ -148,7 +148,8 @@ Your artwork for order {{order_code}} is complete!
 To arrange delivery, please pay the remaining balance of {{amount}} using the link below:
 {{payment_link}}
 
-tmpl_shipped_subject: 'Order {{order_code}} is On Its Way!',
+— {{site_name}}`,
+    tmpl_shipped_subject: 'Order {{order_code}} is On Its Way!',
     tmpl_shipped_body: `Hi {{name}},
 
 Your order {{order_code}} has been sent out for delivery. We hope you love it!
