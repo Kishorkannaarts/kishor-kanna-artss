@@ -289,6 +289,8 @@ textarea { resize: vertical; min-height: 100px; }
 .status-Completed { background: #e0f7e9; color: #1a7a3f; }
 .status-Delivered { background: #d8f0d8; color: #1e6b34; }
 .status-Cancelled { background: #fbe0e0; color: #a2231d; }
+.status-Artwork-Sent---Awaiting-Confirmation { background: #fde8d2; color: #a15c00; }
+.status-Customer-Confirmed { background: #dcf1e6; color: #1a7a3f; }
 
 @media (max-width: 780px) {
   .nav { position: fixed; top: 68px; left: 0; right: 0; background: #fff; flex-direction: column;
