@@ -1,46 +1,32 @@
-<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Services | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
-<body class="admin">
-<div class="admin-shell">
-  <% active = 'services' %>
-  <%- include('partials/sidebar') %>
-  <div class="admin-main">
-    <div class="admin-topbar"><h1>Services</h1></div>
+<% pageTitle = 'Services' %>
+<%- include('partials/header') %>
 
-    <table style="margin-bottom:30px;">
-      <tr><th>Image</th><th>Title</th><th>A5</th><th>A4</th><th>A3</th><th>A2</th><th>Custom</th><th>Actions</th></tr>
-      <% services.forEach(s => { %>
-        <tr>
-          <td><img class="thumb" src="<%= s.image || 'https://placehold.co/60x60' %>"></td>
-          <td><%= s.title %></td>
-          <td><%= s.price_a5 %></td>
-          <td><%= s.price_a4 %></td>
-          <td><%= s.price_a3 %></td>
-          <td><%= s.price_a2 %></td>
-          <td><%= s.price_custom %></td>
-          <td>
-            <form action="/admin/services/<%= s.id %>/delete" method="POST" onsubmit="return confirm('Delete this service?');">
-              <button class="btn btn-danger btn-sm" type="submit">Delete</button>
-            </form>
-          </td>
-        </tr>
-      <% }) %>
-      <% if (services.length === 0) { %><tr><td colspan="8">No services yet.</td></tr><% } %>
-    </table>
-
-    <h2 style="font-size:1.1rem;">Add Service</h2>
-    <form class="admin-form" action="/admin/services/save" method="POST" enctype="multipart/form-data">
-      <div class="form-group"><label>Title</label><input type="text" name="title" required></div>
-      <div class="form-group"><label>Description</label><textarea name="description"></textarea></div>
-      <div class="form-group"><label>Image</label><input type="file" name="image" accept="image/*"></div>
-      <div class="form-group"><label>Price - A5</label><input type="text" name="price_a5"></div>
-      <div class="form-group"><label>Price - A4</label><input type="text" name="price_a4"></div>
-      <div class="form-group"><label>Price - A3</label><input type="text" name="price_a3"></div>
-      <div class="form-group"><label>Price - A2</label><input type="text" name="price_a2"></div>
-      <div class="form-group"><label>Price - Custom (starting from)</label><input type="text" name="price_custom"></div>
-      <button class="btn btn-primary" type="submit">Save Service</button>
-    </form>
+<section class="section">
+  <h2>Services</h2>
+  <p class="sub">Choose a service and size to get started</p>
+  <div class="grid grid-services">
+    <% services.forEach(s => { %>
+      <div class="card">
+        <img src="<%= s.image || 'https://placehold.co/400x300?text=Service' %>" alt="<%= s.title %>">
+        <div class="card-body">
+          <h3><%= s.title %></h3>
+          <p><%= s.description %></p>
+          <table style="width:100%; font-size:0.9rem; margin-bottom:14px;">
+            <% if (s.price_a5) { %><tr><td>A5</td><td style="text-align:right;"><%= s.price_a5 %></td></tr><% } %>
+            <% if (s.price_a4) { %><tr><td>A4</td><td style="text-align:right;"><%= s.price_a4 %></td></tr><% } %>
+            <% if (s.price_a3) { %><tr><td>A3</td><td style="text-align:right;"><%= s.price_a3 %></td></tr><% } %>
+            <% if (s.price_a2) { %><tr><td>A2</td><td style="text-align:right;"><%= s.price_a2 %></td></tr><% } %>
+            <% if (s.price_custom) { %><tr><td>Custom</td><td style="text-align:right;">from <%= s.price_custom %></td></tr><% } %>
+          </table>
+          <% if (s.price_custom) { %><p class="sub" style="text-align:left; font-size:0.8rem; margin:-8px 0 12px;">Custom sizes: final price confirmed after we review your request.</p><% } %>
+          <a class="btn" href="/order">Order</a>
+        </div>
+      </div>
+    <% }) %>
+    <% if (services.length === 0) { %>
+      <p class="sub">No services added yet.</p>
+    <% } %>
   </div>
-</div>
-</body></html>
+</section>
+
+<%- include('partials/footer') %>
