@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Send Final Artwork | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
+<body class="admin">
+<div class="admin-shell">
+  <% active = 'orders' %>
+  <%- include('partials/sidebar') %>
+  <div class="admin-main">
+    <div class="admin-topbar"><h1>Send Final Artwork</h1></div>
+    <p style="color:var(--muted); margin-top:-10px;">Order <%= order.order_code %> — <%= order.name %> (<%= order.email || 'no email on file' %>)</p>
+
+    <% if (!order.email) { %>
+      <div class="error-box">This customer didn't provide an email address, so no email can be sent — but you can still upload the photo below and share it with them directly (e.g. via WhatsApp) once uploaded.</div>
+    <% } %>
+
+    <% if (order.final_artwork_image) { %>
+      <div style="margin:16px 0;">
+        <p style="color:var(--muted); font-size:0.9rem;">Currently sent photo:</p>
+        <img src="<%= order.final_artwork_image %>" alt="Final artwork" style="max-width:260px; border-radius:10px; border:1px solid var(--border);">
+        <p style="margin-top:6px;">
+          <span class="badge <%= order.customer_confirmed ? 'badge-ok' : 'badge-new' %>"><%= order.customer_confirmed ? '✓ Customer Confirmed' : 'Awaiting Customer Confirmation' %></span>
+        </p>
+      </div>
+    <% } %>
+
+    <form class="admin-form" action="/admin/orders/<%= order.id %>/send-artwork" method="POST" enctype="multipart/form-data">
+      <div class="form-group">
+        <label>Photo of Completed Artwork</label>
+        <input type="file" name="artwork_image" accept="image/*" <%= order.final_artwork_image ? '' : 'required' %>>
+        <small style="color:var(--muted);">Take a clear, well-lit photo of the finished piece. <% if (order.final_artwork_image) { %>Leave empty to keep the currently uploaded photo and just resend the email.<% } %></small>
+      </div>
+      <div class="form-group">
+        <label>Note to Customer (optional)</label>
+        <textarea name="note" placeholder="e.g. Here's a sneak peek of your finished piece — let us know if you'd like any small changes before we pack it!"><%= order.final_artwork_note || '' %></textarea>
+      </div>
+      <button class="btn btn-primary" type="submit">Send to Customer for Confirmation</button>
+      <a class="btn btn-ghost" href="/admin/orders">Cancel</a>
+    </form>
+
+    <p style="color:var(--muted); font-size:0.85rem; margin-top:18px;">
+      This emails the customer a link to their Track Order page where they can view the photo and tap "Confirm Artwork". Order status will be set to <strong>Artwork Sent - Awaiting Confirmation</strong> until they confirm.
+    </p>
+  </div>
+</div>
+</body></html>
