@@ -12,13 +12,11 @@
           <h3><%= s.title %></h3>
           <p><%= s.description %></p>
           <table style="width:100%; font-size:0.9rem; margin-bottom:14px;">
-            <% if (s.price_a5) { %><tr><td>A5</td><td style="text-align:right;"><%= s.price_a5 %></td></tr><% } %>
-            <% if (s.price_a4) { %><tr><td>A4</td><td style="text-align:right;"><%= s.price_a4 %></td></tr><% } %>
-            <% if (s.price_a3) { %><tr><td>A3</td><td style="text-align:right;"><%= s.price_a3 %></td></tr><% } %>
-            <% if (s.price_a2) { %><tr><td>A2</td><td style="text-align:right;"><%= s.price_a2 %></td></tr><% } %>
-            <% if (s.price_custom) { %><tr><td>Custom</td><td style="text-align:right;">from <%= s.price_custom %></td></tr><% } %>
+            <% sizes.forEach(sz => { const p = priceForSize(s, sz); %>
+              <% if (p) { %><tr><td><%= sz %></td><td style="text-align:right;"><%= sz.toLowerCase() === 'custom' ? 'from ' + p : p %></td></tr><% } %>
+            <% }) %>
           </table>
-          <% if (s.price_custom) { %><p class="sub" style="text-align:left; font-size:0.8rem; margin:-8px 0 12px;">Custom sizes: final price confirmed after we review your request.</p><% } %>
+          <% if (priceForSize(s, sizes.find(sz => sz.toLowerCase() === 'custom') || 'Custom')) { %><p class="sub" style="text-align:left; font-size:0.8rem; margin:-8px 0 12px;">Custom sizes: final price confirmed after we review your request.</p><% } %>
           <a class="btn" href="/order">Order</a>
         </div>
       </div>
