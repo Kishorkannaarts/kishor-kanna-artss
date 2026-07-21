@@ -24,16 +24,18 @@
         <div class="form-row">
           <div class="form-group">
             <label>Art Type</label>
+            <% const artTypeOptions = artTypes.slice(); if (old.art_type && !artTypeOptions.includes(old.art_type)) artTypeOptions.unshift(old.art_type); %>
             <select name="art_type" id="artTypeSelect" required>
-              <% ['Pencil Art','Pen Art','Blood Art','Colour Art','Canvas Art'].forEach(t => { %>
+              <% artTypeOptions.forEach(t => { %>
                 <option value="<%= t %>" <%= old.art_type === t ? 'selected' : '' %>><%= t %></option>
               <% }) %>
             </select>
           </div>
           <div class="form-group">
             <label>Size</label>
+            <% const sizeOptions = sizes.slice(); if (old.size && !sizeOptions.includes(old.size)) sizeOptions.unshift(old.size); %>
             <select name="size" id="sizeSelect" required>
-              <% ['A5','A4','A3','A2','Custom'].forEach(sz => { %>
+              <% sizeOptions.forEach(sz => { %>
                 <option value="<%= sz %>" <%= old.size === sz ? 'selected' : '' %>><%= sz %></option>
               <% }) %>
             </select>
@@ -77,12 +79,22 @@
   const estimatedPriceInput = document.getElementById('estimatedPriceInput');
   const discountAppliedInput = document.getElementById('discountAppliedInput');
 
-  function sizeFieldKey(size) {
-    if (size === 'A5') return 'price_a5';
-    if (size === 'A4') return 'price_a4';
-    if (size === 'A3') return 'price_a3';
-    if (size === 'A2') return 'price_a2';
-    return 'price_custom';
+  function legacyPriceKey(size) {
+    const s = String(size || '').toLowerCase();
+    if (s === 'a5') return 'price_a5';
+    if (s === 'a4') return 'price_a4';
+    if (s === 'a3') return 'price_a3';
+    if (s === 'a2') return 'price_a2';
+    if (s === 'custom') return 'price_custom';
+    return null;
+  }
+
+  function priceForSize(service, size) {
+    if (!service) return '';
+    if (service.prices && service.prices[size]) return service.prices[size];
+    const lk = legacyPriceKey(size);
+    if (lk && service[lk]) return service[lk];
+    return '';
   }
 
   const presetPrice = <%- JSON.stringify(typeof presetPrice !== 'undefined' ? presetPrice : '') %>;
@@ -93,12 +105,12 @@
       if (p) return p;
     }
     const service = servicesData.find(s => s.title === artTypeSelect.value);
-    const rawPrice = service ? service[sizeFieldKey(sizeSelect.value)] : null;
+    const rawPrice = priceForSize(service, sizeSelect.value);
     return parseFloat(String(rawPrice || '').replace(/[^0-9.]/g, ''));
   }
 
   function updatePrice() {
-    if (sizeSelect.value === 'Custom') {
+    if (sizeSelect.value.toLowerCase() === 'custom') {
       priceBox.style.display = 'none';
       customNote.style.display = 'block';
       estimatedPriceInput.value = '';
