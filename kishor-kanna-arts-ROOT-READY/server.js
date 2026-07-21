@@ -42,7 +42,10 @@ app.use(async (req, res, next) => {
   try {
     res.locals.settings = await db.getAllSettings();
     res.locals.isAdmin = !!(req.session && req.session.isAdmin);
-    res.locals.popupOffer = await db.findOne('offers', { active: true });
+    res.locals.popupOffer = await db.findOne('offers', { active: true }, { created_at: -1 });
+    res.locals.artTypes = await db.getArtTypes();
+    res.locals.sizes = await db.getSizes();
+    res.locals.priceForSize = priceForSize;
     next();
   } catch (err) { next(err); }
 });
@@ -66,6 +69,39 @@ async function uploadImage(file, folder) {
 function genOrderCode() {
   const rand = Math.random().toString(36).slice(2, 7).toUpperCase();
   return 'KKA-' + Date.now().toString().slice(-6) + '-' + rand;
+}
+
+// Map a size name to the old fixed column name, so services saved before
+// the dynamic sizes/art-types feature still display correctly.
+function legacyPriceKey(size) {
+  const s = String(size || '').toLowerCase();
+  if (s === 'a5') return 'price_a5';
+  if (s === 'a4') return 'price_a4';
+  if (s === 'a3') return 'price_a3';
+  if (s === 'a2') return 'price_a2';
+  if (s === 'custom') return 'price_custom';
+  return null;
+}
+
+function priceForSize(service, size) {
+  if (!service) return '';
+  if (service.prices && service.prices[size]) return service.prices[size];
+  const lk = legacyPriceKey(size);
+  if (lk && service[lk]) return service[lk];
+  return '';
+}
+
+// Multipart form bodies (parsed by multer) don't auto-nest bracket-style
+// field names the way express.urlencoded (qs) does, so pull `prices[X]`
+// fields out of req.body manually.
+function extractPrices(body) {
+  if (body.prices && typeof body.prices === 'object') return body.prices; // already nested (non-multipart submit)
+  const prices = {};
+  for (const key of Object.keys(body)) {
+    const m = key.match(/^prices\[(.+)\]$/);
+    if (m) prices[m[1]] = body[key];
+  }
+  return prices;
 }
 
 function slugify(str) {
@@ -114,7 +150,7 @@ app.get('/portfolio', ah(async (req, res) => {
   const category = req.query.category || null;
   const filter = category ? { category } : {};
   const artworks = db.normalize(await db.find('artworks', filter, { created_at: -1 }));
-  const categories = ['Pencil Art', 'Pen Art', 'Blood Art', 'Colour Art', 'Canvas Art'];
+  const categories = await db.getArtTypes();
   res.render('portfolio', { artworks, categories, activeCategory: category });
 }));
 
@@ -322,14 +358,15 @@ app.get('/admin/services', requireAdmin, ah(async (req, res) => {
 }));
 
 app.post('/admin/services/save', requireAdmin, memoryUpload.single('image'), ah(async (req, res) => {
-  const { id, title, description, price_a5, price_a4, price_a3, price_a2, price_custom } = req.body;
+  const { id, title, description } = req.body;
+  const prices = extractPrices(req.body);
   const uploadedUrl = await uploadImage(req.file, 'services');
   if (id) {
     const existing = await db.findById('services', id);
     const image = uploadedUrl || (existing ? existing.image : null);
-    await db.updateById('services', id, { title, description, image, price_a5, price_a4, price_a3, price_a2, price_custom });
+    await db.updateById('services', id, { title, description, image, prices });
   } else {
-    await db.insertOne('services', { title, description, image: uploadedUrl, price_a5, price_a4, price_a3, price_a2, price_custom });
+    await db.insertOne('services', { title, description, image: uploadedUrl, prices });
   }
   res.redirect('/admin/services');
 }));
@@ -563,6 +600,40 @@ app.post('/admin/newsletter/send', requireAdmin, ah(async (req, res) => {
   });
 }));
 
+// ---- Art Types & Sizes (drives Portfolio categories, the Artwork form,
+//      Services pricing, and the Order form) ----
+app.get('/admin/taxonomy', requireAdmin, ah(async (req, res) => {
+  res.render('admin/taxonomy', { artTypesList: await db.getArtTypes(), sizesList: await db.getSizes() });
+}));
+
+app.post('/admin/taxonomy/art-types/add', requireAdmin, ah(async (req, res) => {
+  const list = await db.getArtTypes();
+  const val = (req.body.name || '').trim();
+  if (val && !list.includes(val)) list.push(val);
+  await db.saveArtTypes(list);
+  res.redirect('/admin/taxonomy');
+}));
+
+app.post('/admin/taxonomy/art-types/delete', requireAdmin, ah(async (req, res) => {
+  const list = (await db.getArtTypes()).filter(v => v !== req.body.value);
+  await db.saveArtTypes(list);
+  res.redirect('/admin/taxonomy');
+}));
+
+app.post('/admin/taxonomy/sizes/add', requireAdmin, ah(async (req, res) => {
+  const list = await db.getSizes();
+  const val = (req.body.name || '').trim();
+  if (val && !list.includes(val)) list.push(val);
+  await db.saveSizes(list);
+  res.redirect('/admin/taxonomy');
+}));
+
+app.post('/admin/taxonomy/sizes/delete', requireAdmin, ah(async (req, res) => {
+  const list = (await db.getSizes()).filter(v => v !== req.body.value);
+  await db.saveSizes(list);
+  res.redirect('/admin/taxonomy');
+}));
+
 // ---- Homepage Content ----
 app.get('/admin/homepage-content', requireAdmin, (req, res) => res.render('admin/homepage-content'));
 
@@ -673,13 +744,27 @@ app.get('/admin/offers', requireAdmin, ah(async (req, res) => {
 app.post('/admin/offers/save', requireAdmin, memoryUpload.single('image'), ah(async (req, res) => {
   const discount = parseFloat(req.body.discount_percent) || 0;
   const uploadedUrl = await uploadImage(req.file, 'offers');
+  // A newly published offer becomes the one live offer, so the popup/banner
+  // never end up showing more than one offer at once.
+  const mdb = await db.getDB();
+  await mdb.collection('offers').updateMany({}, { $set: { active: false } });
   await db.insertOne('offers', { title: req.body.title, message: req.body.message, discount_percent: discount, image: uploadedUrl, active: true });
   res.redirect('/admin/offers');
 }));
 
 app.post('/admin/offers/:id/toggle', requireAdmin, ah(async (req, res) => {
   const offer = await db.findById('offers', req.params.id);
-  if (offer) await db.updateById('offers', req.params.id, { active: !offer.active });
+  if (offer) {
+    if (!offer.active) {
+      // Turning one offer on turns every other offer off, so there is only
+      // ever one live offer showing in the popup and homepage banner.
+      const mdb = await db.getDB();
+      await mdb.collection('offers').updateMany({}, { $set: { active: false } });
+      await db.updateById('offers', req.params.id, { active: true });
+    } else {
+      await db.updateById('offers', req.params.id, { active: false });
+    }
+  }
   res.redirect('/admin/offers');
 }));
 
@@ -724,5 +809,3 @@ db.initSchema().then(() => {
   console.error('Database connection failed:', err.message);
   process.exit(1);
 });
-
-
