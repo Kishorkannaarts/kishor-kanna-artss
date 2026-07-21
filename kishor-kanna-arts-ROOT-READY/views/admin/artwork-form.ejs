@@ -16,10 +16,11 @@
       <div class="form-group">
         <label>Category</label>
         <select name="category" required>
-          <% ['Pencil Art','Pen Art','Blood Art','Colour Art','Canvas Art'].forEach(c => { %>
+          <% artTypes.forEach(c => { %>
             <option value="<%= c %>" <%= artwork && artwork.category === c ? 'selected' : '' %>><%= c %></option>
           <% }) %>
         </select>
+        <small style="color:var(--muted); display:block; margin-top:4px;">Need a new art type? Add it under <a href="/admin/taxonomy">Art Types &amp; Sizes</a>.</small>
       </div>
       <div class="form-group">
         <label>Description</label>
@@ -31,7 +32,10 @@
       </div>
       <div class="form-group">
         <label>Size</label>
-        <input type="text" name="size" value="<%= artwork ? artwork.size : '' %>" placeholder="e.g. A4">
+        <input type="text" name="size" list="sizeOptions" value="<%= artwork ? artwork.size : '' %>" placeholder="e.g. A4">
+        <datalist id="sizeOptions">
+          <% sizes.forEach(sz => { %><option value="<%= sz %>"><% }) %>
+        </datalist>
       </div>
       <div class="form-group">
         <label>Price</label>
