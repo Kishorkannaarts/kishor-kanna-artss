@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Art Types & Sizes | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
+<body class="admin">
+<div class="admin-shell">
+  <% active = 'taxonomy' %>
+  <%- include('partials/sidebar') %>
+  <div class="admin-main">
+    <div class="admin-topbar"><h1>Art Types & Sizes</h1></div>
+    <p style="color:var(--muted); font-size:0.9rem; margin-top:-16px; margin-bottom:20px;">
+      Whatever you add here automatically shows up in the Artwork form, the Portfolio filter,
+      the Services price table, and the Order form (Art Type &amp; Size dropdowns) — no code changes needed.
+    </p>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:30px;">
+
+      <div>
+        <h2 style="font-size:1.1rem;">Art Types</h2>
+        <table style="margin-bottom:16px;">
+          <tr><th>Art Type</th><th>Actions</th></tr>
+          <% artTypesList.forEach(t => { %>
+            <tr>
+              <td><%= t %></td>
+              <td class="actions-row">
+                <form action="/admin/taxonomy/art-types/delete" method="POST" onsubmit="return confirm('Remove &quot;<%= t %>&quot;? Existing artworks/orders keep the text but it will no longer appear as an option.');">
+                  <input type="hidden" name="value" value="<%= t %>">
+                  <button class="btn btn-danger btn-sm" type="submit">Remove</button>
+                </form>
+              </td>
+            </tr>
+          <% }) %>
+          <% if (artTypesList.length === 0) { %><tr><td colspan="2">No art types yet.</td></tr><% } %>
+        </table>
+        <form class="admin-form" action="/admin/taxonomy/art-types/add" method="POST" style="display:flex; gap:10px; align-items:flex-end;">
+          <div class="form-group" style="flex:1; margin-bottom:0;">
+            <label>Add Art Type</label>
+            <input type="text" name="name" placeholder="e.g. Charcoal Art" required>
+          </div>
+          <button class="btn btn-primary" type="submit">Add</button>
+        </form>
+      </div>
+
+      <div>
+        <h2 style="font-size:1.1rem;">Sizes</h2>
+        <table style="margin-bottom:16px;">
+          <tr><th>Size</th><th>Actions</th></tr>
+          <% sizesList.forEach(sz => { %>
+            <tr>
+              <td><%= sz %></td>
+              <td class="actions-row">
+                <form action="/admin/taxonomy/sizes/delete" method="POST" onsubmit="return confirm('Remove &quot;<%= sz %>&quot;? Existing artworks/orders keep the text but it will no longer appear as an option.');">
+                  <input type="hidden" name="value" value="<%= sz %>">
+                  <button class="btn btn-danger btn-sm" type="submit">Remove</button>
+                </form>
+              </td>
+            </tr>
+          <% }) %>
+          <% if (sizesList.length === 0) { %><tr><td colspan="2">No sizes yet.</td></tr><% } %>
+        </table>
+        <form class="admin-form" action="/admin/taxonomy/sizes/add" method="POST" style="display:flex; gap:10px; align-items:flex-end;">
+          <div class="form-group" style="flex:1; margin-bottom:0;">
+            <label>Add Size</label>
+            <input type="text" name="name" placeholder="e.g. A1" required>
+          </div>
+          <button class="btn btn-primary" type="submit">Add</button>
+        </form>
+        <p style="color:var(--muted); font-size:0.85rem; margin-top:10px;">
+          After adding a size here, set its price for each service on the
+          <a href="/admin/services">Services</a> page.
+        </p>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body></html>
