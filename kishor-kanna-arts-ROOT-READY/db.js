@@ -35,6 +35,34 @@ async function getAllSettings() {
   return out;
 }
 
+// ---------- Art Types & Sizes (admin-managed taxonomy) ----------
+const DEFAULT_ART_TYPES = ['Pencil Art', 'Pen Art', 'Blood Art', 'Colour Art', 'Canvas Art'];
+const DEFAULT_SIZES = ['A5', 'A4', 'A3', 'A2', 'Custom'];
+
+async function getArtTypes() {
+  const raw = await getSetting('art_types');
+  if (raw) {
+    try { const arr = JSON.parse(raw); if (Array.isArray(arr) && arr.length) return arr; } catch { /* fall through */ }
+  }
+  return DEFAULT_ART_TYPES.slice();
+}
+
+async function saveArtTypes(list) {
+  await setSetting('art_types', JSON.stringify(list));
+}
+
+async function getSizes() {
+  const raw = await getSetting('sizes');
+  if (raw) {
+    try { const arr = JSON.parse(raw); if (Array.isArray(arr) && arr.length) return arr; } catch { /* fall through */ }
+  }
+  return DEFAULT_SIZES.slice();
+}
+
+async function saveSizes(list) {
+  await setSetting('sizes', JSON.stringify(list));
+}
+
 // ---------- Generic collection helpers ----------
 async function find(col, filter = {}, sort = { created_at: -1 }, limit = 0) {
   const db = await getDB();
@@ -43,8 +71,12 @@ async function find(col, filter = {}, sort = { created_at: -1 }, limit = 0) {
   return q.toArray();
 }
 
-async function findOne(col, filter) {
+async function findOne(col, filter, sort) {
   const db = await getDB();
+  if (sort) {
+    const arr = await db.collection(col).find(filter).sort(sort).limit(1).toArray();
+    return arr[0] || null;
+  }
   return db.collection(col).findOne(filter);
 }
 
@@ -203,5 +235,6 @@ function normalize(doc) {
 module.exports = {
   getDB, getSetting, setSetting, getAllSettings,
   find, findOne, findById, insertOne, updateById, deleteById, count,
-  normalize, ObjectId, initSchema
+  normalize, ObjectId, initSchema,
+  getArtTypes, saveArtTypes, getSizes, saveSizes
 };
