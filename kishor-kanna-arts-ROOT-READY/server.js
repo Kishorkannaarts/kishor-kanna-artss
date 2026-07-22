@@ -10,8 +10,20 @@ const cloudinary = require('cloudinary').v2;
 const db = require('./db');
 const mailer = require('./mailer');
 
+// ---------- Security & performance middleware ----------
+const helmet = require('helmet');
+const compression = require('compression');
+const rateLimit = require('express-rate-limit');
+const mongoSanitize = require('express-mongo-sanitize');
+const hpp = require('hpp');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
+const isProd = process.env.NODE_ENV === 'production';
+
+// Trust the first proxy (needed on Render/Heroku/etc for secure cookies,
+// correct client IPs in rate limiting, and correct req.protocol for https).
+app.set('trust proxy', 1);
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -22,20 +34,82 @@ cloudinary.config({
 // ---------- Basic setup ----------
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+
+// Security headers. Cloudinary is used for all uploaded images, so it needs
+// to be allowed as an image source. Adjust connectSrc if you add more
+// third-party APIs (payment gateways, analytics, etc).
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      imgSrc: ["'self'", 'data:', 'https://res.cloudinary.com', 'https://*.googleusercontent.com'],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+      connectSrc: ["'self'"]
+    }
+  },
+  crossOriginEmbedderPolicy: false
+}));
+
+// Gzip/Brotli-style compression for every response (big win for Lighthouse).
+app.use(compression());
+
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use('/public', express.static(path.join(__dirname, 'public')));
+
+// Strip any Mongo operator injection ($gt, $ne, etc) from user input.
+app.use(mongoSanitize());
+// Prevent HTTP parameter pollution (?price[]=1&price[]=2 tricks).
+app.use(hpp());
+
+// Static assets: cache aggressively in production since filenames rarely
+// change; in dev, disable caching so edits show up immediately.
+app.use('/public', express.static(path.join(__dirname, 'public'), {
+  maxAge: isProd ? '30d' : 0,
+  etag: true
+}));
 
 const sessionsDir = path.join(__dirname, 'data', 'sessions');
 if (!fs.existsSync(sessionsDir)) fs.mkdirSync(sessionsDir, { recursive: true });
+
+if (!process.env.SESSION_SECRET && isProd) {
+  console.error('[security] SESSION_SECRET is not set. Refusing to start in production with the default secret.');
+  process.exit(1);
+}
 
 app.use(session({
   store: new FileStore({ path: sessionsDir, logFn: () => {} }),
   secret: process.env.SESSION_SECRET || 'insecure_dev_secret_change_me',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 1000 * 60 * 60 * 8 }
+  cookie: {
+    maxAge: 1000 * 60 * 60 * 8,
+    httpOnly: true,
+    secure: isProd,       // only send the cookie over HTTPS in production
+    sameSite: 'lax'
+  }
 }));
+
+// ---------- Rate limiting ----------
+// General limiter: protects the whole site from scraping/abuse.
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many requests. Please slow down and try again shortly.'
+});
+app.use(generalLimiter);
+
+// Strict limiter for admin login: stops brute-force password guessing.
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many login attempts. Please wait 15 minutes and try again.'
+});
 
 // Make site settings available to every view
 app.use(async (req, res, next) => {
@@ -46,12 +120,25 @@ app.use(async (req, res, next) => {
     res.locals.artTypes = await db.getArtTypes();
     res.locals.sizes = await db.getSizes();
     res.locals.priceForSize = priceForSize;
+    // SEO helpers available on every view: absolute site URL + canonical
+    // link for the current page. Set SITE_URL in your .env, e.g.
+    // SITE_URL=https://kishorkannaarts.com (no trailing slash).
+    res.locals.siteUrl = (process.env.SITE_URL || '').replace(/\/$/, '');
+    res.locals.canonicalUrl = res.locals.siteUrl ? res.locals.siteUrl + req.originalUrl : null;
     next();
   } catch (err) { next(err); }
 });
 
 // ---------- Image uploads via Cloudinary ----------
-const memoryUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
+const memoryUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (allowed.includes(file.mimetype)) return cb(null, true);
+    cb(new Error('Only JPG, PNG, WEBP or GIF images are allowed.'));
+  }
+});
 
 async function uploadImage(file, folder) {
   if (!file) return null;
@@ -142,8 +229,14 @@ app.get('/', ah(async (req, res) => {
   const services  = db.normalize(await db.find('services', {}, { created_at: -1 }));
   const offers    = db.normalize(await db.find('offers', { active: true }, { created_at: -1 }));
   const blocks    = db.normalize(await db.find('blocks', {}, { created_at: 1 }));
+  const timeline  = db.normalize(await db.find('timeline_steps', {}, { step_number: 1 }));
+  const trustBadges = db.normalize(await db.find('trust_badges', {}, { created_at: 1 }));
   const recentPosts = db.normalize(await db.find('posts', { published: true }, { created_at: -1 }, 3));
-  res.render('index', { featured, testimonials, videos, services, offers, blocks, recentPosts });
+  res.render('index', {
+    featured, testimonials, videos, services, offers, blocks, timeline, trustBadges, recentPosts,
+    pageTitle: 'Custom Handmade Portraits & Fine Art',
+    metaDescription: 'Order beautiful handmade pencil, color and canvas portraits from Kishor Kanna Arts. Pet, couple, family and wedding portraits made with love, shipped across India.'
+  });
 }));
 
 app.get('/portfolio', ah(async (req, res) => {
@@ -151,27 +244,70 @@ app.get('/portfolio', ah(async (req, res) => {
   const filter = category ? { category } : {};
   const artworks = db.normalize(await db.find('artworks', filter, { created_at: -1 }));
   const categories = await db.getArtTypes();
-  res.render('portfolio', { artworks, categories, activeCategory: category });
+  res.render('portfolio', {
+    artworks, categories, activeCategory: category,
+    pageTitle: category ? `${category} Portfolio` : 'Portfolio',
+    metaDescription: 'Browse our gallery of handmade portraits: pencil, color, canvas, pet, couple, family and wedding art, all made to order.'
+  });
 }));
 
 app.get('/portfolio/:id', ah(async (req, res) => {
   const artwork = db.normalize(await db.findById('artworks', req.params.id));
   if (!artwork) return res.status(404).send('Artwork not found');
-  res.render('artwork-detail', { artwork });
+  const productSchema = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: artwork.title || 'Custom Handmade Portrait',
+    description: (artwork.description || '').slice(0, 300) || 'A handmade custom portrait by Kishor Kanna Arts.',
+    image: artwork.image_url || artwork.image || undefined,
+    brand: { '@type': 'Brand', name: 'Kishor Kanna Arts' }
+  });
+  res.render('artwork-detail', {
+    artwork,
+    pageTitle: artwork.title || 'Artwork',
+    metaDescription: (artwork.description || '').slice(0, 155) || 'View this handmade custom portrait by Kishor Kanna Arts.',
+    ogImage: artwork.image_url || artwork.image || undefined,
+    extraSchema: productSchema
+  });
 }));
 
 app.get('/services', ah(async (req, res) => {
   const services = db.normalize(await db.find('services', {}, { created_at: -1 }));
-  res.render('services', { services });
+  res.render('services', {
+    services,
+    pageTitle: 'Our Services',
+    metaDescription: 'Pencil portraits, color portraits, canvas paintings, pet portraits, wedding portraits and more, all handmade to order by Kishor Kanna Arts.'
+  });
 }));
 
 app.get('/about', ah(async (req, res) => {
   const testimonials = db.normalize(await db.find('testimonials', { approved: true }, { created_at: -1 }));
   const faqs = db.normalize(await db.find('faqs', {}, { created_at: 1 }));
-  res.render('about', { testimonials, faqs });
+  let faqSchema = null;
+  if (faqs.length) {
+    faqSchema = JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: faqs.map(f => ({
+        '@type': 'Question',
+        name: f.question,
+        acceptedAnswer: { '@type': 'Answer', text: f.answer }
+      }))
+    });
+  }
+  res.render('about', {
+    testimonials, faqs,
+    pageTitle: 'About Us',
+    metaDescription: 'Meet the artist behind Kishor Kanna Arts and learn how every handmade portrait is created, from photo to final artwork.',
+    extraSchema: faqSchema
+  });
 }));
 
-app.get('/contact', (req, res) => res.render('contact', { sent: false }));
+app.get('/contact', (req, res) => res.render('contact', {
+  sent: false,
+  pageTitle: 'Contact Us',
+  metaDescription: 'Get in touch with Kishor Kanna Arts for custom portrait orders, questions or support.'
+}));
 
 app.post('/contact', ah(async (req, res) => {
   const { name, email, phone, subject, message } = req.body;
@@ -193,7 +329,11 @@ app.get('/order', ah(async (req, res) => {
   if (req.query.art_type) old.art_type = req.query.art_type;
   if (req.query.size) old.size = req.query.size;
   const presetPrice = req.query.price || '';
-  res.render('order', { success: null, error: null, blockedDates: blocked.map(r => r.date), old, services, offerDiscount, presetPrice });
+  res.render('order', {
+    success: null, error: null, blockedDates: blocked.map(r => r.date), old, services, offerDiscount, presetPrice,
+    pageTitle: 'Order Your Portrait',
+    metaDescription: 'Order your custom handmade portrait in a few easy steps. Choose your art type and size, upload a photo, and get instant pricing.'
+  });
 }));
 
 app.post('/order', memoryUpload.single('reference_image'), ah(async (req, res) => {
@@ -227,7 +367,11 @@ app.post('/order', memoryUpload.single('reference_image'), ah(async (req, res) =
   res.render('order', { success: order_code, error: null, blockedDates, old: {}, services, offerDiscount, presetPrice: '' });
 }));
 
-app.get('/track-order', (req, res) => res.render('track-order', { order: null, searched: false, presetOrderCode: req.query.order_code || '' }));
+app.get('/track-order', (req, res) => res.render('track-order', {
+  order: null, searched: false, presetOrderCode: req.query.order_code || '',
+  pageTitle: 'Track Your Order',
+  metaDescription: 'Track the progress of your custom portrait order with Kishor Kanna Arts, from sketch to shipping.'
+}));
 
 app.post('/track-order', ah(async (req, res) => {
   const { order_code, phone } = req.body;
@@ -262,7 +406,11 @@ app.post('/testimonials', ah(async (req, res) => {
 
 app.get('/blog', ah(async (req, res) => {
   const posts = db.normalize(await db.find('posts', { published: true }, { created_at: -1 }));
-  res.render('blog_list', { posts });
+  res.render('blog_list', {
+    posts,
+    pageTitle: 'Blog',
+    metaDescription: 'Art tips, gift ideas, drawing tutorials and behind-the-scenes stories from Kishor Kanna Arts.'
+  });
 }));
 
 app.get('/blog/:slug', ah(async (req, res) => {
@@ -271,8 +419,39 @@ app.get('/blog/:slug', ah(async (req, res) => {
   res.render('blog_post', { post });
 }));
 
-app.get('/privacy-policy', (req, res) => res.render('privacy-policy'));
-app.get('/terms', (req, res) => res.render('terms'));
+app.get('/privacy-policy', (req, res) => res.render('privacy-policy', { pageTitle: 'Privacy Policy', metaDescription: 'Read the Kishor Kanna Arts privacy policy.' }));
+app.get('/terms', (req, res) => res.render('terms', { pageTitle: 'Terms & Conditions', metaDescription: 'Read the Kishor Kanna Arts terms and conditions.' }));
+
+// ---------- SEO: robots.txt + sitemap.xml ----------
+app.get('/robots.txt', (req, res) => {
+  const base = res.locals.siteUrl || `${req.protocol}://${req.get('host')}`;
+  res.type('text/plain').send(
+`User-agent: *
+Allow: /
+Disallow: /admin
+Sitemap: ${base}/sitemap.xml`
+  );
+});
+
+app.get('/sitemap.xml', ah(async (req, res) => {
+  const base = res.locals.siteUrl || `${req.protocol}://${req.get('host')}`;
+  const staticUrls = ['/', '/portfolio', '/services', '/about', '/contact', '/blog', '/order', '/track-order'];
+  const artworks = db.normalize(await db.find('artworks', {}, { created_at: -1 }));
+  const posts = db.normalize(await db.find('posts', { published: true }, { created_at: -1 }));
+
+  const urls = [
+    ...staticUrls.map(u => ({ loc: base + u, priority: u === '/' ? '1.0' : '0.7' })),
+    ...artworks.map(a => ({ loc: `${base}/portfolio/${a.id}`, priority: '0.6' })),
+    ...posts.map(p => ({ loc: `${base}/blog/${p.slug}`, priority: '0.6' }))
+  ];
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls.map(u => `  <url><loc>${u.loc}</loc><priority>${u.priority}</priority></url>`).join('\n')}
+</urlset>`;
+
+  res.type('application/xml').send(xml);
+}));
 
 // =========================================================
 // ADMIN ROUTES
@@ -283,7 +462,7 @@ app.get('/admin/login', (req, res) => {
   res.render('admin/login', { error: null });
 });
 
-app.post('/admin/login', (req, res) => {
+app.post('/admin/login', loginLimiter, (req, res) => {
   const { username, password } = req.body;
   const validUser = username === process.env.ADMIN_USERNAME;
   const storedPass = process.env.ADMIN_PASSWORD || '';
@@ -690,6 +869,38 @@ app.post('/admin/blocks/save', requireAdmin, ah(async (req, res) => {
 app.post('/admin/blocks/:id/delete', requireAdmin, ah(async (req, res) => {
   await db.deleteById('blocks', req.params.id);
   res.redirect('/admin/blocks');
+}));
+
+// ---- Process Timeline (homepage "How It Works" steps) ----
+app.get('/admin/timeline', requireAdmin, ah(async (req, res) => {
+  res.render('admin/timeline', { steps: db.normalize(await db.find('timeline_steps', {}, { step_number: 1 })) });
+}));
+
+app.post('/admin/timeline/save', requireAdmin, ah(async (req, res) => {
+  const stepNumber = parseInt(req.body.step_number, 10) || 0;
+  await db.insertOne('timeline_steps', { step_number: stepNumber, title: req.body.title, text: req.body.text });
+  res.redirect('/admin/timeline');
+}));
+
+app.post('/admin/timeline/:id/delete', requireAdmin, ah(async (req, res) => {
+  await db.deleteById('timeline_steps', req.params.id);
+  res.redirect('/admin/timeline');
+}));
+
+// ---- Trusted By / Awards logos (homepage trust strip) ----
+app.get('/admin/trust-badges', requireAdmin, ah(async (req, res) => {
+  res.render('admin/trust-badges', { badges: db.normalize(await db.find('trust_badges', {}, { created_at: 1 })) });
+}));
+
+app.post('/admin/trust-badges/save', requireAdmin, memoryUpload.single('image'), ah(async (req, res) => {
+  const uploadedUrl = await uploadImage(req.file, 'trust-badges');
+  await db.insertOne('trust_badges', { name: req.body.name, link: req.body.link || '', image: uploadedUrl });
+  res.redirect('/admin/trust-badges');
+}));
+
+app.post('/admin/trust-badges/:id/delete', requireAdmin, ah(async (req, res) => {
+  await db.deleteById('trust_badges', req.params.id);
+  res.redirect('/admin/trust-badges');
 }));
 
 // ---- Settings ----
