@@ -3,7 +3,49 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title><%= typeof pageTitle !== 'undefined' ? pageTitle + ' | ' + settings.site_name : settings.site_name %></title>
+<title><%= typeof pageTitle !== 'undefined' && pageTitle ? pageTitle + ' | ' + settings.site_name : settings.site_name %></title>
+
+<% const metaDesc = (typeof metaDescription !== 'undefined' && metaDescription) ? metaDescription : (settings.site_description || 'Custom handmade pencil, color and canvas portraits by Kishor Kanna Arts. Pet, couple, family and wedding portraits, made with love and shipped across India.'); %>
+<% const ogImg = (typeof ogImage !== 'undefined' && ogImage) ? ogImage : (settings.logo_url || ''); %>
+<meta name="description" content="<%= metaDesc %>">
+<meta name="robots" content="index, follow">
+<% if (typeof canonicalUrl !== 'undefined' && canonicalUrl) { %><link rel="canonical" href="<%= canonicalUrl %>"><% } %>
+
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="<%= settings.site_name %>">
+<meta property="og:title" content="<%= typeof pageTitle !== 'undefined' && pageTitle ? pageTitle : settings.site_name %>">
+<meta property="og:description" content="<%= metaDesc %>">
+<% if (typeof canonicalUrl !== 'undefined' && canonicalUrl) { %><meta property="og:url" content="<%= canonicalUrl %>"><% } %>
+<% if (ogImg) { %><meta property="og:image" content="<%= ogImg %>"><% } %>
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="<%= typeof pageTitle !== 'undefined' && pageTitle ? pageTitle : settings.site_name %>">
+<meta name="twitter:description" content="<%= metaDesc %>">
+<% if (ogImg) { %><meta name="twitter:image" content="<%= ogImg %>"><% } %>
+
+<!-- Organization schema (site-wide, helps Google show your logo, socials, contact info in search) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "<%= settings.site_name %>",
+  <% if (siteUrl) { %>"url": "<%= siteUrl %>",<% } %>
+  <% if (ogImg) { %>"logo": "<%= ogImg %>",<% } %>
+  "description": "<%= metaDesc.replace(/"/g, '\\"') %>"<% if (settings.contact_phone || settings.contact_email) { %>,
+  "contactPoint": {
+    "@type": "ContactPoint",
+    <% if (settings.contact_phone) { %>"telephone": "<%= settings.contact_phone %>",<% } %>
+    "contactType": "customer service"<% if (settings.contact_email) { %>,
+    "email": "<%= settings.contact_email %>"<% } %>
+  }<% } %>
+}
+</script>
+<% if (typeof extraSchema !== 'undefined' && extraSchema) { %>
+<script type="application/ld+json"><%- extraSchema %></script>
+<% } %>
+
 <link rel="stylesheet" href="/public/css/style.css">
 <style>
   :root {
