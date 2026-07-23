@@ -1,4 +1,5 @@
 <% pageTitle = 'Portfolio' %>
+<% pageDescription = `Browse hand-made portraits by ${settings.site_name} — pencil, colour, pen and canvas art. See real work before you order.` %>
 <%- include('partials/header') %>
 
 <section class="section">
@@ -16,7 +17,7 @@
     <% artworks.forEach(a => { %>
       <div class="card">
         <a href="/portfolio/<%= a.id %>">
-          <img src="<%= a.image || 'https://placehold.co/400x300?text=Artwork' %>" alt="<%= a.title %>">
+          <img src="<%= a.image || 'https://placehold.co/400x300?text=Artwork' %>" alt="<%= a.title %>" loading="lazy" decoding="async">
         </a>
         <div class="card-body">
           <span class="tag"><%= a.category %></span>
