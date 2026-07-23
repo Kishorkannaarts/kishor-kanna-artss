@@ -1,9 +1,10 @@
 <% pageTitle = 'Home' %>
+<% pageDescription = settings.meta_description || `${settings.site_name} — custom hand-made pencil, colour and canvas portraits made from your photo. Couple, family, wedding and pet portraits, shipped anywhere in India.` %>
 <%- include('partials/header') %>
 
 <section class="hero<%= settings.hero_image_url ? ' hero-with-image' : '' %>">
   <% if (settings.hero_image_url) { %>
-    <img class="hero-photo" src="<%= settings.hero_image_url %>" alt="">
+    <img class="hero-photo" src="<%= settings.hero_image_url %>" alt="" fetchpriority="high" decoding="async">
     <div class="hero-overlay"></div>
   <% } %>
   <div class="hero-inner">
@@ -34,7 +35,7 @@
     <% featured.forEach(a => { %>
       <div class="card">
         <a href="/portfolio/<%= a.id %>">
-          <img src="<%= a.image || 'https://placehold.co/400x300?text=Artwork' %>" alt="<%= a.title %>">
+          <img src="<%= a.image || 'https://placehold.co/400x300?text=Artwork' %>" alt="<%= a.title %>" loading="lazy" decoding="async">
         </a>
         <div class="card-body">
           <span class="tag"><%= a.category %></span>
@@ -62,7 +63,7 @@
   <div class="grid grid-services">
     <% services.forEach(s => { %>
       <div class="card">
-        <img src="<%= s.image || 'https://placehold.co/400x300?text=Service' %>" alt="<%= s.title %>">
+        <img src="<%= s.image || 'https://placehold.co/400x300?text=Service' %>" alt="<%= s.title %>" loading="lazy" decoding="async">
         <div class="card-body">
           <h3><%= s.title %></h3>
           <p><%= s.description %></p>
@@ -192,7 +193,7 @@
   <div class="grid">
     <% recentPosts.forEach(p => { %>
       <a class="card" href="/blog/<%= p.slug %>" style="text-decoration:none; color:inherit;">
-        <img src="<%= p.cover_image || 'https://placehold.co/400x300?text=Blog' %>" alt="<%= p.title %>">
+        <img src="<%= p.cover_image || 'https://placehold.co/400x300?text=Blog' %>" alt="<%= p.title %>" loading="lazy" decoding="async">
         <div class="card-body">
           <h3><%= p.title %></h3>
           <p><%= p.excerpt %></p>
