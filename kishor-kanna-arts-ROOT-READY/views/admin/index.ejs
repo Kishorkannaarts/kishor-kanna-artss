@@ -1,0 +1,214 @@
+<% pageTitle = 'Home' %>
+<% pageDescription = settings.meta_description || `${settings.site_name} — custom hand-made pencil, colour and canvas portraits made from your photo. Couple, family, wedding and pet portraits, shipped anywhere in India.` %>
+<%- include('partials/header') %>
+
+<section class="hero<%= settings.hero_image_url ? ' hero-with-image' : '' %>">
+  <% if (settings.hero_image_url) { %>
+    <img class="hero-photo" src="<%= settings.hero_image_url %>" alt="" fetchpriority="high" decoding="async">
+    <div class="hero-overlay"></div>
+  <% } %>
+  <div class="hero-inner">
+    <h1><%= settings.hero_title %></h1>
+    <p><%= settings.hero_subtitle %></p>
+    <div class="hero-buttons">
+      <a class="btn" href="/order">Order Your Artwork</a>
+      <a class="btn btn-outline<%= settings.hero_image_url ? ' btn-outline-onimage' : '' %>" href="/portfolio">View Portfolio</a>
+    </div>
+  </div>
+</section>
+
+<% if (offers.length) { %>
+<div class="container" style="margin-bottom:10px;">
+  <% offers.forEach(o => { %>
+    <div style="background:#fff2cc; border:1px solid #e6cf87; border-radius:10px; padding:14px 20px; margin-bottom:12px; text-align:center;">
+      <strong><%= o.title %></strong>
+      <% if (o.message) { %> — <%= o.message %><% } %>
+    </div>
+  <% }) %>
+</div>
+<% } %>
+
+<section class="section">
+  <h2><%= settings.featured_heading || 'Featured Portfolio' %></h2>
+  <p class="sub"><%= settings.featured_sub || 'A glimpse of recent handcrafted pieces' %></p>
+  <div class="grid grid-arts">
+    <% featured.forEach(a => { %>
+      <div class="card">
+        <a href="/portfolio/<%= a.id %>">
+          <img src="<%= a.image || 'https://placehold.co/400x300?text=Artwork' %>" alt="<%= a.title %>" loading="lazy" decoding="async">
+        </a>
+        <div class="card-body">
+          <span class="tag"><%= a.category %></span>
+          <h3><a href="/portfolio/<%= a.id %>" style="color:inherit; text-decoration:none;"><%= a.title %></a></h3>
+          <p><%= a.description %></p>
+          <div class="card-footer">
+            <div class="meta">
+              <% if (a.size) { %><span>Size: <strong><%= a.size %></strong></span><% } %>
+              <% if (a.price) { %><span style="margin-left:10px;">₹<strong><%= a.price %></strong></span><% } %>
+            </div>
+            <a class="btn btn-sm" href="/order?art_type=<%= encodeURIComponent(a.category) %>&size=<%= encodeURIComponent(a.size || '') %>&price=<%= encodeURIComponent(a.price || '') %>">Order This</a>
+          </div>
+        </div>
+      </div>
+    <% }) %>
+    <% if (featured.length === 0) { %>
+      <p class="sub">No artworks added yet — add some from the admin panel.</p>
+    <% } %>
+  </div>
+</section>
+
+<section class="section section-tint">
+  <h2><%= settings.services_heading || 'Services' %></h2>
+  <p class="sub"><%= settings.services_sub || 'Custom art made to order' %></p>
+  <div class="grid grid-services">
+    <% services.forEach(s => { %>
+      <div class="card">
+        <img src="<%= s.image || 'https://placehold.co/400x300?text=Service' %>" alt="<%= s.title %>" loading="lazy" decoding="async">
+        <div class="card-body">
+          <h3><%= s.title %></h3>
+          <p><%= s.description %></p>
+          <a class="btn btn-outline" href="/order">Order This</a>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+</section>
+
+<section class="section">
+  <h2><%= settings.why_heading || 'Why Choose Us' %></h2>
+  <div class="grid">
+    <div class="card"><div class="card-body"><h3><%= settings.why1_title || '100% Hand-made' %></h3><p><%= settings.why1_text || 'Every artwork is drawn or painted by hand, never printed.' %></p></div></div>
+    <div class="card"><div class="card-body"><h3><%= settings.why2_title || 'Made From Your Photos' %></h3><p><%= settings.why2_text || 'Send a photo and we turn it into a keepsake artwork.' %></p></div></div>
+    <div class="card"><div class="card-body"><h3><%= settings.why3_title || 'Tracked Orders' %></h3><p><%= settings.why3_text || 'Follow your order status from start to delivery.' %></p></div></div>
+    <div class="card"><div class="card-body"><h3><%= settings.why4_title || 'Nationwide Delivery' %></h3><p><%= settings.why4_text || 'Carefully packed and shipped anywhere in India.' %></p></div></div>
+  </div>
+</section>
+
+<% if (typeof blocks !== 'undefined' && blocks.length) { %>
+<section class="section section-tint">
+  <h2>More From Us</h2>
+  <div class="grid">
+    <% blocks.forEach(b => { %>
+      <div class="card"><div class="card-body"><h3><%= b.title %></h3><p><%= b.text %></p></div></div>
+    <% }) %>
+  </div>
+</section>
+<% } %>
+
+<% if (videos.length) { %>
+<section class="section section-tint">
+  <h2><%= settings.videos_heading || 'Videos' %></h2>
+  <p class="sub"><%= settings.videos_sub || 'Watch the artwork process' %></p>
+
+  <div class="videos-marquee">
+    <div class="videos-track" id="videosTrack">
+      <% videos.forEach(v => { %>
+        <div class="video-card">
+          <div class="card">
+            <div class="card-body">
+              <h3><%= v.title %></h3>
+              <% if (v.embed_url) { %>
+                <div style="position:relative; padding-bottom:56.25%; height:0; overflow:hidden; border-radius:8px;">
+                  <iframe src="<%= v.embed_url %>" style="position:absolute; top:0; left:0; width:100%; height:100%;" frameborder="0" loading="lazy" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                </div>
+              <% } else { %>
+                <a class="btn btn-outline" href="<%= v.video_url %>" target="_blank" rel="noopener">Watch Video</a>
+              <% } %>
+            </div>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+</section>
+<script>
+  (function () {
+    const track = document.getElementById('videosTrack');
+    if (!track) return;
+    Array.from(track.children).forEach(card => track.appendChild(card.cloneNode(true)));
+  })();
+</script>
+<% } %>
+
+<% if (testimonials.length) { %>
+<section class="section">
+  <h2><%= settings.reviews_heading || 'Reviews' %></h2>
+  <p class="sub"><%= settings.reviews_sub || 'What our customers say' %></p>
+  <div class="reviews-marquee">
+    <div class="reviews-track" id="reviewsTrack">
+      <% testimonials.forEach(t => {
+        const headline = t.message.length > 55 ? t.message.slice(0, 55).trim() + '…' : t.message;
+        const needsReadMore = t.message.length > 140;
+      %>
+        <div class="testimonial">
+          <div class="quote-mark">&ldquo;</div>
+          <div class="review-title"><%= headline %></div>
+          <div class="review-body"><%= t.message %></div>
+          <% if (needsReadMore) { %>
+            <button type="button" class="read-more" onclick="const c=this.closest('.testimonial'); c.classList.toggle('expanded'); this.textContent = c.classList.contains('expanded') ? 'READ LESS' : 'READ MORE';">READ MORE</button>
+          <% } %>
+          <div class="stars"><%= '★'.repeat(t.rating) %><%= '☆'.repeat(5 - t.rating) %></div>
+          <div class="who-row"><span class="who"><%= t.name %></span></div>
+          <div class="meta-row">
+            <span class="verified">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              Verified
+            </span>
+            <span class="review-date" data-created="<%= t.created_at %>">just now</span>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+</section>
+<script>
+  (function () {
+    function timeAgo(iso) {
+      const diff = Date.now() - new Date(iso).getTime();
+      const day = 86400000;
+      const days = Math.floor(diff / day);
+      if (days <= 0) return 'Today';
+      if (days === 1) return '1 day ago';
+      if (days < 30) return days + ' days ago';
+      const months = Math.floor(days / 30);
+      if (months < 12) return months + (months === 1 ? ' month ago' : ' months ago');
+      const years = Math.floor(months / 12);
+      return years + (years === 1 ? ' year ago' : ' years ago');
+    }
+    document.querySelectorAll('.review-date[data-created]').forEach(el => {
+      el.textContent = timeAgo(el.getAttribute('data-created'));
+    });
+
+    const track = document.getElementById('reviewsTrack');
+    if (!track) return;
+    Array.from(track.children).forEach(card => track.appendChild(card.cloneNode(true)));
+  })();
+</script>
+<% } %>
+
+<% if (typeof recentPosts !== 'undefined' && recentPosts.length) { %>
+<section class="section section-tint">
+  <h2>From the Blog</h2>
+  <p class="sub">Tips, stories, and behind-the-scenes</p>
+  <div class="grid">
+    <% recentPosts.forEach(p => { %>
+      <a class="card" href="/blog/<%= p.slug %>" style="text-decoration:none; color:inherit;">
+        <img src="<%= p.cover_image || 'https://placehold.co/400x300?text=Blog' %>" alt="<%= p.title %>" loading="lazy" decoding="async">
+        <div class="card-body">
+          <h3><%= p.title %></h3>
+          <p><%= p.excerpt %></p>
+        </div>
+      </a>
+    <% }) %>
+  </div>
+  <div style="text-align:center; margin-top:10px;"><a class="btn btn-outline" href="/blog">View All Posts</a></div>
+</section>
+<% } %>
+
+<section class="section section-tint" style="text-align:center;">
+  <h2><%= settings.cta_title || 'Ready to Order Your Custom Artwork?' %></h2>
+  <p class="sub"><%= settings.cta_subtitle || "Tell us your idea — we'll bring it to life." %></p>
+  <a class="btn" href="/order"><%= settings.cta_button_text || 'Start Your Order' %></a>
+</section>
+
+<%- include('partials/footer') %>
