@@ -1,0 +1,28 @@
+<% pageTitle = 'Art Courses' %>
+<% pageDescription = `Learn to draw and paint with ${settings.site_name}. Live classes and recorded courses are coming soon — join the waitlist to be first to know.` %>
+<%- include('partials/header') %>
+
+<section class="section">
+  <div class="container" style="max-width:640px; text-align:center;">
+    <h1>Learn to Draw &amp; Paint</h1>
+    <p class="sub">
+      Live art classes and recorded courses from <%= settings.site_name %> are coming soon —
+      pencil shading, portrait basics, and colour techniques, taught the same way we create your custom portraits.
+    </p>
+
+    <% if (submitted) { %>
+      <div class="alert alert-success" style="margin-top:20px;">
+        You're on the list! We'll email you the moment classes open.
+      </div>
+    <% } else { %>
+      <form action="/courses/waitlist" method="POST" style="margin-top:24px; display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
+        <input type="text" name="name" placeholder="Your name" required style="flex:1; min-width:160px; padding:12px 14px; border-radius:8px; border:1px solid var(--border);">
+        <input type="email" name="email" placeholder="Your email" required style="flex:1; min-width:200px; padding:12px 14px; border-radius:8px; border:1px solid var(--border);">
+        <button class="btn" type="submit">Notify Me</button>
+      </form>
+      <p style="font-size:0.85rem; color:var(--muted); margin-top:10px;">No spam — just one email when classes launch.</p>
+    <% } %>
+  </div>
+</section>
+
+<%- include('partials/footer') %>
