@@ -12,7 +12,11 @@
       <% orders.forEach(o => { %>
         <tr>
           <td><%= o.order_code %><br><small style="color:var(--muted);"><%= o.created_at %></small></td>
-          <td><%= o.name %><br><small style="color:var(--muted);"><%= o.phone %><br><%= o.email || 'no email' %></small></td>
+          <td><%= o.name %><br><small style="color:var(--muted);"><%= o.phone %><br><%= o.email || 'no email' %></small>
+            <% if (o.address_line || o.city) { %>
+              <br><small style="color:var(--muted);"><%= [o.address_line, o.city, o.state, o.pincode].filter(Boolean).join(', ') %></small>
+            <% } %>
+          </td>
           <td><%= o.art_type %> / <%= o.size %><% if (o.estimated_price) { %><br><small style="color:var(--muted);">Est. ₹<%= o.estimated_price %><% if (o.discount_percent_applied > 0) { %> (<%= o.discount_percent_applied %>% off)<% } %></small><% } %></td>
           <td><% if (o.reference_image) { %><a href="<%= o.reference_image %>" target="_blank">View photo</a><% } else { %>—<% } %>
             <% if (o.final_artwork_image) { %>
@@ -21,7 +25,7 @@
             <% } %>
           </td>
           <td>
-            <span class="badge badge-new" style="display:block; margin-bottom:8px;"><%= o.status %></span>
+            <span class="badge <%= statusBadgeClass(o.status) %>" style="display:block; margin-bottom:8px;"><%= o.status %></span>
             <form action="/admin/orders/<%= o.id %>/status" method="POST">
               <select name="status" onchange="this.form.submit()" style="width:100%; padding:6px; border-radius:6px; background:var(--panel-2); color:var(--text); border:1px solid var(--border);">
                 <% ['Received','Confirmed','In Progress','Completed','Artwork Sent - Awaiting Confirmation','Customer Confirmed','Delivered','Cancelled'].forEach(s => { %>
