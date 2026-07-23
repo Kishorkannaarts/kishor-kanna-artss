@@ -1,10 +1,12 @@
 <% pageTitle = artwork.title %>
+<% pageDescription = (artwork.description || `${artwork.title} — a hand-made ${artwork.category || 'custom'} portrait${artwork.size ? ' in ' + artwork.size : ''}.`).slice(0, 160) %>
+<% pageImage = artwork.image %>
 <%- include('partials/header') %>
 
 <section class="section">
   <div class="container" style="max-width:900px;">
     <div class="grid" style="grid-template-columns: 1fr 1fr;">
-      <img src="<%= artwork.image || 'https://placehold.co/500x500?text=Artwork' %>" style="border-radius:14px;">
+      <img src="<%= artwork.image || 'https://placehold.co/500x500?text=Artwork' %>" alt="<%= artwork.title %>" loading="lazy" decoding="async" style="border-radius:14px;">
       <div>
         <span class="tag"><%= artwork.category %></span>
         <h1><%= artwork.title %></h1>
@@ -17,5 +19,23 @@
     </div>
   </div>
 </section>
+
+<script type="application/ld+json">
+<%- JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": artwork.title,
+  "description": artwork.description || undefined,
+  "image": artwork.image || undefined,
+  "category": artwork.category || undefined,
+  "offers": artwork.price ? {
+    "@type": "Offer",
+    "priceCurrency": "INR",
+    "price": String(artwork.price).replace(/[^0-9.]/g, ''),
+    "availability": "https://schema.org/InStock",
+    "url": siteUrl + currentPath
+  } : undefined
+}) %>
+</script>
 
 <%- include('partials/footer') %>
