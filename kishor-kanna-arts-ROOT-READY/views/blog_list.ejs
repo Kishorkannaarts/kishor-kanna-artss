@@ -8,7 +8,7 @@
   <div class="grid">
     <% posts.forEach(p => { %>
       <a class="card" href="/blog/<%= p.slug %>" style="text-decoration:none; color:inherit;">
-        <img src="<%= p.cover_image || 'https://placehold.co/400x300?text=Blog' %>" alt="<%= p.title %>">
+        <img src="<%= p.cover_image || 'https://placehold.co/400x300?text=Blog' %>" alt="<%= p.title %>" loading="lazy" decoding="async">
         <div class="card-body">
           <h3><%= p.title %></h3>
           <p><%= p.excerpt %></p>
