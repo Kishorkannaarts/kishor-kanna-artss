@@ -7,23 +7,35 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const cloudinary = require('cloudinary').v2;
+const compression = require('compression');
+const helmet = require('helmet');
 const db = require('./db');
 const mailer = require('./mailer');
 
-// ---------- Security & performance middleware ----------
-const helmet = require('helmet');
-const compression = require('compression');
-const rateLimit = require('express-rate-limit');
-const mongoSanitize = require('express-mongo-sanitize');
-const hpp = require('hpp');
-
 const app = express();
 const PORT = process.env.PORT || 3000;
-const isProd = process.env.NODE_ENV === 'production';
 
-// Trust the first proxy (needed on Render/Heroku/etc for secure cookies,
-// correct client IPs in rate limiting, and correct req.protocol for https).
-app.set('trust proxy', 1);
+// Gzip/Brotli-style compression for every response — meaningful win for
+// Lighthouse/Core Web Vitals with near-zero code cost.
+app.use(compression());
+
+// Security headers. CSP is relaxed for the specific third parties this site
+// actually uses (Google Fonts, Cloudinary images, embedded YouTube videos) —
+// a default-deny CSP would silently break the hero fonts and video embeds.
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", 'https://www.googletagmanager.com', 'https://connect.facebook.net'],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      frameSrc: ["'self'", 'https://www.youtube.com', 'https://player.vimeo.com'],
+      connectSrc: ["'self'", 'https://www.google-analytics.com', 'https://www.facebook.com']
+    }
+  },
+  crossOriginEmbedderPolicy: false
+}));
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -34,82 +46,20 @@ cloudinary.config({
 // ---------- Basic setup ----------
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
-
-// Security headers. Cloudinary is used for all uploaded images, so it needs
-// to be allowed as an image source. Adjust connectSrc if you add more
-// third-party APIs (payment gateways, analytics, etc).
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      imgSrc: ["'self'", 'data:', 'https://res.cloudinary.com', 'https://*.googleusercontent.com'],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
-      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-      connectSrc: ["'self'"]
-    }
-  },
-  crossOriginEmbedderPolicy: false
-}));
-
-// Gzip/Brotli-style compression for every response (big win for Lighthouse).
-app.use(compression());
-
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-
-// Strip any Mongo operator injection ($gt, $ne, etc) from user input.
-app.use(mongoSanitize());
-// Prevent HTTP parameter pollution (?price[]=1&price[]=2 tricks).
-app.use(hpp());
-
-// Static assets: cache aggressively in production since filenames rarely
-// change; in dev, disable caching so edits show up immediately.
-app.use('/public', express.static(path.join(__dirname, 'public'), {
-  maxAge: isProd ? '30d' : 0,
-  etag: true
-}));
+app.use('/public', express.static(path.join(__dirname, 'public')));
 
 const sessionsDir = path.join(__dirname, 'data', 'sessions');
 if (!fs.existsSync(sessionsDir)) fs.mkdirSync(sessionsDir, { recursive: true });
-
-if (!process.env.SESSION_SECRET && isProd) {
-  console.error('[security] SESSION_SECRET is not set. Refusing to start in production with the default secret.');
-  process.exit(1);
-}
 
 app.use(session({
   store: new FileStore({ path: sessionsDir, logFn: () => {} }),
   secret: process.env.SESSION_SECRET || 'insecure_dev_secret_change_me',
   resave: false,
   saveUninitialized: false,
-  cookie: {
-    maxAge: 1000 * 60 * 60 * 8,
-    httpOnly: true,
-    secure: isProd,       // only send the cookie over HTTPS in production
-    sameSite: 'lax'
-  }
+  cookie: { maxAge: 1000 * 60 * 60 * 8 }
 }));
-
-// ---------- Rate limiting ----------
-// General limiter: protects the whole site from scraping/abuse.
-const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 300,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: 'Too many requests. Please slow down and try again shortly.'
-});
-app.use(generalLimiter);
-
-// Strict limiter for admin login: stops brute-force password guessing.
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 8,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: 'Too many login attempts. Please wait 15 minutes and try again.'
-});
 
 // Make site settings available to every view
 app.use(async (req, res, next) => {
@@ -120,25 +70,20 @@ app.use(async (req, res, next) => {
     res.locals.artTypes = await db.getArtTypes();
     res.locals.sizes = await db.getSizes();
     res.locals.priceForSize = priceForSize;
-    // SEO helpers available on every view: absolute site URL + canonical
-    // link for the current page. Set SITE_URL in your .env, e.g.
-    // SITE_URL=https://kishorkannaarts.com (no trailing slash).
-    res.locals.siteUrl = (process.env.SITE_URL || '').replace(/\/$/, '');
-    res.locals.canonicalUrl = res.locals.siteUrl ? res.locals.siteUrl + req.originalUrl : null;
+    res.locals.siteUrl = (process.env.SITE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
+    res.locals.currentPath = req.originalUrl.split('?')[0];
+    res.locals.statusBadgeClass = function (status) {
+      if (status === 'Delivered' || status === 'Customer Confirmed') return 'badge-ok';
+      if (status === 'Cancelled') return 'badge-danger';
+      if (status === 'In Progress' || status === 'Artwork Sent - Awaiting Confirmation') return 'badge-progress';
+      return 'badge-new'; // Received, Confirmed, Completed
+    };
     next();
   } catch (err) { next(err); }
 });
 
 // ---------- Image uploads via Cloudinary ----------
-const memoryUpload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 15 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-    if (allowed.includes(file.mimetype)) return cb(null, true);
-    cb(new Error('Only JPG, PNG, WEBP or GIF images are allowed.'));
-  }
-});
+const memoryUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
 
 async function uploadImage(file, folder) {
   if (!file) return null;
@@ -216,6 +161,48 @@ function ah(fn) {
 // PUBLIC ROUTES
 // =========================================================
 
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain').send(
+    `User-agent: *\n` +
+    `Disallow: /admin\n` +
+    `Disallow: /track-order\n` +
+    `Allow: /\n\n` +
+    `Sitemap: ${res.locals.siteUrl}/sitemap.xml\n`
+  );
+});
+
+app.get('/sitemap.xml', ah(async (req, res) => {
+  const base = res.locals.siteUrl;
+  const staticUrls = [
+    { loc: '/', priority: '1.0' },
+    { loc: '/portfolio', priority: '0.9' },
+    { loc: '/services', priority: '0.9' },
+    { loc: '/order', priority: '0.8' },
+    { loc: '/about', priority: '0.7' },
+    { loc: '/blog', priority: '0.7' },
+    { loc: '/contact', priority: '0.6' },
+    { loc: '/privacy-policy', priority: '0.3' },
+    { loc: '/terms', priority: '0.3' }
+  ];
+  if (res.locals.settings.courses_enabled) staticUrls.push({ loc: '/courses', priority: '0.6' });
+
+  const artworks = db.normalize(await db.find('artworks', {}, { created_at: -1 }));
+  const posts = db.normalize(await db.find('posts', { published: true }, { created_at: -1 }));
+
+  const urlEntries = [
+    ...staticUrls.map(u => ({ loc: base + u.loc, priority: u.priority })),
+    ...artworks.map(a => ({ loc: `${base}/portfolio/${a.id}`, priority: '0.6' })),
+    ...posts.map(p => ({ loc: `${base}/blog/${p.slug}`, priority: '0.5' }))
+  ];
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n` +
+    `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+    urlEntries.map(u => `  <url><loc>${u.loc}</loc><priority>${u.priority}</priority></url>`).join('\n') +
+    `\n</urlset>`;
+
+  res.type('application/xml').send(xml);
+}));
+
 app.get('/', ah(async (req, res) => {
   const featured  = db.normalize(await db.find('artworks', { featured: true }, { created_at: -1 }, 8));
   const testimonials = db.normalize(await db.find('testimonials', { approved: true }, { created_at: -1 }, 6));
@@ -229,14 +216,8 @@ app.get('/', ah(async (req, res) => {
   const services  = db.normalize(await db.find('services', {}, { created_at: -1 }));
   const offers    = db.normalize(await db.find('offers', { active: true }, { created_at: -1 }));
   const blocks    = db.normalize(await db.find('blocks', {}, { created_at: 1 }));
-  const timeline  = db.normalize(await db.find('timeline_steps', {}, { step_number: 1 }));
-  const trustBadges = db.normalize(await db.find('trust_badges', {}, { created_at: 1 }));
   const recentPosts = db.normalize(await db.find('posts', { published: true }, { created_at: -1 }, 3));
-  res.render('index', {
-    featured, testimonials, videos, services, offers, blocks, timeline, trustBadges, recentPosts,
-    pageTitle: 'Custom Handmade Portraits & Fine Art',
-    metaDescription: 'Order beautiful handmade pencil, color and canvas portraits from Kishor Kanna Arts. Pet, couple, family and wedding portraits made with love, shipped across India.'
-  });
+  res.render('index', { featured, testimonials, videos, services, offers, blocks, recentPosts });
 }));
 
 app.get('/portfolio', ah(async (req, res) => {
@@ -244,70 +225,45 @@ app.get('/portfolio', ah(async (req, res) => {
   const filter = category ? { category } : {};
   const artworks = db.normalize(await db.find('artworks', filter, { created_at: -1 }));
   const categories = await db.getArtTypes();
-  res.render('portfolio', {
-    artworks, categories, activeCategory: category,
-    pageTitle: category ? `${category} Portfolio` : 'Portfolio',
-    metaDescription: 'Browse our gallery of handmade portraits: pencil, color, canvas, pet, couple, family and wedding art, all made to order.'
-  });
+  res.render('portfolio', { artworks, categories, activeCategory: category });
 }));
 
 app.get('/portfolio/:id', ah(async (req, res) => {
   const artwork = db.normalize(await db.findById('artworks', req.params.id));
   if (!artwork) return res.status(404).send('Artwork not found');
-  const productSchema = JSON.stringify({
-    '@context': 'https://schema.org',
-    '@type': 'Product',
-    name: artwork.title || 'Custom Handmade Portrait',
-    description: (artwork.description || '').slice(0, 300) || 'A handmade custom portrait by Kishor Kanna Arts.',
-    image: artwork.image_url || artwork.image || undefined,
-    brand: { '@type': 'Brand', name: 'Kishor Kanna Arts' }
-  });
-  res.render('artwork-detail', {
-    artwork,
-    pageTitle: artwork.title || 'Artwork',
-    metaDescription: (artwork.description || '').slice(0, 155) || 'View this handmade custom portrait by Kishor Kanna Arts.',
-    ogImage: artwork.image_url || artwork.image || undefined,
-    extraSchema: productSchema
-  });
+  res.render('artwork-detail', { artwork });
 }));
 
 app.get('/services', ah(async (req, res) => {
   const services = db.normalize(await db.find('services', {}, { created_at: -1 }));
-  res.render('services', {
-    services,
-    pageTitle: 'Our Services',
-    metaDescription: 'Pencil portraits, color portraits, canvas paintings, pet portraits, wedding portraits and more, all handmade to order by Kishor Kanna Arts.'
-  });
+  res.render('services', { services });
 }));
 
 app.get('/about', ah(async (req, res) => {
   const testimonials = db.normalize(await db.find('testimonials', { approved: true }, { created_at: -1 }));
   const faqs = db.normalize(await db.find('faqs', {}, { created_at: 1 }));
-  let faqSchema = null;
-  if (faqs.length) {
-    faqSchema = JSON.stringify({
-      '@context': 'https://schema.org',
-      '@type': 'FAQPage',
-      mainEntity: faqs.map(f => ({
-        '@type': 'Question',
-        name: f.question,
-        acceptedAnswer: { '@type': 'Answer', text: f.answer }
-      }))
-    });
-  }
-  res.render('about', {
-    testimonials, faqs,
-    pageTitle: 'About Us',
-    metaDescription: 'Meet the artist behind Kishor Kanna Arts and learn how every handmade portrait is created, from photo to final artwork.',
-    extraSchema: faqSchema
-  });
+  res.render('about', { testimonials, faqs });
 }));
 
-app.get('/contact', (req, res) => res.render('contact', {
-  sent: false,
-  pageTitle: 'Contact Us',
-  metaDescription: 'Get in touch with Kishor Kanna Arts for custom portrait orders, questions or support.'
+// Reserved for the future course platform (live classes, recorded courses,
+// student dashboard). For now it's a waitlist page — this keeps the URL and
+// nav slot stable so the real platform can slot in later without a redesign.
+app.get('/courses', (req, res) => res.render('courses', { submitted: false }));
+
+app.post('/courses/waitlist', ah(async (req, res) => {
+  const { name, email } = req.body;
+  if (name && email) {
+    const mdb = await db.getDB();
+    await mdb.collection('course_waitlist').updateOne(
+      { email: String(email).toLowerCase().trim() },
+      { $set: { name, email: String(email).toLowerCase().trim() }, $setOnInsert: { created_at: new Date().toISOString() } },
+      { upsert: true }
+    );
+  }
+  res.render('courses', { submitted: true });
 }));
+
+app.get('/contact', (req, res) => res.render('contact', { sent: false }));
 
 app.post('/contact', ah(async (req, res) => {
   const { name, email, phone, subject, message } = req.body;
@@ -329,15 +285,11 @@ app.get('/order', ah(async (req, res) => {
   if (req.query.art_type) old.art_type = req.query.art_type;
   if (req.query.size) old.size = req.query.size;
   const presetPrice = req.query.price || '';
-  res.render('order', {
-    success: null, error: null, blockedDates: blocked.map(r => r.date), old, services, offerDiscount, presetPrice,
-    pageTitle: 'Order Your Portrait',
-    metaDescription: 'Order your custom handmade portrait in a few easy steps. Choose your art type and size, upload a photo, and get instant pricing.'
-  });
+  res.render('order', { success: null, error: null, blockedDates: blocked.map(r => r.date), old, services, offerDiscount, presetPrice });
 }));
 
 app.post('/order', memoryUpload.single('reference_image'), ah(async (req, res) => {
-  const { name, phone, email, art_type, size, delivery_date, notes, estimated_price, discount_percent_applied } = req.body;
+  const { name, phone, email, art_type, size, delivery_date, notes, estimated_price, address_line, city, state, pincode, coupon_code } = req.body;
   const blocked = await db.find('blocked_dates', {}, { date: 1 });
   const blockedDates = blocked.map(r => r.date);
   const services = db.normalize(await db.find('services', {}, { created_at: -1 }));
@@ -348,17 +300,39 @@ app.post('/order', memoryUpload.single('reference_image'), ah(async (req, res) =
     return res.render('order', { success: null, error: 'Sorry, that delivery date is not available. Please choose a different date.', blockedDates, old: req.body, services, offerDiscount, presetPrice: req.body.preset_price || '' });
   }
 
+  // Re-check the coupon on the server — the client-side discount is only a
+  // preview and must never be trusted for the final price or usage count.
+  let discount_percent_applied = offerDiscount;
+  let appliedCouponCode = null;
+  if (coupon_code) {
+    const couponResult = await checkCoupon(coupon_code);
+    if (couponResult.valid) {
+      discount_percent_applied = Math.max(offerDiscount, couponResult.coupon.discount_percent);
+      appliedCouponCode = couponResult.coupon.code;
+    }
+  }
+  const basePrice = parseFloat(String(estimated_price || '0').replace(/[^0-9.]/g, '')) || null;
+  const finalPrice = basePrice && discount_percent_applied
+    ? (basePrice / (1 - (parseFloat(req.body.discount_percent_applied || 0) || 0) / 100) * (1 - discount_percent_applied / 100))
+    : basePrice;
+
   const order_code = genOrderCode();
   const refImage = await uploadImage(req.file, 'orders');
-  await db.insertOne('orders', { order_code, name, phone, email, art_type, size, reference_image: refImage, delivery_date, notes, estimated_price: estimated_price || null, discount_percent_applied: discount_percent_applied || 0, status: 'Received', advance_amount: null, advance_payment_link: null, advance_paid: false, balance_amount: null, balance_payment_link: null, balance_paid: false });
+  await db.insertOne('orders', { order_code, name, phone, email, art_type, size, reference_image: refImage, delivery_date, notes, estimated_price: finalPrice ? finalPrice.toFixed(0) : (estimated_price || null), discount_percent_applied, coupon_code: appliedCouponCode, address_line, city, state, pincode, status: 'Received', advance_amount: null, advance_payment_link: null, advance_paid: false, balance_amount: null, balance_payment_link: null, balance_paid: false });
+
+  if (appliedCouponCode) {
+    const mdb = await db.getDB();
+    await mdb.collection('coupons').updateOne({ code: appliedCouponCode }, { $inc: { used_count: 1 } });
+  }
 
   const s = res.locals.settings;
   const trackUrl = `${req.protocol}://${req.get('host')}/track-order`;
   const data = { name, order_code, art_type, size, notes, track_url: trackUrl, site_name: s.site_name };
 
   if (process.env.NOTIFY_EMAIL) {
+    const addressLine = [address_line, city, state, pincode].filter(Boolean).join(', ');
     mailer.sendMail({ to: process.env.NOTIFY_EMAIL, subject: `New Order Received - ${order_code}`,
-      html: `<h2>New Order</h2><p><b>ID:</b> ${order_code}</p><p><b>Name:</b> ${name}</p><p><b>Phone:</b> ${phone}</p><p><b>Email:</b> ${email||'-'}</p><p><b>Type:</b> ${art_type} / ${size}</p><p><b>Date:</b> ${delivery_date||'-'}</p><p><b>Notes:</b> ${notes||'-'}</p>` });
+      html: `<h2>New Order</h2><p><b>ID:</b> ${order_code}</p><p><b>Name:</b> ${name}</p><p><b>Phone:</b> ${phone}</p><p><b>Email:</b> ${email||'-'}</p><p><b>Type:</b> ${art_type} / ${size}</p><p><b>Coupon:</b> ${appliedCouponCode || '-'}</p><p><b>Delivery Address:</b> ${addressLine || '-'}</p><p><b>Date:</b> ${delivery_date||'-'}</p><p><b>Notes:</b> ${notes||'-'}</p>` });
   }
   if (email) {
     mailer.sendMail({ to: email, subject: renderTemplate(s.tmpl_order_received_subject, data), html: renderTemplate(s.tmpl_order_received_body, data).replace(/\n/g, '<br>') });
@@ -367,11 +341,7 @@ app.post('/order', memoryUpload.single('reference_image'), ah(async (req, res) =
   res.render('order', { success: order_code, error: null, blockedDates, old: {}, services, offerDiscount, presetPrice: '' });
 }));
 
-app.get('/track-order', (req, res) => res.render('track-order', {
-  order: null, searched: false, presetOrderCode: req.query.order_code || '',
-  pageTitle: 'Track Your Order',
-  metaDescription: 'Track the progress of your custom portrait order with Kishor Kanna Arts, from sketch to shipping.'
-}));
+app.get('/track-order', (req, res) => res.render('track-order', { order: null, searched: false, presetOrderCode: req.query.order_code || '' }));
 
 app.post('/track-order', ah(async (req, res) => {
   const { order_code, phone } = req.body;
@@ -406,11 +376,7 @@ app.post('/testimonials', ah(async (req, res) => {
 
 app.get('/blog', ah(async (req, res) => {
   const posts = db.normalize(await db.find('posts', { published: true }, { created_at: -1 }));
-  res.render('blog_list', {
-    posts,
-    pageTitle: 'Blog',
-    metaDescription: 'Art tips, gift ideas, drawing tutorials and behind-the-scenes stories from Kishor Kanna Arts.'
-  });
+  res.render('blog_list', { posts });
 }));
 
 app.get('/blog/:slug', ah(async (req, res) => {
@@ -419,39 +385,8 @@ app.get('/blog/:slug', ah(async (req, res) => {
   res.render('blog_post', { post });
 }));
 
-app.get('/privacy-policy', (req, res) => res.render('privacy-policy', { pageTitle: 'Privacy Policy', metaDescription: 'Read the Kishor Kanna Arts privacy policy.' }));
-app.get('/terms', (req, res) => res.render('terms', { pageTitle: 'Terms & Conditions', metaDescription: 'Read the Kishor Kanna Arts terms and conditions.' }));
-
-// ---------- SEO: robots.txt + sitemap.xml ----------
-app.get('/robots.txt', (req, res) => {
-  const base = res.locals.siteUrl || `${req.protocol}://${req.get('host')}`;
-  res.type('text/plain').send(
-`User-agent: *
-Allow: /
-Disallow: /admin
-Sitemap: ${base}/sitemap.xml`
-  );
-});
-
-app.get('/sitemap.xml', ah(async (req, res) => {
-  const base = res.locals.siteUrl || `${req.protocol}://${req.get('host')}`;
-  const staticUrls = ['/', '/portfolio', '/services', '/about', '/contact', '/blog', '/order', '/track-order'];
-  const artworks = db.normalize(await db.find('artworks', {}, { created_at: -1 }));
-  const posts = db.normalize(await db.find('posts', { published: true }, { created_at: -1 }));
-
-  const urls = [
-    ...staticUrls.map(u => ({ loc: base + u, priority: u === '/' ? '1.0' : '0.7' })),
-    ...artworks.map(a => ({ loc: `${base}/portfolio/${a.id}`, priority: '0.6' })),
-    ...posts.map(p => ({ loc: `${base}/blog/${p.slug}`, priority: '0.6' }))
-  ];
-
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls.map(u => `  <url><loc>${u.loc}</loc><priority>${u.priority}</priority></url>`).join('\n')}
-</urlset>`;
-
-  res.type('application/xml').send(xml);
-}));
+app.get('/privacy-policy', (req, res) => res.render('privacy-policy'));
+app.get('/terms', (req, res) => res.render('terms'));
 
 // =========================================================
 // ADMIN ROUTES
@@ -462,7 +397,7 @@ app.get('/admin/login', (req, res) => {
   res.render('admin/login', { error: null });
 });
 
-app.post('/admin/login', loginLimiter, (req, res) => {
+app.post('/admin/login', (req, res) => {
   const { username, password } = req.body;
   const validUser = username === process.env.ADMIN_USERNAME;
   const storedPass = process.env.ADMIN_PASSWORD || '';
@@ -756,6 +691,11 @@ app.get('/admin/newsletter', requireAdmin, ah(async (req, res) => {
   res.render('admin/newsletter', { subscribers: db.normalize(await db.find('newsletter', {}, { created_at: -1 })), notice: null });
 }));
 
+// ---- Course Waitlist (reserved for the future course platform) ----
+app.get('/admin/course-waitlist', requireAdmin, ah(async (req, res) => {
+  res.render('admin/course-waitlist', { signups: db.normalize(await db.find('course_waitlist', {}, { created_at: -1 })) });
+}));
+
 app.get('/admin/newsletter/export', requireAdmin, ah(async (req, res) => {
   const subscribers = await db.find('newsletter', {}, { created_at: -1 });
   const csv = 'email,subscribed_at\n' + subscribers.map(s => `${s.email},${s.created_at}`).join('\n');
@@ -871,43 +811,14 @@ app.post('/admin/blocks/:id/delete', requireAdmin, ah(async (req, res) => {
   res.redirect('/admin/blocks');
 }));
 
-// ---- Process Timeline (homepage "How It Works" steps) ----
-app.get('/admin/timeline', requireAdmin, ah(async (req, res) => {
-  res.render('admin/timeline', { steps: db.normalize(await db.find('timeline_steps', {}, { step_number: 1 })) });
-}));
-
-app.post('/admin/timeline/save', requireAdmin, ah(async (req, res) => {
-  const stepNumber = parseInt(req.body.step_number, 10) || 0;
-  await db.insertOne('timeline_steps', { step_number: stepNumber, title: req.body.title, text: req.body.text });
-  res.redirect('/admin/timeline');
-}));
-
-app.post('/admin/timeline/:id/delete', requireAdmin, ah(async (req, res) => {
-  await db.deleteById('timeline_steps', req.params.id);
-  res.redirect('/admin/timeline');
-}));
-
-// ---- Trusted By / Awards logos (homepage trust strip) ----
-app.get('/admin/trust-badges', requireAdmin, ah(async (req, res) => {
-  res.render('admin/trust-badges', { badges: db.normalize(await db.find('trust_badges', {}, { created_at: 1 })) });
-}));
-
-app.post('/admin/trust-badges/save', requireAdmin, memoryUpload.single('image'), ah(async (req, res) => {
-  const uploadedUrl = await uploadImage(req.file, 'trust-badges');
-  await db.insertOne('trust_badges', { name: req.body.name, link: req.body.link || '', image: uploadedUrl });
-  res.redirect('/admin/trust-badges');
-}));
-
-app.post('/admin/trust-badges/:id/delete', requireAdmin, ah(async (req, res) => {
-  await db.deleteById('trust_badges', req.params.id);
-  res.redirect('/admin/trust-badges');
-}));
-
 // ---- Settings ----
 app.get('/admin/settings', requireAdmin, (req, res) => res.render('admin/settings'));
 
 app.post('/admin/settings/save', requireAdmin, memoryUpload.fields([{ name: 'logo', maxCount: 1 }, { name: 'hero_image', maxCount: 1 }]), ah(async (req, res) => {
   for (const [key, value] of Object.entries(req.body)) await db.setSetting(key, value);
+  // Checkboxes are absent from req.body entirely when unchecked, so the generic
+  // loop above can turn this ON but can never turn it back OFF. Handle it explicitly.
+  await db.setSetting('courses_enabled', req.body.courses_enabled === 'on' ? 'on' : 'off');
   const logoFile = req.files && req.files.logo && req.files.logo[0];
   const heroFile = req.files && req.files.hero_image && req.files.hero_image[0];
   const uploadedLogo = await uploadImage(logoFile, 'logo');
@@ -982,6 +893,60 @@ app.post('/admin/offers/:id/toggle', requireAdmin, ah(async (req, res) => {
 app.post('/admin/offers/:id/delete', requireAdmin, ah(async (req, res) => {
   await db.deleteById('offers', req.params.id);
   res.redirect('/admin/offers');
+}));
+
+// ---- Coupon Codes ----
+app.get('/admin/coupons', requireAdmin, ah(async (req, res) => {
+  res.render('admin/coupons', { coupons: db.normalize(await db.find('coupons', {}, { created_at: -1 })) });
+}));
+
+app.post('/admin/coupons/save', requireAdmin, ah(async (req, res) => {
+  const code = String(req.body.code || '').trim().toUpperCase();
+  const discount_percent = parseFloat(req.body.discount_percent) || 0;
+  const max_uses = req.body.max_uses ? parseInt(req.body.max_uses) : null;
+  const expires_at = req.body.expires_at || null;
+  if (code && discount_percent > 0) {
+    // Codes are unique — re-creating an existing code replaces its terms rather
+    // than silently creating a confusing duplicate.
+    const mdb = await db.getDB();
+    await mdb.collection('coupons').deleteMany({ code });
+    await db.insertOne('coupons', { code, discount_percent, max_uses, used_count: 0, expires_at, active: true });
+  }
+  res.redirect('/admin/coupons');
+}));
+
+app.post('/admin/coupons/:id/toggle', requireAdmin, ah(async (req, res) => {
+  const coupon = await db.findById('coupons', req.params.id);
+  if (coupon) await db.updateById('coupons', req.params.id, { active: !coupon.active });
+  res.redirect('/admin/coupons');
+}));
+
+app.post('/admin/coupons/:id/delete', requireAdmin, ah(async (req, res) => {
+  await db.deleteById('coupons', req.params.id);
+  res.redirect('/admin/coupons');
+}));
+
+// Shared validity check used by both the live AJAX check and the final
+// server-side re-check on order submission — so a customer can never bypass
+// the rules by tampering with the client-side request.
+async function checkCoupon(codeRaw) {
+  const code = String(codeRaw || '').trim().toUpperCase();
+  if (!code) return { valid: false, message: 'Enter a coupon code.' };
+  const coupon = await db.findOne('coupons', { code });
+  if (!coupon || !coupon.active) return { valid: false, message: 'That coupon code is not valid.' };
+  if (coupon.expires_at && new Date(coupon.expires_at) < new Date(new Date().toDateString())) {
+    return { valid: false, message: 'That coupon code has expired.' };
+  }
+  if (coupon.max_uses && (coupon.used_count || 0) >= coupon.max_uses) {
+    return { valid: false, message: 'That coupon code has reached its usage limit.' };
+  }
+  return { valid: true, coupon };
+}
+
+app.post('/coupon/validate', express.json(), ah(async (req, res) => {
+  const result = await checkCoupon(req.body.code);
+  if (!result.valid) return res.json({ valid: false, message: result.message });
+  res.json({ valid: true, discount_percent: result.coupon.discount_percent, message: `Coupon applied: ${result.coupon.discount_percent}% off` });
 }));
 // ---- FAQs ----
 app.get('/admin/faqs', requireAdmin, ah(async (req, res) => {
