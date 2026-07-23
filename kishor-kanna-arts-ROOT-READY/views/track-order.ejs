@@ -16,11 +16,32 @@
       <% if (order) { %>
         <hr style="margin:26px 0; border-color:var(--border);">
         <h3>Order <%= order.order_code %></h3>
-        <p><strong>Status:</strong> <span class="status-badge status-<%= order.status.replace(/ /g,'-') %>"><%= order.status %></span></p>
+
+        <%
+          const pipeline = ['Received','Confirmed','In Progress','Completed','Artwork Sent - Awaiting Confirmation','Customer Confirmed','Delivered'];
+          const stepLabels = ['Order Received','Confirmed','In Progress','Artwork Completed','Sent for Your Approval','You Approved It','Delivered'];
+          const currentIndex = pipeline.indexOf(order.status);
+        %>
+        <% if (order.status === 'Cancelled') { %>
+          <div class="tracker-cancelled">This order was cancelled. If you think this is a mistake, please contact us.</div>
+        <% } else { %>
+          <div class="tracker-wrap">
+            <div class="tracker">
+              <% pipeline.forEach((step, i) => { %>
+                <div class="tracker-step <%= i < currentIndex ? 'completed' : (i === currentIndex ? 'current' : '') %>">
+                  <div class="tracker-dot"><%= i < currentIndex ? '✓' : (i + 1) %></div>
+                  <div class="tracker-label"><%= stepLabels[i] %></div>
+                </div>
+              <% }) %>
+            </div>
+          </div>
+        <% } %>
+
         <p><strong>Art Type:</strong> <%= order.art_type %> &nbsp; | &nbsp; <strong>Size:</strong> <%= order.size %></p>
         <p><strong>Placed on:</strong> <%= order.created_at %></p>
    <% if (order.estimated_price) { %><p><strong>Estimated Price:</strong> ₹<%= order.estimated_price %><% if (order.discount_percent_applied > 0) { %> (<%= order.discount_percent_applied %>% off applied)<% } %></p><% } %>
         <% if (order.delivery_date) { %><p><strong>Preferred Delivery:</strong> <%= order.delivery_date %></p><% } %>
+        <% if (order.address_line || order.city) { %><p><strong>Delivery Address:</strong> <%= [order.address_line, order.city, order.state, order.pincode].filter(Boolean).join(', ') %></p><% } %>
         <% if (order.notes) { %><p><strong>Notes:</strong> <%= order.notes %></p><% } %>
 
         <% if (order.advance_amount) { %>
@@ -48,7 +69,7 @@
         <% if (order.final_artwork_image) { %>
           <div style="margin-top:20px; padding:18px; border-radius:10px; background:#f4efe8; border:1px solid var(--border);">
             <h3 style="margin-top:0;">Your Finished Artwork</h3>
-            <img src="<%= order.final_artwork_image %>" alt="Your finished artwork" style="max-width:100%; border-radius:10px; display:block; margin-bottom:12px;">
+            <img src="<%= order.final_artwork_image %>" alt="Your finished artwork" loading="lazy" decoding="async" style="max-width:100%; border-radius:10px; display:block; margin-bottom:12px;">
             <% if (order.final_artwork_note) { %><p style="margin-bottom:14px;"><%= order.final_artwork_note %></p><% } %>
             <% if (order.customer_confirmed) { %>
               <div class="alert" style="background:#e6f4ea; border:1px solid #b7e0c4; padding:12px 14px; border-radius:8px;">✓ You confirmed this artwork on <%= new Date(order.customer_confirmed_at).toLocaleDateString() %>. We'll proceed with packing &amp; delivery!</div>
