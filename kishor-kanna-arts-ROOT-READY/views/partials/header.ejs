@@ -3,50 +3,75 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title><%= typeof pageTitle !== 'undefined' && pageTitle ? pageTitle + ' | ' + settings.site_name : settings.site_name %></title>
+<title><%= typeof pageTitle !== 'undefined' ? pageTitle + ' | ' + settings.site_name : settings.site_name %></title>
 
-<% const metaDesc = (typeof metaDescription !== 'undefined' && metaDescription) ? metaDescription : (settings.site_description || 'Custom handmade pencil, color and canvas portraits by Kishor Kanna Arts. Pet, couple, family and wedding portraits, made with love and shipped across India.'); %>
-<% const ogImg = (typeof ogImage !== 'undefined' && ogImage) ? ogImage : (settings.logo_url || ''); %>
-<meta name="description" content="<%= metaDesc %>">
-<meta name="robots" content="index, follow">
-<% if (typeof canonicalUrl !== 'undefined' && canonicalUrl) { %><link rel="canonical" href="<%= canonicalUrl %>"><% } %>
+<%
+  const _desc = typeof pageDescription !== 'undefined' ? pageDescription
+    : (settings.meta_description || `Custom hand-made pencil, colour and canvas portraits by ${settings.site_name}. Made from your photo, shipped anywhere in India.`);
+  const _canonical = siteUrl + currentPath;
+  const _ogImage = (typeof pageImage !== 'undefined' && pageImage) ? pageImage : (settings.og_image_url || settings.logo_url || '');
+  const _isAdminPath = currentPath.indexOf('/admin') === 0;
+  const _noIndex = _isAdminPath || currentPath === '/track-order';
+%>
+<meta name="description" content="<%= _desc %>">
+<link rel="canonical" href="<%= _canonical %>">
+<% if (_noIndex) { %><meta name="robots" content="noindex, nofollow"><% } %>
 
-<!-- Open Graph -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="<%= settings.site_name %>">
-<meta property="og:title" content="<%= typeof pageTitle !== 'undefined' && pageTitle ? pageTitle : settings.site_name %>">
-<meta property="og:description" content="<%= metaDesc %>">
-<% if (typeof canonicalUrl !== 'undefined' && canonicalUrl) { %><meta property="og:url" content="<%= canonicalUrl %>"><% } %>
-<% if (ogImg) { %><meta property="og:image" content="<%= ogImg %>"><% } %>
+<meta property="og:title" content="<%= typeof pageTitle !== 'undefined' ? pageTitle + ' | ' + settings.site_name : settings.site_name %>">
+<meta property="og:description" content="<%= _desc %>">
+<meta property="og:url" content="<%= _canonical %>">
+<% if (_ogImage) { %><meta property="og:image" content="<%= _ogImage %>"><% } %>
 
-<!-- Twitter Card -->
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="<%= typeof pageTitle !== 'undefined' && pageTitle ? pageTitle : settings.site_name %>">
-<meta name="twitter:description" content="<%= metaDesc %>">
-<% if (ogImg) { %><meta name="twitter:image" content="<%= ogImg %>"><% } %>
+<meta name="twitter:card" content="<% if (_ogImage) { %>summary_large_image<% } else { %>summary<% } %>">
+<meta name="twitter:title" content="<%= typeof pageTitle !== 'undefined' ? pageTitle + ' | ' + settings.site_name : settings.site_name %>">
+<meta name="twitter:description" content="<%= _desc %>">
+<% if (_ogImage) { %><meta name="twitter:image" content="<%= _ogImage %>"><% } %>
 
-<!-- Organization schema (site-wide, helps Google show your logo, socials, contact info in search) -->
+<% if (!_isAdminPath) { %>
 <script type="application/ld+json">
-{
+<%- JSON.stringify({
   "@context": "https://schema.org",
-  "@type": "Organization",
-  "name": "<%= settings.site_name %>",
-  <% if (siteUrl) { %>"url": "<%= siteUrl %>",<% } %>
-  <% if (ogImg) { %>"logo": "<%= ogImg %>",<% } %>
-  "description": "<%= metaDesc.replace(/"/g, '\\"') %>"<% if (settings.contact_phone || settings.contact_email) { %>,
-  "contactPoint": {
-    "@type": "ContactPoint",
-    <% if (settings.contact_phone) { %>"telephone": "<%= settings.contact_phone %>",<% } %>
-    "contactType": "customer service"<% if (settings.contact_email) { %>,
-    "email": "<%= settings.contact_email %>"<% } %>
-  }<% } %>
-}
+  "@type": "LocalBusiness",
+  "name": settings.site_name,
+  "image": _ogImage || undefined,
+  "url": siteUrl,
+  "telephone": settings.contact_phone,
+  "email": settings.contact_email,
+  "address": settings.contact_address,
+  "priceRange": "₹₹"
+}) %>
 </script>
-<% if (typeof extraSchema !== 'undefined' && extraSchema) { %>
-<script type="application/ld+json"><%- extraSchema %></script>
 <% } %>
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,500;0,600;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/public/css/style.css">
+
+<% if (!_isAdminPath && settings.ga_measurement_id) { %>
+<script async src="https://www.googletagmanager.com/gtag/js?id=<%= settings.ga_measurement_id %>"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', '<%= settings.ga_measurement_id %>');
+</script>
+<% } %>
+<% if (!_isAdminPath && settings.meta_pixel_id) { %>
+<script>
+  !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+  n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+  n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+  t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+  document,'script','https://connect.facebook.net/en_US/fbevents.js');
+  fbq('init', '<%= settings.meta_pixel_id %>');
+  fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=<%= settings.meta_pixel_id %>&ev=PageView&noscript=1"></noscript>
+<% } %>
+
 <style>
   :root {
     --accent: <%= settings.theme_accent || '#b5451b' %>;
@@ -69,6 +94,7 @@
     <a href="/portfolio">Portfolio</a>
     <a href="/services">Services</a>
     <a href="/blog">Blog</a>
+    <% if (settings.courses_enabled) { %><a href="/courses">Courses</a><% } %>
     <a href="/about">About Us</a>
     <a href="/contact">Contact</a>
     <a href="/track-order">Track Order</a>
