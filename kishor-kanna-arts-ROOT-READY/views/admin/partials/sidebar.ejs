@@ -1,4 +1,6 @@
-<div class="admin-sidebar">
+<button class="admin-menu-toggle" id="adminMenuToggle" aria-label="Open menu" aria-expanded="false">&#9776;</button>
+<div class="admin-sidebar-overlay" id="adminSidebarOverlay"></div>
+<div class="admin-sidebar" id="adminSidebar">
   <div class="brand"><%= settings.site_name %><br><small style="color:var(--muted); font-weight:normal;">Admin Panel</small></div>
   <a href="/admin/dashboard" class="<%= active === 'dashboard' ? 'active' : '' %>">Dashboard</a>
   <a href="/admin/artworks" class="<%= active === 'artworks' ? 'active' : '' %>">Portfolio / Artworks</a>
@@ -11,14 +13,37 @@
   <a href="/admin/testimonials" class="<%= active === 'testimonials' ? 'active' : '' %>">Reviews / Comments</a>
   <a href="/admin/messages" class="<%= active === 'messages' ? 'active' : '' %>">Contact Messages</a>
   <a href="/admin/offers" class="<%= active === 'offers' ? 'active' : '' %>">Offers / Updates</a>
+  <a href="/admin/coupons" class="<%= active === 'coupons' ? 'active' : '' %>">Coupon Codes</a>
   <a href="/admin/blog" class="<%= active === 'blog' ? 'active' : '' %>">Blog</a>
   <a href="/admin/homepage-content" class="<%= active === 'homepage-content' ? 'active' : '' %>">Homepage Content</a>
   <a href="/admin/blocks" class="<%= active === 'blocks' ? 'active' : '' %>">Custom Content Blocks</a>
   <a href="/admin/faqs" class="<%= active === 'faqs' ? 'active' : '' %>">FAQs</a>
   <a href="/admin/newsletter" class="<%= active === 'newsletter' ? 'active' : '' %>">Newsletter</a>
+  <a href="/admin/course-waitlist" class="<%= active === 'course-waitlist' ? 'active' : '' %>">Course Waitlist</a>
   <a href="/admin/settings" class="<%= active === 'settings' ? 'active' : '' %>">Site Settings</a>
   <form action="/admin/logout" method="POST" style="padding: 14px 20px 0;">
     <button class="btn btn-ghost btn-sm" type="submit" style="width:100%;">Log Out</button>
   </form>
   <div style="padding: 14px 20px 0;"><a href="/" target="_blank">&larr; View Live Site</a></div>
 </div>
+<script>
+  (function () {
+    var toggle = document.getElementById('adminMenuToggle');
+    var sidebar = document.getElementById('adminSidebar');
+    var overlay = document.getElementById('adminSidebarOverlay');
+    if (!toggle || !sidebar || !overlay) return;
+    function closeMenu() {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('open');
+      toggle.setAttribute('aria-expanded', 'false');
+    }
+    function toggleMenu() {
+      var isOpen = sidebar.classList.toggle('open');
+      overlay.classList.toggle('open', isOpen);
+      toggle.setAttribute('aria-expanded', String(isOpen));
+    }
+    toggle.addEventListener('click', toggleMenu);
+    overlay.addEventListener('click', closeMenu);
+    sidebar.querySelectorAll('a').forEach(function (a) { a.addEventListener('click', closeMenu); });
+  })();
+</script>
