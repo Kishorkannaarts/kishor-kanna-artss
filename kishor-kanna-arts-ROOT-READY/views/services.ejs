@@ -1,4 +1,5 @@
 <% pageTitle = 'Services' %>
+<% pageDescription = `Custom art services from ${settings.site_name} — pencil portraits, colour portraits, canvas paintings, pet and family portraits, and corporate gifting.` %>
 <%- include('partials/header') %>
 
 <section class="section">
@@ -7,7 +8,7 @@
   <div class="grid grid-services">
     <% services.forEach(s => { %>
       <div class="card">
-        <img src="<%= s.image || 'https://placehold.co/400x300?text=Service' %>" alt="<%= s.title %>">
+        <img src="<%= s.image || 'https://placehold.co/400x300?text=Service' %>" alt="<%= s.title %>" loading="lazy" decoding="async">
         <div class="card-body">
           <h3><%= s.title %></h3>
           <p><%= s.description %></p>
