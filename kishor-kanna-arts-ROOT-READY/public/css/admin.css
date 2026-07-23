@@ -69,6 +69,35 @@ img.thumb { width: 54px; height: 54px; object-fit: cover; border-radius: 6px; }
 .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.78rem; }
 .badge-new { background: #3a3320; color: #e0c94f; }
 .badge-ok { background: #1e3a2a; color: #3fb56f; }
+.badge-progress { background: #2c3a52; color: #6fa8ff; }
+.badge-danger { background: #3a2225; color: #f28b85; }
 
 .actions-row { display: flex; gap: 8px; }
-.top-actions { margin-bottom: 18px; }
+.top-actions { margin-bottom: 18px; flex-wrap: wrap; }
+
+/* Mobile admin nav: hidden by default, shown via JS toggle */
+.admin-menu-toggle { display: none; }
+.admin-sidebar-overlay { display: none; }
+
+@media (max-width: 880px) {
+  .admin-menu-toggle {
+    display: flex; align-items: center; justify-content: center;
+    position: fixed; top: 14px; left: 14px; z-index: 1001;
+    width: 44px; height: 44px; border-radius: 8px;
+    background: var(--panel); border: 1px solid var(--border); color: var(--text);
+    font-size: 1.4rem; cursor: pointer;
+  }
+  .admin-sidebar-overlay.open {
+    display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 999;
+  }
+  .admin-shell { display: block; }
+  .admin-sidebar {
+    position: fixed; top: 0; left: -260px; height: 100vh; width: 230px; z-index: 1000;
+    transition: left .22s ease; overflow-y: auto;
+  }
+  .admin-sidebar.open { left: 0; box-shadow: 0 0 40px rgba(0,0,0,0.5); }
+  .admin-main { padding: 74px 16px 30px; max-width: 100%; }
+  .admin-topbar h1 { font-size: 1.2rem; }
+  table { display: block; overflow-x: auto; white-space: nowrap; }
+  .admin-form { max-width: 100%; }
+}
