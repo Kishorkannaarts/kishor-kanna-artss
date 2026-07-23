@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Course Waitlist | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
+<body class="admin">
+<div class="admin-shell">
+  <% active = 'course-waitlist' %>
+  <%- include('partials/sidebar') %>
+  <div class="admin-main">
+    <div class="admin-topbar"><h1>Course Waitlist</h1></div>
+    <p style="color:var(--muted); font-size:0.9rem; margin-top:-10px;">
+      People who signed up on the <a href="/courses" target="_blank">Courses</a> page to be notified when classes launch.
+      <%= signups.length %> so far.
+    </p>
+
+    <table>
+      <tr><th>Name</th><th>Email</th><th>Signed Up</th></tr>
+      <% signups.forEach(s => { %>
+        <tr><td><%= s.name %></td><td><%= s.email %></td><td><%= s.created_at %></td></tr>
+      <% }) %>
+      <% if (signups.length === 0) { %><tr><td colspan="3">No signups yet.</td></tr><% } %>
+    </table>
+  </div>
+</div>
+</body></html>
