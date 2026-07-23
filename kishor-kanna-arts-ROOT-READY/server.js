@@ -30,7 +30,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       imgSrc: ["'self'", 'data:', 'https:'],
-      frameSrc: ["'self'", 'https://www.youtube.com', 'https://www.youtube-nocookie.com', 'https://player.vimeo.com', 'https://www.google.com', 'https://maps.google.com', 'https://drive.google.com'],
+      frameSrc: ["'self'", 'https://www.youtube.com', 'https://player.vimeo.com'],
       connectSrc: ["'self'", 'https://www.google-analytics.com', 'https://www.facebook.com']
     }
   },
@@ -65,32 +65,6 @@ app.use(session({
 app.use(async (req, res, next) => {
   try {
     res.locals.settings = await db.getAllSettings();
-
-    // --- Fix-up pass: settings pasted into the admin panel without "https://",
-    // or a Maps URL that isn't the special /maps/embed?pb= code, silently break
-    // the link/iframe. Normalize here so the site works even with loose input. ---
-    const s = res.locals.settings;
-    const urlize = (v) => (v && !/^https?:\/\//i.test(v)) ? `https://${v}` : v;
-    ['youtube_url', 'instagram_url', 'facebook_url', 'google_business_url'].forEach((k) => {
-      if (s[k]) s[k] = urlize(s[k].trim());
-    });
-    if (s.google_maps_embed) {
-      // Admin sometimes pastes Google's whole "<iframe ...>" snippet instead
-      // of just the URL — pull the src out of it if so.
-      const iframeMatch = s.google_maps_embed.match(/src=["']([^"']+)["']/i);
-      if (iframeMatch) s.google_maps_embed = iframeMatch[1];
-      s.google_maps_embed = s.google_maps_embed.trim();
-    }
-    if (s.google_maps_embed && !/maps\/embed/i.test(s.google_maps_embed)) {
-      // A normal share link (maps.app.goo.gl / maps/place/...) instead of the
-      // iframe embed code. Google blocks those in an <iframe> (X-Frame-Options
-      // refuses to connect), so fall back to an address-based embed that
-      // needs no API key and always renders.
-      s.google_maps_embed = `https://www.google.com/maps?q=${encodeURIComponent(s.contact_address || s.site_name || '')}&output=embed`;
-    } else if (!s.google_maps_embed && s.contact_address) {
-      s.google_maps_embed = `https://www.google.com/maps?q=${encodeURIComponent(s.contact_address)}&output=embed`;
-    }
-
     res.locals.isAdmin = !!(req.session && req.session.isAdmin);
     res.locals.popupOffer = await db.findOne('offers', { active: true }, { created_at: -1 });
     res.locals.artTypes = await db.getArtTypes();
@@ -233,23 +207,11 @@ app.get('/', ah(async (req, res) => {
   const featured  = db.normalize(await db.find('artworks', { featured: true }, { created_at: -1 }, 8));
   const testimonials = db.normalize(await db.find('testimonials', { approved: true }, { created_at: -1 }, 6));
   const videos    = db.normalize(await db.find('videos', {}, { created_at: -1 }, 12)).map(v => {
-  // Click-to-play only: NOT autoplay/loop/playlist on page load. That combo is
-  // what triggers YouTube's "Error 153 / player configuration error" inside
-  // in-app browsers (WhatsApp/Instagram webviews) and some mobile Chrome
-  // sessions — those environments block simultaneous autoplaying iframes.
-  // A user-triggered play (real click) is always allowed by every browser,
-  // so we only build the plain embed URL here and let the click add autoplay.
-  let embed = null, thumb = null, youtubeId = null;
+  let embed = null;
   let m = v.video_url.match(/youtu\.be\/([A-Za-z0-9_-]+)/) || v.video_url.match(/[?&]v=([A-Za-z0-9_-]+)/) || v.video_url.match(/youtube\.com\/shorts\/([A-Za-z0-9_-]+)/);
-  if (m) {
-    youtubeId = m[1];
-    embed = `https://www.youtube-nocookie.com/embed/${youtubeId}?rel=0&modestbranding=1`;
-    thumb = `https://i.ytimg.com/vi/${youtubeId}/hqdefault.jpg`;
-  } else {
-    m = v.video_url.match(/drive\.google\.com\/file\/d\/([A-Za-z0-9_-]+)/);
-    if (m) embed = `https://drive.google.com/file/d/${m[1]}/preview`;
-  }
-  return { ...v, embed_url: embed, thumb_url: thumb, youtube_id: youtubeId };
+  if (m) embed = `https://www.youtube.com/embed/${m[1]}?autoplay=1&mute=1&loop=1&playlist=${m[1]}`;
+  else { m = v.video_url.match(/drive\.google\.com\/file\/d\/([A-Za-z0-9_-]+)/); if (m) embed = `https://drive.google.com/file/d/${m[1]}/preview`; }
+  return { ...v, embed_url: embed };
 });
   const services  = db.normalize(await db.find('services', {}, { created_at: -1 }));
   const offers    = db.normalize(await db.find('offers', { active: true }, { created_at: -1 }));
