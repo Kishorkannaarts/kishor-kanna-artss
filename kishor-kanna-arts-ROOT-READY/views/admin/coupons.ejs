@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coupon Codes | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
+<body class="admin">
+<div class="admin-shell">
+  <% active = 'coupons' %>
+  <%- include('partials/sidebar') %>
+  <div class="admin-main">
+    <div class="admin-topbar"><h1>Coupon Codes</h1></div>
+    <p style="color:var(--muted); font-size:0.9rem; margin-top:-10px;">Customers type this code on the Order page to get the discount. Unlike the site-wide Offer popup, each code can have its own discount and a usage limit.</p>
+
+    <table style="margin-bottom:30px;">
+      <tr><th>Code</th><th>Discount</th><th>Uses</th><th>Expires</th><th>Status</th><th>Actions</th></tr>
+      <% coupons.forEach(c => { %>
+        <tr>
+          <td><strong><%= c.code %></strong></td>
+          <td><%= c.discount_percent %>%</td>
+          <td><%= c.used_count || 0 %><%= c.max_uses ? ' / ' + c.max_uses : ' (unlimited)' %></td>
+          <td><%= c.expires_at || '—' %></td>
+          <td><span class="badge <%= c.active ? 'badge-ok' : 'badge-new' %>"><%= c.active ? 'Live' : 'Off' %></span></td>
+          <td class="actions-row">
+            <form action="/admin/coupons/<%= c.id %>/toggle" method="POST">
+              <button class="btn btn-ghost btn-sm" type="submit"><%= c.active ? 'Turn Off' : 'Turn On' %></button>
+            </form>
+            <form action="/admin/coupons/<%= c.id %>/delete" method="POST" onsubmit="return confirm('Delete this coupon?');">
+              <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+      <% if (coupons.length === 0) { %><tr><td colspan="6">No coupon codes yet.</td></tr><% } %>
+    </table>
+
+    <h2 style="font-size:1.1rem;">Create Coupon Code</h2>
+    <form class="admin-form" action="/admin/coupons/save" method="POST">
+      <div class="form-group"><label>Code</label><input type="text" name="code" required placeholder="e.g. FESTIVE20" style="text-transform:uppercase;"></div>
+      <div class="form-group"><label>Discount %</label><input type="number" name="discount_percent" min="1" max="100" required placeholder="e.g. 20"></div>
+      <div class="form-group"><label>Maximum Uses (leave blank for unlimited)</label><input type="number" name="max_uses" min="1" placeholder="e.g. 50"></div>
+      <div class="form-group"><label>Expiry Date (optional)</label><input type="date" name="expires_at"></div>
+      <button class="btn btn-primary" type="submit">Create Coupon</button>
+    </form>
+  </div>
+</div>
+</body></html>
