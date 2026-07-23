@@ -8,6 +8,13 @@
   <div class="admin-main">
     <div class="admin-topbar"><h1>Dashboard</h1></div>
 
+    <div class="top-actions actions-row">
+      <a class="btn btn-primary btn-sm" href="/admin/artworks/new">+ Add Artwork</a>
+      <a class="btn btn-ghost btn-sm" href="/admin/offers">+ New Offer</a>
+      <a class="btn btn-ghost btn-sm" href="/admin/orders">View All Orders</a>
+      <a class="btn btn-ghost btn-sm" href="/admin/messages">Contact Messages<% if (counts.messages > 0) { %> (<%= counts.messages %>)<% } %></a>
+    </div>
+
     <div class="stat-grid">
       <div class="stat-card"><div class="num">₹<%= finance.totalReceived.toFixed(0) %></div><div class="label">Total Received</div></div>
       <div class="stat-card"><div class="num">₹<%= finance.totalPending.toFixed(0) %></div><div class="label">Pending Payments</div></div>
@@ -33,7 +40,7 @@
           <td><%= o.order_code %></td>
           <td><%= o.name %></td>
           <td><%= o.art_type %></td>
-          <td><span class="badge badge-new"><%= o.status %></span></td>
+          <td><span class="badge <%= statusBadgeClass(o.status) %>"><%= o.status %></span></td>
           <td><%= o.created_at %></td>
         </tr>
       <% }) %>
