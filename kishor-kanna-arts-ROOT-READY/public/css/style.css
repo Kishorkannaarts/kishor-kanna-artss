@@ -475,3 +475,14 @@ textarea { resize: vertical; min-height: 100px; }
   .offer-popup { grid-template-columns: 1fr; max-height: 95vh; overflow-y: auto; }
   .offer-popup-right { min-height: 200px; order: -1; }
 }
+
+/* ---------- Video click-to-play facade (fixes YouTube "Error 153") ---------- */
+.video-facade { transition: filter 0.15s ease; }
+.video-facade:hover { filter: brightness(0.85); }
+.video-play-btn {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 68px; height: 48px; display: flex; align-items: center; justify-content: center;
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.4));
+  transition: transform 0.15s ease;
+}
+.video-facade:hover .video-play-btn { transform: translate(-50%, -50%) scale(1.08); }
