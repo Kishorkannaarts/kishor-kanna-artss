@@ -30,7 +30,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       imgSrc: ["'self'", 'data:', 'https:'],
-      frameSrc: ["'self'", 'https://www.youtube.com', 'https://player.vimeo.com'],
+      frameSrc: ["'self'", 'https://www.youtube.com', 'https://player.vimeo.com', 'https://www.google.com', 'https://maps.google.com'],
       connectSrc: ["'self'", 'https://www.google-analytics.com', 'https://www.facebook.com']
     }
   },
@@ -65,6 +65,24 @@ app.use(session({
 app.use(async (req, res, next) => {
   try {
     res.locals.settings = await db.getAllSettings();
+
+    // --- Fix-up pass: settings pasted into the admin panel without "https://",
+    // or a Maps URL that isn't the special /maps/embed?pb= code, silently break
+    // the link/iframe. Normalize here so the site works even with loose input. ---
+    const s = res.locals.settings;
+    const urlize = (v) => (v && !/^https?:\/\//i.test(v)) ? `https://${v}` : v;
+    ['youtube_url', 'instagram_url', 'facebook_url', 'google_business_url'].forEach((k) => {
+      if (s[k]) s[k] = urlize(s[k].trim());
+    });
+    if (s.google_maps_embed && !/maps\/embed/i.test(s.google_maps_embed)) {
+      // Admin pasted a normal share link instead of the iframe embed code.
+      // Google blocks those in an <iframe> (X-Frame-Options), so fall back to
+      // an address-based embed that needs no API key and always renders.
+      s.google_maps_embed = `https://www.google.com/maps?q=${encodeURIComponent(s.contact_address || s.site_name || '')}&output=embed`;
+    } else if (!s.google_maps_embed && s.contact_address) {
+      s.google_maps_embed = `https://www.google.com/maps?q=${encodeURIComponent(s.contact_address)}&output=embed`;
+    }
+
     res.locals.isAdmin = !!(req.session && req.session.isAdmin);
     res.locals.popupOffer = await db.findOne('offers', { active: true }, { created_at: -1 });
     res.locals.artTypes = await db.getArtTypes();
