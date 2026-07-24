@@ -344,18 +344,22 @@ textarea { resize: vertical; min-height: 100px; }
 
 .order-code { font-size: 1.6rem; letter-spacing: 1px; color: var(--accent-dark); font-weight: bold; }
 
-/* Order tracking progress stepper */
-.tracker-wrap { margin: 22px 0 30px; overflow-x: auto; padding-bottom: 4px; }
-.tracker { display: flex; min-width: 560px; }
-.tracker-step { flex: 1; text-align: center; position: relative; padding: 0 4px; }
+/* Order tracking progress stepper (vertical) */
+.tracker-wrap { margin: 22px 0 30px; }
+.tracker { display: flex; flex-direction: column; }
+.tracker-step {
+  display: flex; align-items: flex-start; text-align: left; position: relative;
+  padding: 0 0 30px 0;
+}
+.tracker-step:last-child { padding-bottom: 0; }
 .tracker-step:not(:first-child)::before {
-  content: ''; position: absolute; top: 13px; left: -50%; width: 100%; height: 3px;
+  content: ''; position: absolute; top: -22px; left: 13px; width: 3px; height: 22px;
   background: var(--border); z-index: 0;
 }
 .tracker-step.completed:not(:first-child)::before { background: var(--accent); }
 .tracker-dot {
   width: 28px; height: 28px; border-radius: 50%; background: #fff; border: 3px solid var(--border);
-  margin: 0 auto 10px; position: relative; z-index: 1; display: flex; align-items: center; justify-content: center;
+  margin: 0 14px 0 0; flex-shrink: 0; position: relative; z-index: 1; display: flex; align-items: center; justify-content: center;
   color: var(--muted); font-size: 0.75rem; font-weight: bold; transition: background .25s var(--ease), border-color .25s var(--ease);
 }
 .tracker-step.completed .tracker-dot { background: var(--accent); border-color: var(--accent); color: #fff; }
@@ -363,8 +367,8 @@ textarea { resize: vertical; min-height: 100px; }
   background: var(--accent); border-color: var(--accent); color: #fff;
   box-shadow: 0 0 0 5px rgba(181,69,27,0.15);
 }
-.tracker-label { font-size: 0.78rem; color: var(--muted); line-height: 1.3; }
-.tracker-step.completed .tracker-label, .tracker-step.current .tracker-label { color: var(--ink); font-weight: 600; }
+.tracker-label { font-size: 0.85rem; color: var(--muted); line-height: 1.3; padding-top: 5px; }
+.tracker-step.completed .tracker-label, .tracker-step.cu
 .tracker-cancelled {
   background: #fbe7e6; border: 1px solid #f2b8b5; color: #a2231d; border-radius: 8px;
   padding: 14px 18px; margin: 22px 0 30px; text-align: center; font-weight: 600;
