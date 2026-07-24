@@ -24,7 +24,8 @@
         </div>
         <div class="form-group">
           <label>Payment Link</label>
-          <input type="text" name="payment_link" value="<%= defaultLink %>" placeholder="Paste your UPI / payment link here" required>
+          <input type="text" name="payment_link" value="<%= defaultLink %>" placeholder="e.g. https://razorpay.me/@yourname or upi://pay?..." required>
+          <small style="color:var(--muted);">Paste the full link (starting with https:// or upi://). If you forget the https://, we'll add it automatically.</small>
         </div>
       <% } %>
       <% if (actionType === 'reject') { %>
