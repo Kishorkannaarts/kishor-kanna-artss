@@ -101,6 +101,12 @@ async function uploadImage(file, folder) {
 
 // ---------- Helpers ----------
 function genOrderCode() {
+  function normalizePaymentLink(link) {
+  if (!link) return link;
+  const trimmed = link.trim();
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(trimmed) || /^upi:/i.test(trimmed)) return trimmed;
+  return 'https://' + trimmed;
+  }
   const rand = Math.random().toString(36).slice(2, 7).toUpperCase();
   return 'KKA-' + Date.now().toString().slice(-6) + '-' + rand;
 }
@@ -588,7 +594,8 @@ app.get('/admin/orders/:id/advance', requireAdmin, ah(async (req, res) => {
 }));
 
 app.post('/admin/orders/:id/advance', requireAdmin, ah(async (req, res) => {
-  const { amount, payment_link } = req.body;
+  const { amount } = req.body;
+  const payment_link = normalizePaymentLink(req.body.payment_link);
   const order = db.normalize(await db.findById('orders', req.params.id));
   if (!order) return res.redirect('/admin/orders');
   await db.updateById('orders', req.params.id, { status: 'Confirmed', advance_amount: amount, advance_payment_link: payment_link, advance_paid: false });
@@ -645,7 +652,8 @@ app.get('/admin/orders/:id/balance', requireAdmin, ah(async (req, res) => {
 }));
 
 app.post('/admin/orders/:id/balance', requireAdmin, ah(async (req, res) => {
-  const { amount, payment_link } = req.body;
+  const { amount } = req.body;
+  const payment_link = normalizePaymentLink(req.body.payment_link);
   const order = db.normalize(await db.findById('orders', req.params.id));
   if (!order) return res.redirect('/admin/orders');
   await db.updateById('orders', req.params.id, { status: 'Completed', balance_amount: amount, balance_payment_link: payment_link, balance_paid: false });
