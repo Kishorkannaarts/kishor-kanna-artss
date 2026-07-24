@@ -100,6 +100,17 @@
     <a href="/track-order">Track Order</a>
     <a class="nav-cta" href="/order">Order Now</a>
   </nav>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var btn = document.getElementById('menuToggle');
+    var nav = document.querySelector('.nav');
+    if (btn && nav) {
+      btn.addEventListener('click', function () {
+        nav.classList.toggle('open');
+      });
+    }
+  });
+</script>
 </header>
 
 <% if (typeof popupOffer !== 'undefined' && popupOffer && !isAdmin) { %>
