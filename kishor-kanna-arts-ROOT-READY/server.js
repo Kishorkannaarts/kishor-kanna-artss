@@ -155,6 +155,11 @@ function requireAdmin(req, res, next) {
   return res.redirect('/admin/login');
 }
 
+function requireCustomer(req, res, next) {
+  if (req.session && req.session.customerId) return next();
+  return res.redirect('/account/login?next=' + encodeURIComponent(req.originalUrl));
+}
+
 function ah(fn) {
   return (req, res, next) => fn(req, res, next).catch(next);
 }
@@ -320,7 +325,7 @@ app.post('/order', memoryUpload.single('reference_image'), ah(async (req, res) =
 
   const order_code = genOrderCode();
   const refImage = await uploadImage(req.file, 'orders');
-  await db.insertOne('orders', { order_code, name, phone, email, art_type, size, reference_image: refImage, delivery_date, notes, estimated_price: finalPrice ? finalPrice.toFixed(0) : (estimated_price || null), discount_percent_applied, coupon_code: appliedCouponCode, address_line, city, state, pincode, status: 'Received', advance_amount: null, advance_payment_link: null, advance_paid: false, balance_amount: null, balance_payment_link: null, balance_paid: false });
+  await db.insertOne('orders', { order_code, name, phone, email, art_type, size, reference_image: refImage, delivery_date, notes, estimated_price: finalPrice ? finalPrice.toFixed(0) : (estimated_price || null), discount_percent_applied, coupon_code: appliedCouponCode, address_line, city, state, pincode, status: 'Received', advance_amount: null, advance_payment_link: null, advance_paid: false, balance_amount: null, balance_payment_link: null, balance_paid: false, customer_id: (req.session && req.session.customerId) || null });
 
   if (appliedCouponCode) {
     const mdb = await db.getDB();
@@ -368,6 +373,58 @@ app.post('/track-order/confirm', ah(async (req, res) => {
   }
   const refreshed = db.normalize(await db.findOne('orders', { order_code, phone }));
   res.render('track-order', { order: refreshed || undefined, searched: true, presetOrderCode: order_code || '' });
+}));
+
+// =========================================================
+// Customer Accounts
+// =========================================================
+app.get('/account/signup', (req, res) => {
+  if (req.session && req.session.customerId) return res.redirect('/account/dashboard');
+  res.render('account/signup', { error: null, old: {} });
+});
+
+app.post('/account/signup', ah(async (req, res) => {
+  const { name, email, phone, password } = req.body;
+  if (!name || !email || !password || password.length < 6) {
+    return res.render('account/signup', { error: 'Please fill all fields. Password must be at least 6 characters.', old: req.body });
+  }
+  const existing = await db.findOne('customers', { email: email.toLowerCase().trim() });
+  if (existing) {
+    return res.render('account/signup', { error: 'An account with this email already exists. Please log in instead.', old: req.body });
+  }
+  const password_hash = bcrypt.hashSync(password, 10);
+  const customer = await db.insertOne('customers', { name, email: email.toLowerCase().trim(), phone: phone || '', password_hash });
+  req.session.customerId = customer.id;
+  req.session.customerName = customer.name;
+  res.redirect(req.query.next || '/account/dashboard');
+}));
+
+app.get('/account/login', (req, res) => {
+  if (req.session && req.session.customerId) return res.redirect('/account/dashboard');
+  res.render('account/login', { error: null, oldEmail: '' });
+});
+
+app.post('/account/login', ah(async (req, res) => {
+  const { email, password } = req.body;
+  const customer = await db.findOne('customers', { email: (email || '').toLowerCase().trim() });
+  if (!customer || !bcrypt.compareSync(password || '', customer.password_hash)) {
+    return res.render('account/login', { error: 'Incorrect email or password.', oldEmail: email || '' });
+  }
+  req.session.customerId = customer._id.toString();
+  req.session.customerName = customer.name;
+  res.redirect(req.query.next || req.body.next || '/account/dashboard');
+}));
+
+app.post('/account/logout', (req, res) => {
+  req.session.customerId = null;
+  req.session.customerName = null;
+  res.redirect('/');
+});
+
+app.get('/account/dashboard', requireCustomer, ah(async (req, res) => {
+  const customer = db.normalize(await db.findById('customers', req.session.customerId));
+  const orders = db.normalize(await db.find('orders', { customer_id: req.session.customerId }, { created_at: -1 }));
+  res.render('account/dashboard', { customer, orders });
 }));
 
 app.post('/testimonials', ah(async (req, res) => {
