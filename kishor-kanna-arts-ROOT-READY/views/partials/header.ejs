@@ -132,8 +132,21 @@
     if (el) el.style.display = 'none';
   }
   document.addEventListener('DOMContentLoaded', function () {
-  var overlay = document.getElementById('offerPopupOverlay');
-  if (overlay) overlay.addEventListener('click', function (e) { if (e.target === overlay) closeOfferPopup(); });
-});
+    var overlay = document.getElementById('offerPopupOverlay');
+    if (overlay) {
+      overlay.addEventListener('click', function (e) {
+        // Only the actual "Order Now" link should NOT close the popup —
+        // every other tap (backdrop, image, title, message, gradient area)
+        // dismisses it. Previously only an exact click on the outer
+        // backdrop worked, so tapping the image/dark area appeared to do
+        // nothing.
+        if (e.target.closest('a.btn')) return;
+        closeOfferPopup();
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeOfferPopup();
+      });
+    }
+  });
 </script>
 <% } %>
