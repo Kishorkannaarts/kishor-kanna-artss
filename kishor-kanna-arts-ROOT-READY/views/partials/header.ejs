@@ -93,11 +93,16 @@
     <a href="/">Home</a>
     <a href="/portfolio">Portfolio</a>
     <a href="/services">Services</a>
-    <a href="/blog">Blog</a>
-    <% if (settings.courses_enabled) { %><a href="/courses">Courses</a><% } %>
-    <a href="/about">About Us</a>
-    <a href="/contact">Contact</a>
     <a href="/track-order">Track Order</a>
+    <details class="nav-more">
+      <summary>More</summary>
+      <div class="nav-more-menu">
+        <a href="/blog">Blog</a>
+        <% if (settings.courses_enabled) { %><a href="/courses">Courses</a><% } %>
+        <a href="/about">About Us</a>
+        <a href="/contact">Contact</a>
+      </div>
+    </details>
 <% if (isCustomer) { %><a href="/account/dashboard">My Account</a><% } else { %><a href="/account/login">Login</a><% } %>
     <a class="nav-cta" href="/order">Order Now</a>
   </nav>
