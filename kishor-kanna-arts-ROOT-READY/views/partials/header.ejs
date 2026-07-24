@@ -98,6 +98,7 @@
     <a href="/about">About Us</a>
     <a href="/contact">Contact</a>
     <a href="/track-order">Track Order</a>
+<% if (isCustomer) { %><a href="/account/dashboard">My Account</a><% } else { %><a href="/account/login">Login</a><% } %>
     <a class="nav-cta" href="/order">Order Now</a>
   </nav>
 <script>
