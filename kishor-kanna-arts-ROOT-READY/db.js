@@ -220,6 +220,7 @@ Please review it and confirm so we can proceed with packing & delivery:
   await db.collection('newsletter').createIndex({ email: 1 }, { unique: true, background: true });
   await db.collection('blocked_dates').createIndex({ date: 1 }, { unique: true, background: true });
   await db.collection('settings').createIndex({ key: 1 }, { unique: true, background: true });
+  await db.collection('customers').createIndex({ email: 1 }, { unique: true, background: true });
 
   console.log('[db] MongoDB connected and schema ready');
 }
