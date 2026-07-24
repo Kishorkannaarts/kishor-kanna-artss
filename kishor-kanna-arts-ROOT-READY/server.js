@@ -101,12 +101,6 @@ async function uploadImage(file, folder) {
 
 // ---------- Helpers ----------
 function genOrderCode() {
-  function normalizePaymentLink(link) {
-  if (!link) return link;
-  const trimmed = link.trim();
-  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(trimmed) || /^upi:/i.test(trimmed)) return trimmed;
-  return 'https://' + trimmed;
-  }
   const rand = Math.random().toString(36).slice(2, 7).toUpperCase();
   return 'KKA-' + Date.now().toString().slice(-6) + '-' + rand;
 }
@@ -222,7 +216,7 @@ app.get('/', ah(async (req, res) => {
   const videos    = db.normalize(await db.find('videos', {}, { created_at: -1 }, 12)).map(v => {
   let embed = null;
   let m = v.video_url.match(/youtu\.be\/([A-Za-z0-9_-]+)/) || v.video_url.match(/[?&]v=([A-Za-z0-9_-]+)/) || v.video_url.match(/youtube\.com\/shorts\/([A-Za-z0-9_-]+)/);
-  if (m) embed = `https://www.youtube.com/embed/${m[1]}?autoplay=1&mute=1&loop=1&playlist=${m[1]}`;
+  if (m) embed = `https://www.youtube.com/embed/${m[1]}?loop=1&playlist=${m[1]}`;
   else { m = v.video_url.match(/drive\.google\.com\/file\/d\/([A-Za-z0-9_-]+)/); if (m) embed = `https://drive.google.com/file/d/${m[1]}/preview`; }
   return { ...v, embed_url: embed };
 });
@@ -594,8 +588,7 @@ app.get('/admin/orders/:id/advance', requireAdmin, ah(async (req, res) => {
 }));
 
 app.post('/admin/orders/:id/advance', requireAdmin, ah(async (req, res) => {
-  const { amount } = req.body;
-  const payment_link = normalizePaymentLink(req.body.payment_link);
+  const { amount, payment_link } = req.body;
   const order = db.normalize(await db.findById('orders', req.params.id));
   if (!order) return res.redirect('/admin/orders');
   await db.updateById('orders', req.params.id, { status: 'Confirmed', advance_amount: amount, advance_payment_link: payment_link, advance_paid: false });
@@ -652,8 +645,7 @@ app.get('/admin/orders/:id/balance', requireAdmin, ah(async (req, res) => {
 }));
 
 app.post('/admin/orders/:id/balance', requireAdmin, ah(async (req, res) => {
-  const { amount } = req.body;
-  const payment_link = normalizePaymentLink(req.body.payment_link);
+  const { amount, payment_link } = req.body;
   const order = db.normalize(await db.findById('orders', req.params.id));
   if (!order) return res.redirect('/admin/orders');
   await db.updateById('orders', req.params.id, { status: 'Completed', balance_amount: amount, balance_payment_link: payment_link, balance_paid: false });
