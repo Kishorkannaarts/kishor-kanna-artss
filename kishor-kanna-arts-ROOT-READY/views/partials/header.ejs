@@ -132,8 +132,8 @@
     if (el) el.style.display = 'none';
   }
   document.addEventListener('DOMContentLoaded', function () {
-    var overlay = document.getElementById('offerPopupOverlay');
-    if (overlay) overlay.addEventListener('click', function (e) { if (e.target === overlay) closeOfferPopup(); });
-  });
+  var overlay = document.getElementById('offerPopupOverlay');
+  if (overlay) overlay.addEventListener('click', function (e) { if (e.target === overlay) closeOfferPopup(); });
+});
 </script>
 <% } %>
