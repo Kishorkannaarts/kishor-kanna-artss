@@ -61,7 +61,28 @@
       <div class="form-group"><label>Gold/Star Color (ratings)</label><input type="color" name="theme_gold" value="<%= settings.theme_gold || '#c99a3a' %>"></div>
       <div class="form-group"><label>Background Color</label><input type="color" name="theme_paper" value="<%= settings.theme_paper || '#faf6f0' %>"></div>
       <div class="form-group"><label>Text Color</label><input type="color" name="theme_ink" value="<%= settings.theme_ink || '#221a16' %>"></div>
+<h3 style="margin-top:24px;">Courses &amp; Live Classes</h3>
+      <div class="form-group">
+        <label><input type="checkbox" name="courses_enabled" <%= settings.courses_enabled === 'on' ? 'checked' : '' %>> Show "Courses" in the main menu</label>
+        <small style="color:var(--muted); display:block; margin-top:4px;">Turn this on when you're ready to publicly announce the waitlist page. Leave it off while you're still preparing.</small>
+      </div>
 
+      <h3 style="margin-top:24px;">Analytics &amp; Ads (optional)</h3>
+      <div class="form-group">
+        <label>Google Analytics (GA4) Measurement ID</label>
+        <small style="color:var(--muted); display:block; margin-bottom:6px;">From Google Analytics → Admin → Data Streams → your website. Looks like G-XXXXXXXXXX. Leave blank to disable.</small>
+        <input type="text" name="ga_measurement_id" value="<%= settings.ga_measurement_id %>" placeholder="G-XXXXXXXXXX">
+      </div>
+      <div class="form-group">
+        <label>Meta (Facebook/Instagram) Pixel ID</label>
+        <small style="color:var(--muted); display:block; margin-bottom:6px;">From Meta Events Manager. Lets you run Instagram/Facebook ads that retarget people who viewed your site. Leave blank to disable.</small>
+        <input type="text" name="meta_pixel_id" value="<%= settings.meta_pixel_id %>" placeholder="e.g. 123456789012345">
+      </div>
+      <div class="form-group">
+        <label>Social Share Preview Image</label>
+        <small style="color:var(--muted); display:block; margin-bottom:6px;">Shown when someone shares your site link on WhatsApp/Instagram/Facebook. Paste an image URL, or leave blank to use your logo.</small>
+        <input type="text" name="og_image_url" value="<%= settings.og_image_url %>" placeholder="https://...">
+      </div>
       <button class="btn btn-primary" type="submit">Save Settings</button>
     </form>
   </div>
