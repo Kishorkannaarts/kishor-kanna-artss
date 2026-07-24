@@ -1,987 +1,497 @@
-require('dotenv').config();
-const express = require('express');
-const session = require('express-session');
-const FileStore = require('session-file-store')(session);
-const bcrypt = require('bcryptjs');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-const cloudinary = require('cloudinary').v2;
-const compression = require('compression');
-const helmet = require('helmet');
-const db = require('./db');
-const mailer = require('./mailer');
-
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-// Gzip/Brotli-style compression for every response — meaningful win for
-// Lighthouse/Core Web Vitals with near-zero code cost.
-app.use(compression());
-
-// Security headers. CSP is relaxed for the specific third parties this site
-// actually uses (Google Fonts, Cloudinary images, embedded YouTube videos) —
-// a default-deny CSP would silently break the hero fonts and video embeds.
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", 'https://www.googletagmanager.com', 'https://connect.facebook.net'],
-      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
-      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-      imgSrc: ["'self'", 'data:', 'https:'],
-      frameSrc: ["'self'", 'https://www.youtube.com', 'https://player.vimeo.com'],
-      connectSrc: ["'self'", 'https://www.google-analytics.com', 'https://www.facebook.com']
-    }
-  },
-  crossOriginEmbedderPolicy: false
-}));
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
-
-// ---------- Basic setup ----------
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
-app.use('/public', express.static(path.join(__dirname, 'public')));
-
-const sessionsDir = path.join(__dirname, 'data', 'sessions');
-if (!fs.existsSync(sessionsDir)) fs.mkdirSync(sessionsDir, { recursive: true });
-
-app.use(session({
-  store: new FileStore({ path: sessionsDir, logFn: () => {} }),
-  secret: process.env.SESSION_SECRET || 'insecure_dev_secret_change_me',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { maxAge: 1000 * 60 * 60 * 8 }
-}));
-
-// Make site settings available to every view
-app.use(async (req, res, next) => {
-  try {
-    res.locals.settings = await db.getAllSettings();
-    res.locals.isAdmin = !!(req.session && req.session.isAdmin);
-    res.locals.popupOffer = await db.findOne('offers', { active: true }, { created_at: -1 });
-    res.locals.artTypes = await db.getArtTypes();
-    res.locals.sizes = await db.getSizes();
-    res.locals.priceForSize = priceForSize;
-    res.locals.siteUrl = (process.env.SITE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
-    res.locals.currentPath = req.originalUrl.split('?')[0];
-    res.locals.statusBadgeClass = function (status) {
-      if (status === 'Delivered' || status === 'Customer Confirmed') return 'badge-ok';
-      if (status === 'Cancelled') return 'badge-danger';
-      if (status === 'In Progress' || status === 'Artwork Sent - Awaiting Confirmation') return 'badge-progress';
-      return 'badge-new'; // Received, Confirmed, Completed
-    };
-    next();
-  } catch (err) { next(err); }
-});
-
-// ---------- Image uploads via Cloudinary ----------
-const memoryUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
-
-async function uploadImage(file, folder) {
-  if (!file) return null;
-  if (!process.env.CLOUDINARY_CLOUD_NAME) {
-    console.log('[uploads] Cloudinary not configured - image not saved. See README.');
-    return null;
-  }
-  const b64 = file.buffer.toString('base64');
-  const dataURI = `data:${file.mimetype};base64,${b64}`;
-  const result = await cloudinary.uploader.upload(dataURI, { folder: `kishor-kanna-arts/${folder}` });
-  return result.secure_url;
+:root {
+  --ink: #221a16;
+  --paper: #faf6f0;
+  --accent: #b5451b;
+  --accent-dark: #8c3413;
+  --gold: #c99a3a;
+  --muted: #7a6e63;
+  --graphite: #5b5148;
+  --border: #e6ddd0;
+  --card: #fffaf2;
+  --radius: 14px;
+  --shadow-soft: 0 1px 2px rgba(34,26,22,0.04), 0 8px 24px rgba(34,26,22,0.06);
+  --shadow-lift: 0 4px 10px rgba(34,26,22,0.08), 0 20px 44px rgba(34,26,22,0.14);
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --ease: cubic-bezier(.2,.7,.3,1);
 }
 
-// ---------- Helpers ----------
-function genOrderCode() {
-  const rand = Math.random().toString(36).slice(2, 7).toUpperCase();
-  return 'KKA-' + Date.now().toString().slice(-6) + '-' + rand;
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
 }
 
-// Map a size name to the old fixed column name, so services saved before
-// the dynamic sizes/art-types feature still display correctly.
-function legacyPriceKey(size) {
-  const s = String(size || '').toLowerCase();
-  if (s === 'a5') return 'price_a5';
-  if (s === 'a4') return 'price_a4';
-  if (s === 'a3') return 'price_a3';
-  if (s === 'a2') return 'price_a2';
-  if (s === 'custom') return 'price_custom';
-  return null;
+h1, h2, h3, .logo, .btn, .review-title, .who {
+  font-family: var(--font-display);
+}
+h1, h2, h3 { font-weight: 600; letter-spacing: -0.01em; }
+
+a { color: inherit; text-decoration: none; }
+img { max-width: 100%; display: block; }
+
+/* Accessible focus ring everywhere, replacing the default only when it's actually removed */
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px;
 }
 
-function priceForSize(service, size) {
-  if (!service) return '';
-  if (service.prices && service.prices[size]) return service.prices[size];
-  const lk = legacyPriceKey(size);
-  if (lk && service[lk]) return service[lk];
-  return '';
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
 }
 
-// Multipart form bodies (parsed by multer) don't auto-nest bracket-style
-// field names the way express.urlencoded (qs) does, so pull `prices[X]`
-// fields out of req.body manually.
-function extractPrices(body) {
-  if (body.prices && typeof body.prices === 'object') return body.prices; // already nested (non-multipart submit)
-  const prices = {};
-  for (const key of Object.keys(body)) {
-    const m = key.match(/^prices\[(.+)\]$/);
-    if (m) prices[m[1]] = body[key];
-  }
-  return prices;
+html { scroll-behavior: smooth; }
+
+.container { max-width: 1140px; margin: 0 auto; padding: 0 20px; }
+
+/* Hand-drawn pencil-stroke divider — the site's one signature mark, used under
+   section eyebrows to nod at "sketch first, art after" without being literal. */
+.section h2 { position: relative; padding-bottom: 16px; }
+.section h2::after {
+  content: '';
+  position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
+  width: 64px; height: 10px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='10' viewBox='0 0 64 10'%3E%3Cpath d='M2 6 C 14 1, 20 9, 32 5 S 50 1, 62 6' stroke='%23b5451b' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
 }
 
-function slugify(str) {
-  const base = String(str || '').toLowerCase().trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-  return base || 'post';
+/* Header — soft glass on scroll */
+.site-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; background: rgba(250,246,240,0.82); backdrop-filter: blur(10px) saturate(1.1);
+  -webkit-backdrop-filter: blur(10px) saturate(1.1);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 50;
+  transition: box-shadow .2s var(--ease);
+}
+.site-header.is-scrolled { box-shadow: 0 6px 24px rgba(34,26,22,0.08); }
+.logo { font-size: 1.5rem; font-weight: 600; color: var(--ink); letter-spacing: 0.2px; }
+.nav { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; font-size: 0.95rem; font-family: var(--font-body); }
+.nav a { position: relative; padding: 4px 0; transition: color .15s var(--ease); }
+.nav a:not(.nav-cta)::after {
+  content: ''; position: absolute; left: 0; right: 100%; bottom: -2px; height: 2px; background: var(--accent);
+  transition: right .2s var(--ease);
+}
+.nav a:not(.nav-cta):hover::after { right: 0; }
+.nav a:hover { color: var(--accent); }
+.nav-cta {
+  background: var(--accent); color: #fff !important; padding: 10px 20px; border-radius: 30px;
+  transition: background .15s var(--ease), transform .15s var(--ease);
+}
+.nav-cta:hover { background: var(--accent-dark); transform: translateY(-1px); }
+.menu-toggle { display: none; }
+
+/* Hero */
+.hero {
+  padding: 90px 20px; text-align: center; background: linear-gradient(180deg, #fff 0%, var(--paper) 100%);
+}
+.hero .hero-inner { max-width: 700px; margin: 0 auto; }
+.hero h1 { font-size: clamp(2.4rem, 4vw, 3.4rem); line-height: 1.08; max-width: 760px; margin: 0 auto 16px; color: var(--ink); font-weight: 600; }
+.hero p { font-size: 1.15rem; color: var(--graphite); max-width: 560px; margin: 0 auto 30px; font-family: var(--font-body); }
+
+.hero-with-image {
+  position: relative;
+  min-height: 560px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 40px 20px 56px;
+  text-align: center;
+  background: var(--paper);
+  overflow: hidden;
+}
+.hero-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  z-index: 0;
+}
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.05) 45%, rgba(0,0,0,0.6) 100%);
+  z-index: 1;
+}
+.hero-with-image .hero-inner {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 680px;
+  margin: 0 auto;
+}
+.hero-with-image h1 {
+  color: #fff; font-size: 2.6rem; line-height: 1.15; max-width: 720px; margin: 0 auto 14px;
+  text-shadow: 0 2px 14px rgba(0,0,0,0.55);
+}
+.hero-with-image p {
+  color: #fff; font-size: 1.1rem; max-width: 560px; margin: 0 auto 30px;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.6);
+}
+.hero-buttons {
+  display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap;
 }
 
-function renderTemplate(str, data) {
-  return (str || '').replace(/{{\s*(\w+)\s*}}/g, (m, key) =>
-    (data[key] !== undefined && data[key] !== null) ? data[key] : '');
+@media (min-width: 1400px) {
+  .hero-with-image { min-height: 680px; }
 }
 
-function requireAdmin(req, res, next) {
-  if (req.session && req.session.isAdmin) return next();
-  return res.redirect('/admin/login');
+@media (max-width: 780px) {
+  .hero { padding: 60px 20px; }
+  .hero h1 { font-size: 1.9rem; }
+  .hero-with-image { min-height: 78vh; padding: 24px 20px 44px; align-items: flex-end; }
+  .hero-with-image .hero-photo { object-fit: cover; }
+  .hero-with-image .hero-overlay {
+    background: linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.05) 30%, rgba(0,0,0,0.75) 100%);
+  }
+  .hero-with-image h1 { font-size: 2rem; }
+  .hero-with-image p { font-size: 1rem; margin-bottom: 22px; }
 }
 
-function ah(fn) {
-  return (req, res, next) => fn(req, res, next).catch(next);
+@media (max-width: 480px) {
+  .hero-with-image { min-height: 72vh; padding: 20px 18px 36px; }
+  .hero-with-image h1 { font-size: 1.65rem; margin-bottom: 10px; }
+  .hero-with-image p { font-size: 0.95rem; margin-bottom: 18px; }
+  .hero-buttons { flex-direction: row; flex-wrap: nowrap; width: 100%; gap: 10px; }
+  .hero-buttons .btn { flex: 1 1 0; width: auto; padding: 12px 8px; font-size: 0.82rem; text-align: center; }
 }
 
-// =========================================================
-// PUBLIC ROUTES
-// =========================================================
+.btn {
+  display: inline-block; background: var(--accent); color: #fff; padding: 13px 30px;
+  border-radius: 30px; font-size: 1rem; font-weight: 500; border: none; cursor: pointer;
+  box-shadow: var(--shadow-soft);
+  transition: background .15s var(--ease), transform .15s var(--ease), box-shadow .15s var(--ease);
+}
+.btn:hover { background: var(--accent-dark); transform: translateY(-2px); box-shadow: var(--shadow-lift); }
+.btn:active { transform: translateY(0); }
+.btn-outline {
+  background: transparent; border: 2px solid var(--accent); color: var(--accent); box-shadow: none;
+}
+.btn-outline:hover { background: var(--accent); color: #fff; }
+.btn-outline-onimage { background: rgba(255,255,255,0.9); }
+.btn-sm { padding: 8px 18px; font-size: 0.85rem; white-space: nowrap; }
 
-app.get('/robots.txt', (req, res) => {
-  res.type('text/plain').send(
-    `User-agent: *\n` +
-    `Disallow: /admin\n` +
-    `Disallow: /track-order\n` +
-    `Allow: /\n\n` +
-    `Sitemap: ${res.locals.siteUrl}/sitemap.xml\n`
-  );
-});
+/* Section */
+.section { padding: 18px 20px; }
+.reveal-on-scroll { opacity: 0; transform: translateY(18px); transition: opacity .6s var(--ease), transform .6s var(--ease); }
+.reveal-on-scroll.is-visible { opacity: 1; transform: translateY(0); }
+.section h2 { text-align: center; font-size: 1.9rem; margin-bottom: 4px; }
+.section .sub { text-align: center; color: var(--muted); margin-bottom: 14px; }
+.section-tint { background: #f1e9dd; }
 
-app.get('/sitemap.xml', ah(async (req, res) => {
-  const base = res.locals.siteUrl;
-  const staticUrls = [
-    { loc: '/', priority: '1.0' },
-    { loc: '/portfolio', priority: '0.9' },
-    { loc: '/services', priority: '0.9' },
-    { loc: '/order', priority: '0.8' },
-    { loc: '/about', priority: '0.7' },
-    { loc: '/blog', priority: '0.7' },
-    { loc: '/contact', priority: '0.6' },
-    { loc: '/privacy-policy', priority: '0.3' },
-    { loc: '/terms', priority: '0.3' }
-  ];
-  if (res.locals.settings.courses_enabled) staticUrls.push({ loc: '/courses', priority: '0.6' });
+/* Grid cards */
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; justify-content: center; }
+.card {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  overflow: hidden; box-shadow: var(--shadow-soft);
+  transition: transform .2s var(--ease), box-shadow .2s var(--ease);
+}
+.card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lift); }
+.card img { width: 100%; height: 260px; object-fit: cover; object-position: top center; background: #eee; }
+.grid-arts .card img { height: 320px; }
+/* Signature interaction: artwork thumbnails sit a touch desaturated, like an
+   unfinished sketch, and bloom into full colour on hover/focus — echoing the
+   photo-to-portrait transformation this business actually performs. */
+.grid-arts .card img {
+  filter: saturate(.55) contrast(1.02);
+  transition: filter .5s var(--ease), transform .5s var(--ease);
+}
+.grid-arts .card:hover img { filter: saturate(1) contrast(1.02); transform: scale(1.035); }
+@media (prefers-reduced-motion: reduce) {
+  .grid-arts .card img { filter: none; }
+}
+.card-body { padding: 14px 16px; }
+.card-body h3 { margin: 0 0 6px; font-size: 1.1rem; }
+.card-body p { color: var(--muted); font-size: 0.92rem; margin: 0 0 10px; }
 
-  const artworks = db.normalize(await db.find('artworks', {}, { created_at: -1 }));
-  const posts = db.normalize(await db.find('posts', { published: true }, { created_at: -1 }));
+/* Services grid: fixed 3-up on desktop, auto-fits down from there */
+@media (min-width: 781px) {
+  .grid-services { grid-template-columns: repeat(3, 1fr); }
+}
+.tag {
+  display: inline-block; font-size: 0.75rem; background: #f3e6da; color: var(--accent-dark);
+  padding: 3px 10px; border-radius: 20px; margin-bottom: 8px;
+}
+.card-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 14px; gap: 10px; flex-wrap: wrap;
+}
+.card-footer .meta { font-size: 0.9rem; color: var(--muted); }
+.card-footer .meta strong { color: var(--ink); }
 
-  const urlEntries = [
-    ...staticUrls.map(u => ({ loc: base + u.loc, priority: u.priority })),
-    ...artworks.map(a => ({ loc: `${base}/portfolio/${a.id}`, priority: '0.6' })),
-    ...posts.map(p => ({ loc: `${base}/blog/${p.slug}`, priority: '0.5' }))
-  ];
-
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n` +
-    `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
-    urlEntries.map(u => `  <url><loc>${u.loc}</loc><priority>${u.priority}</priority></url>`).join('\n') +
-    `\n</urlset>`;
-
-  res.type('application/xml').send(xml);
-}));
-
-app.get('/', ah(async (req, res) => {
-  const featured  = db.normalize(await db.find('artworks', { featured: true }, { created_at: -1 }, 8));
-  const testimonials = db.normalize(await db.find('testimonials', { approved: true }, { created_at: -1 }, 6));
-  const videos    = db.normalize(await db.find('videos', {}, { created_at: -1 }, 12)).map(v => {
-  let embed = null;
-  let m = v.video_url.match(/youtu\.be\/([A-Za-z0-9_-]+)/) || v.video_url.match(/[?&]v=([A-Za-z0-9_-]+)/) || v.video_url.match(/youtube\.com\/shorts\/([A-Za-z0-9_-]+)/);
-  if (m) embed = `https://www.youtube.com/embed/${m[1]}?autoplay=1&mute=1&loop=1&playlist=${m[1]}`;
-  else { m = v.video_url.match(/drive\.google\.com\/file\/d\/([A-Za-z0-9_-]+)/); if (m) embed = `https://drive.google.com/file/d/${m[1]}/preview`; }
-  return { ...v, embed_url: embed };
-});
-  const services  = db.normalize(await db.find('services', {}, { created_at: -1 }));
-  const offers    = db.normalize(await db.find('offers', { active: true }, { created_at: -1 }));
-  const blocks    = db.normalize(await db.find('blocks', {}, { created_at: 1 }));
-  const recentPosts = db.normalize(await db.find('posts', { published: true }, { created_at: -1 }, 3));
-  res.render('index', { featured, testimonials, videos, services, offers, blocks, recentPosts });
-}));
-
-app.get('/portfolio', ah(async (req, res) => {
-  const category = req.query.category || null;
-  const filter = category ? { category } : {};
-  const artworks = db.normalize(await db.find('artworks', filter, { created_at: -1 }));
-  const categories = await db.getArtTypes();
-  res.render('portfolio', { artworks, categories, activeCategory: category });
-}));
-
-app.get('/portfolio/:id', ah(async (req, res) => {
-  const artwork = db.normalize(await db.findById('artworks', req.params.id));
-  if (!artwork) return res.status(404).send('Artwork not found');
-  res.render('artwork-detail', { artwork });
-}));
-
-app.get('/services', ah(async (req, res) => {
-  const services = db.normalize(await db.find('services', {}, { created_at: -1 }));
-  res.render('services', { services });
-}));
-
-app.get('/about', ah(async (req, res) => {
-  const testimonials = db.normalize(await db.find('testimonials', { approved: true }, { created_at: -1 }));
-  const faqs = db.normalize(await db.find('faqs', {}, { created_at: 1 }));
-  res.render('about', { testimonials, faqs });
-}));
-
-// Reserved for the future course platform (live classes, recorded courses,
-// student dashboard). For now it's a waitlist page — this keeps the URL and
-// nav slot stable so the real platform can slot in later without a redesign.
-app.get('/courses', (req, res) => res.render('courses', { submitted: false }));
-
-app.post('/courses/waitlist', ah(async (req, res) => {
-  const { name, email } = req.body;
-  if (name && email) {
-    const mdb = await db.getDB();
-    await mdb.collection('course_waitlist').updateOne(
-      { email: String(email).toLowerCase().trim() },
-      { $set: { name, email: String(email).toLowerCase().trim() }, $setOnInsert: { created_at: new Date().toISOString() } },
-      { upsert: true }
-    );
+/* Both grids: always 2-up on mobile so pieces sit side by side, never stretched full-width */
+@media (max-width: 780px) {
+  .grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .grid .card img { height: 170px; }
+  .grid .card-body { padding: 10px 12px 12px; }
+  .grid .card-body h3 { font-size: 0.92rem; margin-bottom: 4px; }
+  .grid .card-body p {
+    font-size: 0.78rem; margin-bottom: 8px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   }
-  res.render('courses', { submitted: true });
-}));
-
-app.get('/contact', (req, res) => res.render('contact', { sent: false }));
-
-app.post('/contact', ah(async (req, res) => {
-  const { name, email, phone, subject, message } = req.body;
-  await db.insertOne('messages', { name, email, phone, subject, message, read: false });
-  res.render('contact', { sent: true });
-}));
-
-app.post('/newsletter', ah(async (req, res) => {
-  try { await db.insertOne('newsletter', { email: req.body.email }); } catch (e) {}
-  res.redirect(req.get('Referrer') || '/');
-}));
-
-app.get('/order', ah(async (req, res) => {
-  const blocked = await db.find('blocked_dates', {}, { date: 1 });
-  const services = db.normalize(await db.find('services', {}, { created_at: -1 }));
-  const activeOffer = await db.findOne('offers', { active: true });
-  const offerDiscount = activeOffer ? (activeOffer.discount_percent || 0) : 0;
-  const old = {};
-  if (req.query.art_type) old.art_type = req.query.art_type;
-  if (req.query.size) old.size = req.query.size;
-  const presetPrice = req.query.price || '';
-  res.render('order', { success: null, error: null, blockedDates: blocked.map(r => r.date), old, services, offerDiscount, presetPrice });
-}));
-
-app.post('/order', memoryUpload.single('reference_image'), ah(async (req, res) => {
-  const { name, phone, email, art_type, size, delivery_date, notes, estimated_price, address_line, city, state, pincode, coupon_code } = req.body;
-  const blocked = await db.find('blocked_dates', {}, { date: 1 });
-  const blockedDates = blocked.map(r => r.date);
-  const services = db.normalize(await db.find('services', {}, { created_at: -1 }));
-  const activeOffer = await db.findOne('offers', { active: true });
-  const offerDiscount = activeOffer ? (activeOffer.discount_percent || 0) : 0;
-
-  if (delivery_date && blockedDates.includes(delivery_date)) {
-    return res.render('order', { success: null, error: 'Sorry, that delivery date is not available. Please choose a different date.', blockedDates, old: req.body, services, offerDiscount, presetPrice: req.body.preset_price || '' });
+  .grid-arts { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .grid-arts .card { border-radius: 10px; }
+  .grid-arts .card img { height: 190px; }
+  .grid-arts .card-body { padding: 10px 12px 12px; }
+  .grid-arts .tag { font-size: 0.65rem; padding: 2px 8px; margin-bottom: 6px; }
+  .grid-arts .card-body h3 { font-size: 0.92rem; margin-bottom: 4px; line-height: 1.25; }
+  .grid-arts .card-body p {
+    font-size: 0.78rem; margin-bottom: 8px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   }
-
-  // Re-check the coupon on the server — the client-side discount is only a
-  // preview and must never be trusted for the final price or usage count.
-  let discount_percent_applied = offerDiscount;
-  let appliedCouponCode = null;
-  if (coupon_code) {
-    const couponResult = await checkCoupon(coupon_code);
-    if (couponResult.valid) {
-      discount_percent_applied = Math.max(offerDiscount, couponResult.coupon.discount_percent);
-      appliedCouponCode = couponResult.coupon.code;
-    }
+  .grid-arts .card-footer {
+    flex-direction: column; align-items: stretch; gap: 8px; margin-top: 8px;
   }
-  const basePrice = parseFloat(String(estimated_price || '0').replace(/[^0-9.]/g, '')) || null;
-  const finalPrice = basePrice && discount_percent_applied
-    ? (basePrice / (1 - (parseFloat(req.body.discount_percent_applied || 0) || 0) / 100) * (1 - discount_percent_applied / 100))
-    : basePrice;
-
-  const order_code = genOrderCode();
-  const refImage = await uploadImage(req.file, 'orders');
-  await db.insertOne('orders', { order_code, name, phone, email, art_type, size, reference_image: refImage, delivery_date, notes, estimated_price: finalPrice ? finalPrice.toFixed(0) : (estimated_price || null), discount_percent_applied, coupon_code: appliedCouponCode, address_line, city, state, pincode, status: 'Received', advance_amount: null, advance_payment_link: null, advance_paid: false, balance_amount: null, balance_payment_link: null, balance_paid: false });
-
-  if (appliedCouponCode) {
-    const mdb = await db.getDB();
-    await mdb.collection('coupons').updateOne({ code: appliedCouponCode }, { $inc: { used_count: 1 } });
-  }
-
-  const s = res.locals.settings;
-  const trackUrl = `${req.protocol}://${req.get('host')}/track-order`;
-  const data = { name, order_code, art_type, size, notes, track_url: trackUrl, site_name: s.site_name };
-
-  if (process.env.NOTIFY_EMAIL) {
-    const addressLine = [address_line, city, state, pincode].filter(Boolean).join(', ');
-    mailer.sendMail({ to: process.env.NOTIFY_EMAIL, subject: `New Order Received - ${order_code}`,
-      html: `<h2>New Order</h2><p><b>ID:</b> ${order_code}</p><p><b>Name:</b> ${name}</p><p><b>Phone:</b> ${phone}</p><p><b>Email:</b> ${email||'-'}</p><p><b>Type:</b> ${art_type} / ${size}</p><p><b>Coupon:</b> ${appliedCouponCode || '-'}</p><p><b>Delivery Address:</b> ${addressLine || '-'}</p><p><b>Date:</b> ${delivery_date||'-'}</p><p><b>Notes:</b> ${notes||'-'}</p>` });
-  }
-  if (email) {
-    mailer.sendMail({ to: email, subject: renderTemplate(s.tmpl_order_received_subject, data), html: renderTemplate(s.tmpl_order_received_body, data).replace(/\n/g, '<br>') });
-  }
-
-  res.render('order', { success: order_code, error: null, blockedDates, old: {}, services, offerDiscount, presetPrice: '' });
-}));
-
-app.get('/track-order', (req, res) => res.render('track-order', { order: null, searched: false, presetOrderCode: req.query.order_code || '' }));
-
-app.post('/track-order', ah(async (req, res) => {
-  const { order_code, phone } = req.body;
-  const order = db.normalize(await db.findOne('orders', { order_code, phone }));
-  res.render('track-order', { order: order || undefined, searched: true, presetOrderCode: order_code || '' });
-}));
-
-app.post('/track-order/confirm', ah(async (req, res) => {
-  const { order_code, phone } = req.body;
-  const order = db.normalize(await db.findOne('orders', { order_code, phone }));
-  if (order && order.final_artwork_image && !order.customer_confirmed) {
-    await db.updateById('orders', order.id, {
-      customer_confirmed: true,
-      customer_confirmed_at: new Date().toISOString(),
-      status: 'Customer Confirmed'
-    });
-    if (process.env.NOTIFY_EMAIL) {
-      const s = res.locals.settings;
-      const data = { name: order.name, order_code: order.order_code, site_name: s.site_name };
-      mailer.sendMail({ to: process.env.NOTIFY_EMAIL, subject: renderTemplate(s.tmpl_customer_confirmed_subject, data), html: renderTemplate(s.tmpl_customer_confirmed_body, data).replace(/\n/g, '<br>') });
-    }
-  }
-  const refreshed = db.normalize(await db.findOne('orders', { order_code, phone }));
-  res.render('track-order', { order: refreshed || undefined, searched: true, presetOrderCode: order_code || '' });
-}));
-
-app.post('/testimonials', ah(async (req, res) => {
-  const { name, message, rating } = req.body;
-  await db.insertOne('testimonials', { name, message, rating: parseInt(rating) || 5, approved: false });
-  res.redirect('/about?thanks=1');
-}));
-
-app.get('/blog', ah(async (req, res) => {
-  const posts = db.normalize(await db.find('posts', { published: true }, { created_at: -1 }));
-  res.render('blog_list', { posts });
-}));
-
-app.get('/blog/:slug', ah(async (req, res) => {
-  const post = db.normalize(await db.findOne('posts', { slug: req.params.slug, published: true }));
-  if (!post) return res.status(404).send('Post not found');
-  res.render('blog_post', { post });
-}));
-
-app.get('/privacy-policy', (req, res) => res.render('privacy-policy'));
-app.get('/terms', (req, res) => res.render('terms'));
-
-// =========================================================
-// ADMIN ROUTES
-// =========================================================
-
-app.get('/admin/login', (req, res) => {
-  if (req.session && req.session.isAdmin) return res.redirect('/admin/dashboard');
-  res.render('admin/login', { error: null });
-});
-
-app.post('/admin/login', (req, res) => {
-  const { username, password } = req.body;
-  const validUser = username === process.env.ADMIN_USERNAME;
-  const storedPass = process.env.ADMIN_PASSWORD || '';
-  let validPass = storedPass.startsWith('$2') ? bcrypt.compareSync(password, storedPass) : password === storedPass;
-  if (validUser && validPass) { req.session.isAdmin = true; return res.redirect('/admin/dashboard'); }
-  res.render('admin/login', { error: 'Invalid username or password' });
-});
-
-app.post('/admin/logout', requireAdmin, (req, res) => req.session.destroy(() => res.redirect('/admin/login')));
-
-app.get('/admin/dashboard', requireAdmin, ah(async (req, res) => {
-  const counts = {
-    artworks:     await db.count('artworks'),
-    orders:       await db.count('orders'),
-    newOrders:    await db.count('orders', { status: 'Received' }),
-    messages:     await db.count('messages', { read: false }),
-    testimonials: await db.count('testimonials', { approved: false }),
-    subscribers:  await db.count('newsletter')
-  };
-  const recentOrders = db.normalize(await db.find('orders', {}, { created_at: -1 }, 5));
-
-  const allOrders = db.normalize(await db.find('orders', {}, { created_at: -1 }));
-  let totalReceived = 0, totalPending = 0, totalExpenses = 0;
-  allOrders.forEach(o => {
-    const adv = parseFloat(o.advance_amount) || 0;
-    const bal = parseFloat(o.balance_amount) || 0;
-    const exp = parseFloat(o.expenses) || 0;
-    if (o.advance_amount) { if (o.advance_paid) totalReceived += adv; else totalPending += adv; }
-    if (o.balance_amount) { if (o.balance_paid) totalReceived += bal; else totalPending += bal; }
-    totalExpenses += exp;
-  });
-  const finance = { totalReceived, totalPending, totalExpenses, totalProfit: totalReceived - totalExpenses };
-
-  res.render('admin/dashboard', { counts, recentOrders, finance });
-}));
-
-// ---- Artworks ----
-app.get('/admin/artworks', requireAdmin, ah(async (req, res) => {
-  res.render('admin/artworks', { artworks: db.normalize(await db.find('artworks', {}, { created_at: -1 })) });
-}));
-
-app.get('/admin/artworks/new', requireAdmin, (req, res) => res.render('admin/artwork-form', { artwork: null }));
-
-app.get('/admin/artworks/:id/edit', requireAdmin, ah(async (req, res) => {
-  const artwork = db.normalize(await db.findById('artworks', req.params.id));
-  if (!artwork) return res.redirect('/admin/artworks');
-  res.render('admin/artwork-form', { artwork });
-}));
-
-app.post('/admin/artworks/save', requireAdmin, memoryUpload.single('image'), ah(async (req, res) => {
-  const { id, title, category, description, story, size, price, featured } = req.body;
-  const uploadedUrl = await uploadImage(req.file, 'artworks');
-  const featuredVal = !!featured;
-  if (id) {
-    const existing = await db.findById('artworks', id);
-    const image = uploadedUrl || (existing ? existing.image : null);
-    await db.updateById('artworks', id, { title, category, description, story, size, price, image, featured: featuredVal });
-  } else {
-    await db.insertOne('artworks', { title, category, description, story, size, price, image: uploadedUrl, featured: featuredVal });
-  }
-  res.redirect('/admin/artworks');
-}));
-
-app.post('/admin/artworks/:id/delete', requireAdmin, ah(async (req, res) => {
-  await db.deleteById('artworks', req.params.id);
-  res.redirect('/admin/artworks');
-}));
-
-// ---- Services ----
-app.get('/admin/services', requireAdmin, ah(async (req, res) => {
-  res.render('admin/services', { services: db.normalize(await db.find('services', {}, { created_at: -1 })) });
-}));
-
-app.post('/admin/services/save', requireAdmin, memoryUpload.single('image'), ah(async (req, res) => {
-  const { id, title, description } = req.body;
-  const prices = extractPrices(req.body);
-  const uploadedUrl = await uploadImage(req.file, 'services');
-  if (id) {
-    const existing = await db.findById('services', id);
-    const image = uploadedUrl || (existing ? existing.image : null);
-    await db.updateById('services', id, { title, description, image, prices });
-  } else {
-    await db.insertOne('services', { title, description, image: uploadedUrl, prices });
-  }
-  res.redirect('/admin/services');
-}));
-
-app.post('/admin/services/:id/delete', requireAdmin, ah(async (req, res) => {
-  await db.deleteById('services', req.params.id);
-  res.redirect('/admin/services');
-}));
-
-// ---- Videos ----
-app.get('/admin/videos', requireAdmin, ah(async (req, res) => {
-  res.render('admin/videos', { videos: db.normalize(await db.find('videos', {}, { created_at: -1 })) });
-}));
-
-app.post('/admin/videos/save', requireAdmin, ah(async (req, res) => {
-  await db.insertOne('videos', { title: req.body.title, video_url: req.body.video_url });
-  res.redirect('/admin/videos');
-}));
-
-app.post('/admin/videos/:id/delete', requireAdmin, ah(async (req, res) => {
-  await db.deleteById('videos', req.params.id);
-  res.redirect('/admin/videos');
-}));
-
-// ---- Orders ----
-app.get('/admin/orders', requireAdmin, ah(async (req, res) => {
-  res.render('admin/orders', { orders: db.normalize(await db.find('orders', {}, { created_at: -1 })) });
-}));
-
-app.post('/admin/orders/:id/status', requireAdmin, ah(async (req, res) => {
-  await db.updateById('orders', req.params.id, { status: req.body.status });
-  const order = db.normalize(await db.findById('orders', req.params.id));
-  if (order && order.email) {
-    const s = res.locals.settings;
-    const trackUrl = `${req.protocol}://${req.get('host')}/track-order`;
-    const data = { name: order.name, order_code: order.order_code, status: order.status, track_url: trackUrl, site_name: s.site_name };
-    mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_status_update_subject, data), html: renderTemplate(s.tmpl_status_update_body, data).replace(/\n/g, '<br>') });
-  }
-  res.redirect('/admin/orders');
-}));
-
-app.get('/admin/orders/:id/advance', requireAdmin, ah(async (req, res) => {
-  const order = db.normalize(await db.findById('orders', req.params.id));
-  if (!order) return res.redirect('/admin/orders');
-  res.render('admin/order-action', { order, actionType: 'advance', title: 'Request Advance Payment', actionUrl: `/admin/orders/${order.id}/advance`, defaultLink: res.locals.settings.default_payment_link, suggestedAmount: null });
-}));
-
-app.post('/admin/orders/:id/advance', requireAdmin, ah(async (req, res) => {
-  const { amount, payment_link } = req.body;
-  const order = db.normalize(await db.findById('orders', req.params.id));
-  if (!order) return res.redirect('/admin/orders');
-  await db.updateById('orders', req.params.id, { status: 'Confirmed', advance_amount: amount, advance_payment_link: payment_link, advance_paid: false });
-  if (order.email) {
-    const s = res.locals.settings;
-    const trackUrl = `${req.protocol}://${req.get('host')}/track-order`;
-    const data = { name: order.name, order_code: order.order_code, art_type: order.art_type, amount, payment_link, track_url: trackUrl, site_name: s.site_name };
-    await mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_advance_subject, data), html: renderTemplate(s.tmpl_advance_body, data).replace(/\n/g, '<br>') });
-  }
-  res.redirect('/admin/orders');
-}));
-
-app.post('/admin/orders/:id/advance-paid', requireAdmin, ah(async (req, res) => {
-  const order = db.normalize(await db.findById('orders', req.params.id));
-  if (!order) return res.redirect('/admin/orders');
-  await db.updateById('orders', req.params.id, { advance_paid: true, status: 'In Progress' });
-  if (order.email) {
-    const s = res.locals.settings;
-    const trackUrl = `${req.protocol}://${req.get('host')}/track-order`;
-    const data = { name: order.name, order_code: order.order_code, status: 'In Progress', track_url: trackUrl, site_name: s.site_name };
-    await mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_status_update_subject, data), html: renderTemplate(s.tmpl_status_update_body, data).replace(/\n/g, '<br>') });
-  }
-  res.redirect('/admin/orders');
-}));
-
-app.get('/admin/orders/:id/reject', requireAdmin, ah(async (req, res) => {
-  const order = db.normalize(await db.findById('orders', req.params.id));
-  if (!order) return res.redirect('/admin/orders');
-  res.render('admin/order-action', { order, actionType: 'reject', title: 'Reject & Ask For a New Date', actionUrl: `/admin/orders/${order.id}/reject`, defaultLink: '', suggestedAmount: null });
-}));
-
-app.post('/admin/orders/:id/reject', requireAdmin, ah(async (req, res) => {
-  const { reason } = req.body;
-  const order = db.normalize(await db.findById('orders', req.params.id));
-  if (!order) return res.redirect('/admin/orders');
-  await db.updateById('orders', req.params.id, { status: 'Date Rejected - Awaiting Reply' });
-  if (order.email) {
-    const s = res.locals.settings;
-    const trackUrl = `${req.protocol}://${req.get('host')}/track-order`;
-    const data = { name: order.name, order_code: order.order_code, reason: reason || 'Requested date unavailable', track_url: trackUrl, site_name: s.site_name };
-    await mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_reject_subject, data), html: renderTemplate(s.tmpl_reject_body, data).replace(/\n/g, '<br>') });
-  }
-  res.redirect('/admin/orders');
-}));
-
-app.get('/admin/orders/:id/balance', requireAdmin, ah(async (req, res) => {
-  const order = db.normalize(await db.findById('orders', req.params.id));
-  if (!order) return res.redirect('/admin/orders');
-  let suggestedAmount = null;
-  const est = parseFloat(order.estimated_price);
-  const adv = parseFloat(order.advance_amount);
-  if (est && adv) suggestedAmount = (est - adv).toFixed(0);
-  res.render('admin/order-action', { order, actionType: 'balance', title: 'Request Balance (Final) Payment', actionUrl: `/admin/orders/${order.id}/balance`, defaultLink: res.locals.settings.default_payment_link, suggestedAmount });
-}));
-
-app.post('/admin/orders/:id/balance', requireAdmin, ah(async (req, res) => {
-  const { amount, payment_link } = req.body;
-  const order = db.normalize(await db.findById('orders', req.params.id));
-  if (!order) return res.redirect('/admin/orders');
-  await db.updateById('orders', req.params.id, { status: 'Completed', balance_amount: amount, balance_payment_link: payment_link, balance_paid: false });
-  if (order.email) {
-    const s = res.locals.settings;
-    const trackUrl = `${req.protocol}://${req.get('host')}/track-order`;
-    const data = { name: order.name, order_code: order.order_code, amount, payment_link, track_url: trackUrl, site_name: s.site_name };
-    await mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_balance_subject, data), html: renderTemplate(s.tmpl_balance_body, data).replace(/\n/g, '<br>') });
-  }
-  res.redirect('/admin/orders');
-}));
-
-app.post('/admin/orders/:id/balance-paid', requireAdmin, ah(async (req, res) => {
-  await db.updateById('orders', req.params.id, { balance_paid: true });
-  res.redirect('/admin/orders');
-}));
-
-app.post('/admin/orders/:id/expenses', requireAdmin, ah(async (req, res) => {
-  await db.updateById('orders', req.params.id, { expenses: req.body.expenses || 0 });
-  res.redirect('/admin/orders');
-}));
-
-app.post('/admin/orders/:id/shipped', requireAdmin, ah(async (req, res) => {
-  const order = db.normalize(await db.findById('orders', req.params.id));
-  if (!order) return res.redirect('/admin/orders');
-  await db.updateById('orders', req.params.id, { status: 'Delivered' });
-  if (order.email) {
-    const s = res.locals.settings;
-    const trackUrl = `${req.protocol}://${req.get('host')}/track-order`;
-    const data = { name: order.name, order_code: order.order_code, track_url: trackUrl, site_name: s.site_name };
-    await mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_shipped_subject, data), html: renderTemplate(s.tmpl_shipped_body, data).replace(/\n/g, '<br>') });
-  }
-  res.redirect('/admin/orders');
-}));
-
-// ---- Send Finished Artwork for Customer Confirmation ----
-app.get('/admin/orders/:id/send-artwork', requireAdmin, ah(async (req, res) => {
-  const order = db.normalize(await db.findById('orders', req.params.id));
-  if (!order) return res.redirect('/admin/orders');
-  res.render('admin/send-artwork', { order });
-}));
-
-app.post('/admin/orders/:id/send-artwork', requireAdmin, memoryUpload.single('artwork_image'), ah(async (req, res) => {
-  const order = db.normalize(await db.findById('orders', req.params.id));
-  if (!order) return res.redirect('/admin/orders');
-  const uploadedUrl = await uploadImage(req.file, 'final-artwork');
-  const final_artwork_image = uploadedUrl || order.final_artwork_image || null;
-  const update = {
-    final_artwork_image,
-    final_artwork_note: req.body.note || '',
-    status: 'Artwork Sent - Awaiting Confirmation',
-    artwork_sent_at: new Date().toISOString(),
-    customer_confirmed: false,
-    customer_confirmed_at: null
-  };
-  await db.updateById('orders', req.params.id, update);
-  if (order.email && final_artwork_image) {
-    const s = res.locals.settings;
-    const trackUrl = `${req.protocol}://${req.get('host')}/track-order?order_code=${encodeURIComponent(order.order_code)}`;
-    const data = { name: order.name, order_code: order.order_code, art_type: order.art_type, artwork_image: final_artwork_image, artwork_note: req.body.note || '', track_url: trackUrl, site_name: s.site_name };
-    await mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_artwork_ready_subject, data), html: renderTemplate(s.tmpl_artwork_ready_body, data).replace(/\n/g, '<br>') });
-  }
-  res.redirect('/admin/orders');
-}));
-
-// ---- Testimonials ----
-app.get('/admin/testimonials', requireAdmin, ah(async (req, res) => {
-  res.render('admin/testimonials', { testimonials: db.normalize(await db.find('testimonials', {}, { created_at: -1 })) });
-}));
-
-app.post('/admin/testimonials/add', requireAdmin, ah(async (req, res) => {
-  const { name, message, rating } = req.body;
-  await db.insertOne('testimonials', { name, message, rating: parseInt(rating) || 5, approved: true });
-  res.redirect('/admin/testimonials');
-}));
-
-app.post('/admin/testimonials/:id/approve', requireAdmin, ah(async (req, res) => {
-  await db.updateById('testimonials', req.params.id, { approved: true });
-  res.redirect('/admin/testimonials');
-}));
-
-app.post('/admin/testimonials/:id/delete', requireAdmin, ah(async (req, res) => {
-  await db.deleteById('testimonials', req.params.id);
-  res.redirect('/admin/testimonials');
-}));
-
-// ---- Messages ----
-app.get('/admin/messages', requireAdmin, ah(async (req, res) => {
-  const mdb = await db.getDB();
-  const messages = db.normalize(await db.find('messages', {}, { created_at: -1 }));
-  await mdb.collection('messages').updateMany({ read: false }, { $set: { read: true } });
-  res.render('admin/messages', { messages });
-}));
-
-app.post('/admin/messages/:id/delete', requireAdmin, ah(async (req, res) => {
-  await db.deleteById('messages', req.params.id);
-  res.redirect('/admin/messages');
-}));
-
-// ---- Newsletter ----
-app.get('/admin/newsletter', requireAdmin, ah(async (req, res) => {
-  res.render('admin/newsletter', { subscribers: db.normalize(await db.find('newsletter', {}, { created_at: -1 })), notice: null });
-}));
-
-// ---- Course Waitlist (reserved for the future course platform) ----
-app.get('/admin/course-waitlist', requireAdmin, ah(async (req, res) => {
-  res.render('admin/course-waitlist', { signups: db.normalize(await db.find('course_waitlist', {}, { created_at: -1 })) });
-}));
-
-app.get('/admin/newsletter/export', requireAdmin, ah(async (req, res) => {
-  const subscribers = await db.find('newsletter', {}, { created_at: -1 });
-  const csv = 'email,subscribed_at\n' + subscribers.map(s => `${s.email},${s.created_at}`).join('\n');
-  res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', 'attachment; filename=subscribers.csv');
-  res.send(csv);
-}));
-
-app.post('/admin/newsletter/send', requireAdmin, ah(async (req, res) => {
-  const { subject, message } = req.body;
-  const subscribers = await db.find('newsletter', {}, { created_at: -1 });
-  const siteName = res.locals.settings.site_name;
-  let sentCount = 0;
-  for (const s of subscribers) {
-    const result = await mailer.sendMail({ to: s.email, subject, html: `<div>${message.replace(/\n/g, '<br>')}</div><p style="margin-top:20px;color:#888;font-size:12px;">— ${siteName}</p>` });
-    if (result && result.sent) sentCount++;
-  }
-  res.render('admin/newsletter', {
-    subscribers: db.normalize(await db.find('newsletter', {}, { created_at: -1 })),
-    notice: mailer.isConfigured() ? `Sent to ${sentCount} of ${subscribers.length} subscribers.` : 'Email not configured yet — nothing was sent.'
-  });
-}));
-
-// ---- Art Types & Sizes (drives Portfolio categories, the Artwork form,
-//      Services pricing, and the Order form) ----
-app.get('/admin/taxonomy', requireAdmin, ah(async (req, res) => {
-  res.render('admin/taxonomy', { artTypesList: await db.getArtTypes(), sizesList: await db.getSizes() });
-}));
-
-app.post('/admin/taxonomy/art-types/add', requireAdmin, ah(async (req, res) => {
-  const list = await db.getArtTypes();
-  const val = (req.body.name || '').trim();
-  if (val && !list.includes(val)) list.push(val);
-  await db.saveArtTypes(list);
-  res.redirect('/admin/taxonomy');
-}));
-
-app.post('/admin/taxonomy/art-types/delete', requireAdmin, ah(async (req, res) => {
-  const list = (await db.getArtTypes()).filter(v => v !== req.body.value);
-  await db.saveArtTypes(list);
-  res.redirect('/admin/taxonomy');
-}));
-
-app.post('/admin/taxonomy/sizes/add', requireAdmin, ah(async (req, res) => {
-  const list = await db.getSizes();
-  const val = (req.body.name || '').trim();
-  if (val && !list.includes(val)) list.push(val);
-  await db.saveSizes(list);
-  res.redirect('/admin/taxonomy');
-}));
-
-app.post('/admin/taxonomy/sizes/delete', requireAdmin, ah(async (req, res) => {
-  const list = (await db.getSizes()).filter(v => v !== req.body.value);
-  await db.saveSizes(list);
-  res.redirect('/admin/taxonomy');
-}));
-
-// ---- Homepage Content ----
-app.get('/admin/homepage-content', requireAdmin, (req, res) => res.render('admin/homepage-content'));
-
-// ---- Blog ----
-app.get('/admin/blog', requireAdmin, ah(async (req, res) => {
-  res.render('admin/blog', { posts: db.normalize(await db.find('posts', {}, { created_at: -1 })) });
-}));
-
-app.get('/admin/blog/new', requireAdmin, (req, res) => res.render('admin/blog-form', { post: null }));
-
-app.get('/admin/blog/:id/edit', requireAdmin, ah(async (req, res) => {
-  const post = db.normalize(await db.findById('posts', req.params.id));
-  if (!post) return res.redirect('/admin/blog');
-  res.render('admin/blog-form', { post });
-}));
-
-app.post('/admin/blog/save', requireAdmin, memoryUpload.single('cover_image'), ah(async (req, res) => {
-  const { id, title, excerpt, content, published } = req.body;
-  const uploadedUrl = await uploadImage(req.file, 'blog');
-  if (id) {
-    const existing = await db.findById('posts', id);
-    const cover_image = uploadedUrl || (existing ? existing.cover_image : null);
-    await db.updateById('posts', id, { title, excerpt, content, cover_image, published: !!published });
-  } else {
-    let slug = slugify(title);
-    const clash = await db.findOne('posts', { slug });
-    if (clash) slug = slug + '-' + Date.now().toString().slice(-5);
-    await db.insertOne('posts', { title, slug, excerpt, content, cover_image: uploadedUrl, published: !!published });
-  }
-  res.redirect('/admin/blog');
-}));
-
-app.post('/admin/blog/:id/publish-toggle', requireAdmin, ah(async (req, res) => {
-  const post = await db.findById('posts', req.params.id);
-  if (post) await db.updateById('posts', req.params.id, { published: !post.published });
-  res.redirect('/admin/blog');
-}));
-
-app.post('/admin/blog/:id/delete', requireAdmin, ah(async (req, res) => {
-  await db.deleteById('posts', req.params.id);
-  res.redirect('/admin/blog');
-}));
-
-// ---- Custom Content Blocks (free-form fields, no code needed) ----
-app.get('/admin/blocks', requireAdmin, ah(async (req, res) => {
-  res.render('admin/blocks', { blocks: db.normalize(await db.find('blocks', {}, { created_at: 1 })) });
-}));
-
-app.post('/admin/blocks/save', requireAdmin, ah(async (req, res) => {
-  await db.insertOne('blocks', { title: req.body.title, text: req.body.text });
-  res.redirect('/admin/blocks');
-}));
-
-app.post('/admin/blocks/:id/delete', requireAdmin, ah(async (req, res) => {
-  await db.deleteById('blocks', req.params.id);
-  res.redirect('/admin/blocks');
-}));
-
-// ---- Settings ----
-app.get('/admin/settings', requireAdmin, (req, res) => res.render('admin/settings'));
-
-app.post('/admin/settings/save', requireAdmin, memoryUpload.fields([{ name: 'logo', maxCount: 1 }, { name: 'hero_image', maxCount: 1 }]), ah(async (req, res) => {
-  for (const [key, value] of Object.entries(req.body)) await db.setSetting(key, value);
-  // Checkboxes are absent from req.body entirely when unchecked, so the generic
-  // loop above can turn this ON but can never turn it back OFF. Handle it explicitly.
-  await db.setSetting('courses_enabled', req.body.courses_enabled === 'on' ? 'on' : 'off');
-  const logoFile = req.files && req.files.logo && req.files.logo[0];
-  const heroFile = req.files && req.files.hero_image && req.files.hero_image[0];
-  const uploadedLogo = await uploadImage(logoFile, 'logo');
-  if (uploadedLogo) await db.setSetting('logo_url', uploadedLogo);
-  const uploadedHero = await uploadImage(heroFile, 'hero');
-  if (uploadedHero) await db.setSetting('hero_image_url', uploadedHero);
-  res.redirect('/admin/settings');
-}));
-
-// ---- Calendar ----
-app.get('/admin/calendar', requireAdmin, ah(async (req, res) => {
-  res.render('admin/calendar', { blocked: await db.find('blocked_dates', {}, { date: 1 }) });
-}));
-
-app.post('/admin/calendar/block', requireAdmin, ah(async (req, res) => {
-  const { date, reason } = req.body;
-  if (date) {
-    const mdb = await db.getDB();
-    await mdb.collection('blocked_dates').updateOne({ date }, { $set: { date, reason: reason || '' } }, { upsert: true });
-  }
-  res.redirect('/admin/calendar');
-}));
-
-app.post('/admin/calendar/unblock', requireAdmin, ah(async (req, res) => {
-  const mdb = await db.getDB();
-  await mdb.collection('blocked_dates').deleteOne({ date: req.body.date });
-  res.redirect('/admin/calendar');
-}));
-
-// ---- Email Templates ----
-app.get('/admin/email-templates', requireAdmin, (req, res) => res.render('admin/email-templates'));
-
-app.post('/admin/email-templates/save', requireAdmin, ah(async (req, res) => {
-  for (const [key, value] of Object.entries(req.body)) {
-    if (key.startsWith('tmpl_') || key === 'default_payment_link') await db.setSetting(key, value);
-  }
-  res.redirect('/admin/email-templates');
-}));
-
-// ---- Offers ----
-app.get('/admin/offers', requireAdmin, ah(async (req, res) => {
-  res.render('admin/offers', { offers: db.normalize(await db.find('offers', {}, { created_at: -1 })) });
-}));
-
-app.post('/admin/offers/save', requireAdmin, memoryUpload.single('image'), ah(async (req, res) => {
-  const discount = parseFloat(req.body.discount_percent) || 0;
-  const uploadedUrl = await uploadImage(req.file, 'offers');
-  // A newly published offer becomes the one live offer, so the popup/banner
-  // never end up showing more than one offer at once.
-  const mdb = await db.getDB();
-  await mdb.collection('offers').updateMany({}, { $set: { active: false } });
-  await db.insertOne('offers', { title: req.body.title, message: req.body.message, discount_percent: discount, image: uploadedUrl, active: true });
-  res.redirect('/admin/offers');
-}));
-
-app.post('/admin/offers/:id/toggle', requireAdmin, ah(async (req, res) => {
-  const offer = await db.findById('offers', req.params.id);
-  if (offer) {
-    if (!offer.active) {
-      // Turning one offer on turns every other offer off, so there is only
-      // ever one live offer showing in the popup and homepage banner.
-      const mdb = await db.getDB();
-      await mdb.collection('offers').updateMany({}, { $set: { active: false } });
-      await db.updateById('offers', req.params.id, { active: true });
-    } else {
-      await db.updateById('offers', req.params.id, { active: false });
-    }
-  }
-  res.redirect('/admin/offers');
-}));
-
-app.post('/admin/offers/:id/delete', requireAdmin, ah(async (req, res) => {
-  await db.deleteById('offers', req.params.id);
-  res.redirect('/admin/offers');
-}));
-
-// ---- Coupon Codes ----
-app.get('/admin/coupons', requireAdmin, ah(async (req, res) => {
-  res.render('admin/coupons', { coupons: db.normalize(await db.find('coupons', {}, { created_at: -1 })) });
-}));
-
-app.post('/admin/coupons/save', requireAdmin, ah(async (req, res) => {
-  const code = String(req.body.code || '').trim().toUpperCase();
-  const discount_percent = parseFloat(req.body.discount_percent) || 0;
-  const max_uses = req.body.max_uses ? parseInt(req.body.max_uses) : null;
-  const expires_at = req.body.expires_at || null;
-  if (code && discount_percent > 0) {
-    // Codes are unique — re-creating an existing code replaces its terms rather
-    // than silently creating a confusing duplicate.
-    const mdb = await db.getDB();
-    await mdb.collection('coupons').deleteMany({ code });
-    await db.insertOne('coupons', { code, discount_percent, max_uses, used_count: 0, expires_at, active: true });
-  }
-  res.redirect('/admin/coupons');
-}));
-
-app.post('/admin/coupons/:id/toggle', requireAdmin, ah(async (req, res) => {
-  const coupon = await db.findById('coupons', req.params.id);
-  if (coupon) await db.updateById('coupons', req.params.id, { active: !coupon.active });
-  res.redirect('/admin/coupons');
-}));
-
-app.post('/admin/coupons/:id/delete', requireAdmin, ah(async (req, res) => {
-  await db.deleteById('coupons', req.params.id);
-  res.redirect('/admin/coupons');
-}));
-
-// Shared validity check used by both the live AJAX check and the final
-// server-side re-check on order submission — so a customer can never bypass
-// the rules by tampering with the client-side request.
-async function checkCoupon(codeRaw) {
-  const code = String(codeRaw || '').trim().toUpperCase();
-  if (!code) return { valid: false, message: 'Enter a coupon code.' };
-  const coupon = await db.findOne('coupons', { code });
-  if (!coupon || !coupon.active) return { valid: false, message: 'That coupon code is not valid.' };
-  if (coupon.expires_at && new Date(coupon.expires_at) < new Date(new Date().toDateString())) {
-    return { valid: false, message: 'That coupon code has expired.' };
-  }
-  if (coupon.max_uses && (coupon.used_count || 0) >= coupon.max_uses) {
-    return { valid: false, message: 'That coupon code has reached its usage limit.' };
-  }
-  return { valid: true, coupon };
+  .grid-arts .card-footer .btn-sm { width: 100%; text-align: center; }
+
+  .grid-services .card-body table { font-size: 0.78rem; margin-bottom: 10px; }
+  .grid-services .card-body table td { padding: 2px 0; }
+  .grid-services .card-body .btn { width: 100%; text-align: center; padding: 10px 14px; font-size: 0.88rem; }
 }
 
-app.post('/coupon/validate', express.json(), ah(async (req, res) => {
-  const result = await checkCoupon(req.body.code);
-  if (!result.valid) return res.json({ valid: false, message: result.message });
-  res.json({ valid: true, discount_percent: result.coupon.discount_percent, message: `Coupon applied: ${result.coupon.discount_percent}% off` });
-}));
-// ---- FAQs ----
-app.get('/admin/faqs', requireAdmin, ah(async (req, res) => {
-  const faqs = db.normalize(await db.find('faqs', {}, { created_at: 1 }));
-  res.render('admin/faqs', { faqs });
-}));
+@media (max-width: 480px) {
+  .grid { gap: 8px; }
+  .grid .card img { height: 145px; }
+  .grid-arts { gap: 8px; }
+  .grid-arts .card img { height: 160px; }
+  .grid-arts .card-body { padding: 8px 10px 10px; }
+  .grid-arts .card-body h3 { font-size: 0.85rem; }
+  .grid-arts .card-body p { font-size: 0.72rem; }
+}
 
-app.post('/admin/faqs/add', requireAdmin, ah(async (req, res) => {
-  const { question, answer } = req.body;
-  await db.insertOne('faqs', { question, answer });
-  res.redirect('/admin/faqs');
-}));
+/* Category filter pills */
+.pills { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-bottom: 36px; }
+.pill {
+  border: 1px solid var(--border); padding: 8px 18px; border-radius: 30px; font-size: 0.9rem;
+  background: var(--card);
+}
+.pill.active, .pill:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
 
-app.post('/admin/faqs/:id/update', requireAdmin, ah(async (req, res) => {
-  const { question, answer } = req.body;
-  await db.updateById('faqs', req.params.id, { question, answer });
-  res.redirect('/admin/faqs');
-}));
+/* Forms */
+.form-box {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 32px; max-width: 620px; margin: 0 auto;
+}
+.form-group { margin-bottom: 18px; }
+label { display: block; font-size: 0.9rem; margin-bottom: 6px; color: var(--muted); }
+input, select, textarea {
+  width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 8px;
+  font-family: inherit; font-size: 1rem; background: #fff;
+}
+textarea { resize: vertical; min-height: 100px; }
+.form-row { display: flex; gap: 16px; flex-wrap: wrap; }
+.form-row .form-group { flex: 1; min-width: 200px; }
 
-app.post('/admin/faqs/:id/delete', requireAdmin, ah(async (req, res) => {
-  await db.deleteById('faqs', req.params.id);
-  res.redirect('/admin/faqs');
-}));
+.alert { padding: 14px 18px; border-radius: 8px; margin-bottom: 20px; }
+.alert-success { background: #e6f4ea; color: #1e6b34; border: 1px solid #b7e0c4; }
+.alert-error { background: #fbe7e6; color: #a2231d; border: 1px solid #f2b8b5; }
 
-// ---------- 404 + Error handler ----------
-app.use((req, res) => res.status(404).send('Page not found'));
-app.use((err, req, res, next) => {
-  console.error('[error]', err.message);
-  res.status(500).send('Something went wrong. Please try again.');
-});
+/* Testimonials */
+.testimonial {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 26px 24px; font-style: normal; display: flex; flex-direction: column;
+}
+.testimonial .quote-mark {
+  font-family: Georgia, serif; font-size: 2.6rem; line-height: 1; color: var(--ink);
+  margin-bottom: 8px; font-weight: bold;
+}
+.testimonial .review-title {
+  font-weight: bold; font-size: 1.05rem; margin-bottom: 8px; color: var(--ink);
+}
+.testimonial .review-body {
+  color: var(--muted); font-size: 0.95rem; margin-bottom: 4px;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.testimonial.expanded .review-body { -webkit-line-clamp: unset; overflow: visible; }
+.testimonial .read-more {
+  background: none; border: none; padding: 0; font-size: 0.85rem; font-weight: bold;
+  letter-spacing: 0.4px; color: var(--ink); text-decoration: underline; cursor: pointer;
+  margin-bottom: 16px; align-self: flex-start;
+}
+.testimonial .stars { color: var(--ink); font-style: normal; margin-top: auto; margin-bottom: 6px; }
+.testimonial .who-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.testimonial .who { font-style: normal; font-weight: bold; color: var(--ink); }
+.testimonial .meta-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-top: 12px; border-top: 1px solid var(--border); font-size: 0.85rem; color: var(--muted);
+}
+.testimonial .verified { display: flex; align-items: center; gap: 5px; color: var(--muted); }
+.testimonial .verified svg { width: 14px; height: 14px; }
 
-// ---------- Start ----------
-db.initSchema().then(() => {
-  app.listen(PORT, () => console.log(`Kishor Kanna Arts running at http://localhost:${PORT}`));
-}).catch(err => {
-  console.error('Database connection failed:', err.message);
-  process.exit(1);
-});
+/* Footer */
+.site-footer { background: var(--ink); color: #e8ded3; padding: 56px 20px 26px; margin-top: 20px; }
+.site-footer .container { max-width: 1100px; margin: 0 auto; }
+.footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1.2fr; gap: 40px; }
+.footer-grid h4 { color: #fff; margin: 0 0 16px; font-size: 0.95rem; letter-spacing: 0.03em; text-transform: uppercase; }
+.footer-grid a { color: #cfc3b5; display: block; margin-bottom: 10px; font-size: 0.92rem; transition: color 0.15s ease; }
+.footer-grid a:hover { color: var(--gold); }
+.footer-bottom { text-align: center; margin-top: 40px; padding-top: 22px; border-top: 1px solid rgba(255,255,255,0.08); color: #9c9187; font-size: 0.85rem; }
+.newsletter-form { display: flex; gap: 8px; margin-top: 12px; }
+.newsletter-form input { border-radius: 6px; }
+@media (max-width: 800px) {
+  .footer-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) {
+  .footer-grid { grid-template-columns: 1fr; }
+}
+.newsletter-form button { border-radius: 6px; padding: 0 18px; background: var(--accent); color: #fff; border: none; cursor: pointer; }
+
+.order-code { font-size: 1.6rem; letter-spacing: 1px; color: var(--accent-dark); font-weight: bold; }
+
+/* Order tracking progress stepper */
+.tracker-wrap { margin: 22px 0 30px; overflow-x: auto; padding-bottom: 4px; }
+.tracker { display: flex; min-width: 560px; }
+.tracker-step { flex: 1; text-align: center; position: relative; padding: 0 4px; }
+.tracker-step:not(:first-child)::before {
+  content: ''; position: absolute; top: 13px; left: -50%; width: 100%; height: 3px;
+  background: var(--border); z-index: 0;
+}
+.tracker-step.completed:not(:first-child)::before { background: var(--accent); }
+.tracker-dot {
+  width: 28px; height: 28px; border-radius: 50%; background: #fff; border: 3px solid var(--border);
+  margin: 0 auto 10px; position: relative; z-index: 1; display: flex; align-items: center; justify-content: center;
+  color: var(--muted); font-size: 0.75rem; font-weight: bold; transition: background .25s var(--ease), border-color .25s var(--ease);
+}
+.tracker-step.completed .tracker-dot { background: var(--accent); border-color: var(--accent); color: #fff; }
+.tracker-step.current .tracker-dot {
+  background: var(--accent); border-color: var(--accent); color: #fff;
+  box-shadow: 0 0 0 5px rgba(181,69,27,0.15);
+}
+.tracker-label { font-size: 0.78rem; color: var(--muted); line-height: 1.3; }
+.tracker-step.completed .tracker-label, .tracker-step.current .tracker-label { color: var(--ink); font-weight: 600; }
+.tracker-cancelled {
+  background: #fbe7e6; border: 1px solid #f2b8b5; color: #a2231d; border-radius: 8px;
+  padding: 14px 18px; margin: 22px 0 30px; text-align: center; font-weight: 600;
+}
+
+.status-badge { padding: 5px 14px; border-radius: 20px; font-size: 0.85rem; display: inline-block; }
+.status-Received { background: #eee; color: #555; }
+.status-Confirmed { background: #d9ecff; color: #1a5aa8; }
+.status-In-Progress { background: #fff2cc; color: #8a6d00; }
+.status-Completed { background: #e0f7e9; color: #1a7a3f; }
+.status-Delivered { background: #d8f0d8; color: #1e6b34; }
+.status-Cancelled { background: #fbe0e0; color: #a2231d; }
+.status-Artwork-Sent---Awaiting-Confirmation { background: #fde8d2; color: #a15c00; }
+.status-Customer-Confirmed { background: #dcf1e6; color: #1a7a3f; }
+
+@media (max-width: 780px) {
+  /* .site-header uses backdrop-filter, which makes it the containing block for any
+     position:fixed descendant in most browsers — so a fixed .nav here doesn't actually
+     stay pinned to the viewport, it gets confined/mispositioned inside the header box
+     and can end up invisible. Using position:absolute anchored to the header (which is
+     already a positioned element via position:sticky) is the same visual result but
+     works reliably everywhere. */
+  .nav { position: absolute; top: 100%; left: 0; right: 0; background: #fff; flex-direction: column;
+    padding: 20px; border-bottom: 1px solid var(--border); display: none;
+    z-index: 60; box-shadow: 0 14px 28px rgba(34,26,22,0.12); max-height: calc(100vh - 68px); overflow-y: auto; }
+  .nav.open { display: flex; }
+  .menu-toggle { display: block; background: none; border: none; font-size: 1.6rem; cursor: pointer;
+    padding: 10px 12px; line-height: 1; z-index: 61; position: relative; }
+}
+
+/* Reviews auto-scroll marquee */
+.reviews-marquee {
+  overflow: hidden;
+  position: relative;
+  white-space: nowrap;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+}
+.reviews-track {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 26px;
+  width: max-content;
+  animation: reviews-scroll-left 35s linear infinite;
+}
+.reviews-marquee:hover .reviews-track { animation-play-state: paused; }
+@keyframes reviews-scroll-left {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.reviews-track .testimonial { flex: 0 0 300px; white-space: normal; }
+
+/* Videos auto-scroll marquee */
+.videos-marquee {
+  overflow: hidden;
+  position: relative;
+  white-space: nowrap;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+}
+.videos-track {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 24px;
+  width: max-content;
+  animation: videos-scroll-left 40s linear infinite;
+}
+.videos-marquee:hover .videos-track { animation-play-state: paused; }
+@keyframes videos-scroll-left {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.video-card {
+  flex: 0 0 380px;
+  white-space: normal;
+  box-sizing: border-box;
+}
+.video-card .card {
+  padding: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.video-card .card-body { padding: 0; }
+.video-card .card-body h3 { font-size: 1.05rem; margin-bottom: 10px; }
+.video-card .video-frame,
+.video-card video { width: 100%; aspect-ratio: 16 / 9; border-radius: 8px; background: #000; display: block; }
+@media (max-width: 600px) {
+  .video-card { flex: 0 0 290px; }
+  .video-card .card { padding: 8px; }
+}
+
+/* Offer popup */
+.offer-popup-overlay {
+  position: fixed; inset: 0; background: rgba(20,15,12,0.55); z-index: 999;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.offer-popup {
+  background: var(--paper); width: 100%; max-width: 860px; border-radius: 10px; overflow: hidden;
+  display: grid; grid-template-columns: 1fr 1fr; position: relative; max-height: 90vh;
+}
+.offer-popup-close {
+  position: absolute; top: 16px; right: 16px; width: 34px; height: 34px; border-radius: 50%;
+  background: #fff; border: 1px solid var(--border); display: flex; align-items: center;
+  justify-content: center; cursor: pointer; z-index: 2;
+}
+.offer-popup-left { padding: 50px 40px; display: flex; flex-direction: column; justify-content: center; }
+.offer-popup-left .eyebrow { text-align: center; font-size: 1.2rem; color: var(--muted); margin-bottom: 6px; }
+.offer-popup-left .headline { text-align: center; font-size: 2.6rem; font-weight: bold; color: var(--ink); margin: 0 0 6px; }
+.offer-popup-left .subline { text-align: center; font-size: 1.3rem; color: var(--ink); margin: 0 0 26px; }
+.offer-popup-left input[type="email"] { margin-bottom: 18px; }
+.offer-popup-left .purchased-q { text-align: center; font-size: 0.95rem; color: var(--muted); margin-bottom: 10px; }
+.offer-popup-left .purchased-options { display: flex; justify-content: center; gap: 26px; margin-bottom: 22px; font-size: 0.95rem; }
+.offer-popup-left .purchased-options label { display: flex; align-items: center; gap: 6px; color: var(--ink); }
+.offer-popup-left .btn { width: 100%; text-align: center; border-radius: 6px; }
+.offer-popup-right { position: relative; background-size: cover; background-position: center; }
+@media (max-width: 720px) {
+  .offer-popup { grid-template-columns: 1fr; max-height: 95vh; overflow-y: auto; }
+  .offer-popup-right { min-height: 200px; order: -1; }
+}
+
+/* ---------- Video click-to-play facade (fixes YouTube "Error 153") ---------- */
+.video-facade { transition: filter 0.15s ease; }
+.video-facade:hover { filter: brightness(0.85); }
+.video-play-btn {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 68px; height: 48px; display: flex; align-items: center; justify-content: center;
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.4));
+  transition: transform 0.15s ease;
+}
+.video-facade:hover .video-play-btn { transform: translate(-50%, -50%) scale(1.08); }
+
