@@ -66,6 +66,8 @@ app.use(async (req, res, next) => {
   try {
     res.locals.settings = await db.getAllSettings();
     res.locals.isAdmin = !!(req.session && req.session.isAdmin);
+    res.locals.isCustomer = !!(req.session && req.session.customerId);
+    res.locals.customerName = (req.session && req.session.customerName) || '';
     res.locals.popupOffer = await db.findOne('offers', { active: true }, { created_at: -1 });
     res.locals.artTypes = await db.getArtTypes();
     res.locals.sizes = await db.getSizes();
