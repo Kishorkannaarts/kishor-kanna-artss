@@ -132,6 +132,9 @@
     function loadFacade(facade, muted) {
       const embed = facade.getAttribute('data-embed');
       const sep = embed.includes('?') ? '&' : '?';
+      // mute=1 is what actually lets these autoplay: every major mobile
+      // browser (and in-app browsers like WhatsApp/Instagram) block
+      // unmuted autoplay outright, but allow it once the iframe is muted.
       const params = muted ? 'autoplay=1&mute=1&playsinline=1' : 'autoplay=1&playsinline=1';
       const iframe = document.createElement('iframe');
       iframe.src = embed + sep + params;
@@ -145,12 +148,18 @@
       facade.dataset.muted = muted ? '1' : '0';
     }
 
+    // Autoplay (muted) each video the moment it scrolls into view — like a
+    // reel — instead of waiting for a tap. Muted autoplay is reliably
+    // allowed everywhere, which is what actually fixes autoplay not working;
+    // a genuinely unmuted autoplay can't be guaranteed cross-browser.
     const facades = Array.from(track.querySelectorAll('.video-facade'));
     if ('IntersectionObserver' in window) {
       const io = new IntersectionObserver(function (entries) {
         entries.forEach(function (entry) {
           const facade = entry.target;
-          if (entry.isIntersecting && !facade.dataset.played) loadFacade(facade, true);
+          if (entry.isIntersecting && !facade.dataset.played) {
+            loadFacade(facade, true);
+          }
         });
       }, { root: null, threshold: 0.5 });
       facades.forEach(function (f) { io.observe(f); });
@@ -158,6 +167,7 @@
       facades.forEach(function (f) { loadFacade(f, true); });
     }
 
+    // Tap a playing (muted) video to turn its sound on.
     track.addEventListener('click', function (e) {
       const facade = e.target.closest('.video-facade');
       if (!facade) return;
