@@ -1,4 +1,4 @@
-  :root {
+:root {
   --ink: #221a16;
   --paper: #faf6f0;
   --accent: #b5451b;
@@ -381,10 +381,18 @@ textarea { resize: vertical; min-height: 100px; }
 .status-Customer-Confirmed { background: #dcf1e6; color: #1a7a3f; }
 
 @media (max-width: 780px) {
-  .nav { position: fixed; top: 68px; left: 0; right: 0; background: #fff; flex-direction: column;
-    padding: 20px; border-bottom: 1px solid var(--border); display: none; }
+  /* .site-header uses backdrop-filter, which makes it the containing block for any
+     position:fixed descendant in most browsers — so a fixed .nav here doesn't actually
+     stay pinned to the viewport, it gets confined/mispositioned inside the header box
+     and can end up invisible. Using position:absolute anchored to the header (which is
+     already a positioned element via position:sticky) is the same visual result but
+     works reliably everywhere. */
+  .nav { position: absolute; top: 100%; left: 0; right: 0; background: #fff; flex-direction: column;
+    padding: 20px; border-bottom: 1px solid var(--border); display: none;
+    z-index: 60; box-shadow: 0 14px 28px rgba(34,26,22,0.12); max-height: calc(100vh - 68px); overflow-y: auto; }
   .nav.open { display: flex; }
-  .menu-toggle { display: block; background: none; border: none; font-size: 1.6rem; cursor: pointer; }
+  .menu-toggle { display: block; background: none; border: none; font-size: 1.6rem; cursor: pointer;
+    padding: 10px 12px; line-height: 1; z-index: 61; position: relative; }
 }
 
 /* Reviews auto-scroll marquee */
