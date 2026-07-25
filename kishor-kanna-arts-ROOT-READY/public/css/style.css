@@ -112,6 +112,12 @@ a:hover { color: var(--color-gold); }
 .btn:hover { text-decoration: none; }
 .btn-sm { padding: 9px 18px; font-size: 0.85rem; }
 
+/* Fallback look for any <a class="btn"> without a color modifier */
+.btn {
+  background: var(--color-charcoal); color: var(--color-white);
+}
+.btn:hover { background: #000; color: #fff; }
+
 .btn-primary {
   background: var(--color-charcoal);
   color: var(--color-white);
@@ -191,11 +197,12 @@ a:hover { color: var(--color-gold); }
   .nav {
     position: fixed; top: var(--header-h); left: 0; right: 0; bottom: 0;
     background: var(--bg-primary); flex-direction: column; align-items: flex-start;
-    padding: 24px; gap: 4px; overflow-y: auto;
-    transform: translateX(100%); transition: transform var(--transition);
-    margin-left: 0;
+    padding: 24px; gap: 4px; overflow-y: auto; z-index: 90;
+    transform: translateX(100%); visibility: hidden; opacity: 0;
+    transition: transform var(--transition), visibility 0s linear var(--transition), opacity var(--transition);
+    margin-left: 0; box-shadow: -8px 0 30px rgba(0,0,0,0.08);
   }
-  .nav.open { transform: translateX(0); }
+  .nav.open { transform: translateX(0); visibility: visible; opacity: 1; transition: transform var(--transition), opacity var(--transition); }
   .nav > a, .nav-more { width: 100%; padding: 12px 4px; border-bottom: 1px solid var(--border-color); }
   .nav-more-menu, .nav-mega-menu { position: static; box-shadow: none; border: none; margin: 4px 0 0; width: 100%; }
   .nav-cta { margin-top: 12px; width: 100%; }
@@ -241,10 +248,16 @@ a:hover { color: var(--color-gold); }
   text-transform: uppercase; color: var(--color-gold); margin-bottom: 8px;
 }
 .pill {
-  display: inline-block; padding: 4px 12px; border-radius: 100px; font-size: 0.8rem;
-  background: var(--bg-secondary); border: 1px solid var(--border-color); margin: 0 6px 6px 0;
+  display: inline-block; padding: 7px 16px; border-radius: 100px; font-size: 0.85rem; font-weight: 500;
+  background: var(--bg-secondary); border: 1px solid var(--border-color); margin: 0 8px 8px 0;
+  color: var(--text-primary); transition: all var(--transition);
 }
-.pills { display: flex; flex-wrap: wrap; }
+.pill:hover { border-color: var(--color-gold); color: var(--color-gold); }
+.pill.active {
+  background: var(--color-charcoal); border-color: var(--color-charcoal); color: #fff;
+}
+.pill.active:hover { color: #fff; }
+.pills { display: flex; flex-wrap: wrap; margin-bottom: var(--space-md); }
 
 /* ---------- Sections ---------- */
 .section { padding: var(--space-xl) 0; }
@@ -268,16 +281,20 @@ a:hover { color: var(--color-gold); }
 .hero::after { width: 320px; height: 320px; background: var(--color-accent); bottom: -140px; left: -80px; animation-delay: -6s; }
 
 .hero-with-image { min-height: 640px; padding: 0; }
-.hero-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+.hero-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 20%; z-index: 0; }
 .hero-overlay {
   position: absolute; inset: 0; z-index: 1;
-  background: linear-gradient(100deg, rgba(20,14,10,0.82) 0%, rgba(20,14,10,0.55) 45%, rgba(20,14,10,0.15) 80%);
+  background:
+    linear-gradient(180deg, rgba(15,10,7,0.55) 0%, rgba(15,10,7,0.35) 30%, rgba(15,10,7,0.75) 100%),
+    linear-gradient(100deg, rgba(15,10,7,0.88) 0%, rgba(15,10,7,0.6) 48%, rgba(15,10,7,0.18) 82%);
 }
 .hero-with-image .hero-inner { padding: 120px 0; }
 .hero-with-image h1, .hero-with-image .hero-eyebrow { color: #fff; }
-.hero-with-image .lead { color: rgba(255,255,255,0.88); }
+.hero-with-image .lead { color: rgba(255,255,255,0.9); }
+.hero-with-image h1 { text-shadow: 0 2px 18px rgba(0,0,0,0.35); }
+.hero-with-image h1::after { display: none; } /* photo already carries visual weight; skip the underline flourish */
 
-.hero-inner { position: relative; z-index: 2; width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+.hero-inner { position: relative; z-index: 2; width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 24px; box-sizing: border-box; }
 .hero-content { position: relative; z-index: 2; max-width: 640px; }
 
 .hero-eyebrow {
@@ -287,18 +304,25 @@ a:hover { color: var(--color-gold); }
   text-transform: uppercase; margin-bottom: var(--space-sm);
   border: 1px solid rgba(201,154,58,0.3);
 }
-.hero h1 { position: relative; display: inline-block; }
-.hero h1::after {
-  content: ''; position: absolute; left: 2px; right: 8%; bottom: -10px; height: 10px;
-  background: linear-gradient(90deg, var(--color-gold), transparent);
-  border-radius: 8px; opacity: 0.55;
+.hero h1 {
+  position: relative; display: inline-block; overflow-wrap: break-word; word-break: break-word; max-width: 100%;
 }
-.hero p.lead { font-size: 1.18rem; max-width: 480px; margin-top: var(--space-sm); }
+.hero h1::after {
+  content: ''; position: absolute; left: 2px; width: 90px; max-width: 40%; bottom: -12px; height: 6px;
+  background: linear-gradient(90deg, var(--color-gold), transparent);
+  border-radius: 8px; opacity: 0.6;
+}
+.hero p.lead { font-size: 1.1rem; max-width: 480px; margin-top: var(--space-md); }
 .hero-actions { display: flex; gap: 16px; margin-top: var(--space-md); flex-wrap: wrap; }
 
 @media (max-width: 700px) {
-  .hero { padding: 64px 0 72px; min-height: auto; }
-  .hero-with-image .hero-inner { padding: 88px 0; }
+  .hero { padding: 56px 0 64px; min-height: auto; }
+  .hero-with-image { min-height: 0; }
+  .hero-with-image .hero-inner { padding: 64px 0 56px; }
+  .hero h1 { font-size: 2.1rem; line-height: 1.2; }
+  .hero p.lead { font-size: 1rem; }
+  .hero-actions .btn { width: 100%; text-align: center; }
+  .hero-actions { flex-direction: column; gap: 12px; }
 }
 
 /* ---------- Trust bar ---------- */
@@ -514,4 +538,3 @@ a:hover { color: var(--color-gold); }
 .breadcrumbs a:hover { color: var(--color-gold); }
 .crumb-sep { margin: 0 4px; opacity: 0.5; }
 .crumb-current { color: var(--text-primary); font-weight: 500; }
-
