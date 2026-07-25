@@ -19,6 +19,43 @@ document.addEventListener('DOMContentLoaded', () => {
   }, { threshold: 0.15 });
   revealEls.forEach(el => observer.observe(el));
 
+  // Animated count-up for trust-bar style stats (e.g. "1000+ Portraits
+  // Delivered") — counts from 0 once the stat scrolls into view. Small
+  // touch, but it's the kind of thing that makes numbers feel earned
+  // rather than just printed on the page.
+  const countEls = document.querySelectorAll('.count-up');
+  if (countEls.length && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const countObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        const el = entry.target;
+        const target = parseFloat(el.dataset.countTo);
+        const decimals = parseInt(el.dataset.decimals || '0', 10);
+        const suffix = el.dataset.suffix || '';
+        if (isNaN(target)) return;
+        const duration = 1200;
+        const start = performance.now();
+        function tick(now) {
+          const progress = Math.min((now - start) / duration, 1);
+          const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+          el.textContent = (target * eased).toFixed(decimals) + suffix;
+          if (progress < 1) requestAnimationFrame(tick);
+          else el.textContent = target.toFixed(decimals) + suffix;
+        }
+        requestAnimationFrame(tick);
+        countObserver.unobserve(el);
+      });
+    }, { threshold: 0.4 });
+    countEls.forEach(el => countObserver.observe(el));
+  } else if (countEls.length) {
+    // Reduced-motion: just show the final numbers straight away.
+    countEls.forEach(el => {
+      const target = parseFloat(el.dataset.countTo);
+      const decimals = parseInt(el.dataset.decimals || '0', 10);
+      if (!isNaN(target)) el.textContent = target.toFixed(decimals) + (el.dataset.suffix || '');
+    });
+  }
+
   // Dark mode toggle (button with id="theme-toggle")
   const themeToggle = document.getElementById('theme-toggle');
   const savedTheme = localStorage.getItem('kka-theme');
