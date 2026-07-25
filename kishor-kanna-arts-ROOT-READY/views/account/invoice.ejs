@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Invoice <%= order.order_code %> | <%= settings.site_name %></title>
+<style>
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #221a16; max-width: 720px; margin: 40px auto; padding: 0 20px; }
+  .invoice-head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #b5451b; padding-bottom: 20px; margin-bottom: 24px; }
+  .invoice-head h1 { font-size: 1.6rem; margin: 0 0 4px; }
+  .invoice-head .muted { color: #6b6058; font-size: 0.9rem; }
+  .invoice-meta { text-align: right; }
+  .cols { display: flex; justify-content: space-between; gap: 24px; margin-bottom: 28px; flex-wrap: wrap; }
+  .cols h4 { margin: 0 0 6px; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; color: #b5451b; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #e5ded6; font-size: 0.92rem; }
+  th { color: #6b6058; font-weight: 600; font-size: 0.82rem; text-transform: uppercase; }
+  .totals { width: 260px; margin-left: auto; }
+  .totals tr td { border: none; padding: 6px 8px; }
+  .totals .grand td { border-top: 2px solid #221a16; font-weight: 700; font-size: 1.05rem; }
+  .print-bar { text-align: right; margin-bottom: 20px; }
+  .btn { background: #b5451b; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; text-decoration: none; display: inline-block; }
+  .footnote { margin-top: 32px; font-size: 0.8rem; color: #6b6058; text-align: center; }
+  @media print {
+    .print-bar { display: none; }
+    body { margin: 0; max-width: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="print-bar">
+    <a class="btn" href="/account/dashboard" style="background:transparent; color:#b5451b; border:1px solid #b5451b; margin-right:8px;">Back to Orders</a>
+    <button class="btn" onclick="window.print()">Print / Save as PDF</button>
+  </div>
+
+  <div class="invoice-head">
+    <div>
+      <h1><%= settings.site_name %></h1>
+      <div class="muted"><%= settings.contact_address %></div>
+      <div class="muted"><%= settings.contact_email %> &middot; <%= settings.contact_phone %></div>
+    </div>
+    <div class="invoice-meta">
+      <div class="muted">Invoice</div>
+      <div><strong><%= order.order_code %></strong></div>
+      <div class="muted"><%= new Date(order.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) %></div>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div>
+      <h4>Billed To</h4>
+      <div><%= order.name %></div>
+      <div><%= order.address_line %>, <%= order.city %></div>
+      <div><%= order.state %> - <%= order.pincode %></div>
+      <% if (order.phone) { %><div><%= order.phone %></div><% } %>
+    </div>
+    <div>
+      <h4>Order Status</h4>
+      <div><span class="badge"><%= order.status %></span></div>
+    </div>
+  </div>
+
+  <table>
+    <tr><th>Description</th><th>Size</th><th style="text-align:right;">Amount</th></tr>
+    <tr>
+      <td><%= order.art_type %><% if (order.coupon_code) { %><br><small>Coupon applied: <%= order.coupon_code %></small><% } %></td>
+      <td><%= order.size %></td>
+      <td style="text-align:right;">₹<%= order.estimated_price || '—' %></td>
+    </tr>
+  </table>
+
+  <table class="totals">
+    <% if (order.advance_amount) { %>
+      <tr><td>Advance <%= order.advance_paid ? '(Paid)' : '(Pending)' %></td><td style="text-align:right;">₹<%= order.advance_amount %></td></tr>
+    <% } %>
+    <% if (order.balance_amount) { %>
+      <tr><td>Balance <%= order.balance_paid ? '(Paid)' : '(Pending)' %></td><td style="text-align:right;">₹<%= order.balance_amount %></td></tr>
+    <% } %>
+    <tr class="grand"><td>Total</td><td style="text-align:right;">₹<%= order.estimated_price || '—' %></td></tr>
+  </table>
+
+  <p class="footnote">This is a computer-generated invoice from <%= settings.site_name %>. For any questions, contact <%= settings.contact_email %>.</p>
+</body>
+</html>
