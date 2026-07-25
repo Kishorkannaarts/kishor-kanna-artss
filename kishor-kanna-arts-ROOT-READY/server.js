@@ -444,7 +444,9 @@ app.get('/order', ah(async (req, res) => {
   if (coupon_code) {
     const couponResult = await checkCoupon(coupon_code);
     if (couponResult.valid) {
-      discount_percent_applied = Math.max(offerDiscount, couponResult.coupon.discount_percent);
+      // Match the client: an actively-entered coupon always wins over the
+      // passive site-wide offer, so applying it visibly changes the price.
+      discount_percent_applied = couponResult.coupon.discount_percent;
       appliedCouponCode = couponResult.coupon.code;
     }
   }
