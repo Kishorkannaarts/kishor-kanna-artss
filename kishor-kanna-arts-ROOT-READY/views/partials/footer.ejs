@@ -92,6 +92,7 @@
     &copy; <%= new Date().getFullYear() %> <%= settings.site_name %>. All rights reserved.
   </div>
 </footer>
+
 <% if (!isAdmin) { %>
 <style>
   .kka-chat-bubble {
@@ -130,7 +131,7 @@
   }
 </style>
 <button id="kka-chat-bubble" class="kka-chat-bubble" aria-label="Chat with us">
-  <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0-2-.9-2-2V4c0-1.1-.9-2-2-2z"/></svg>
+  <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
 </button>
 <div id="kka-chat-panel" class="kka-chat-panel">
   <div class="kka-chat-header">
@@ -146,7 +147,6 @@
 <script src="/public/js/chat-widget.js?v=1" defer></script>
 <% } %>
 
-<% if (settings.whatsapp_number && !isAdmin) { %>
 <% if (settings.whatsapp_number && !isAdmin) { %>
 <style>
   .wa-float-btn {
