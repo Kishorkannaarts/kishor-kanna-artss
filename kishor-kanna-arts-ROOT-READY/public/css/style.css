@@ -883,3 +883,12 @@ textarea { resize: vertical; min-height: 100px; }
 @media (max-width: 640px) {
   .tracker { min-width: 520px; }
 }
+/* Phase 6 — breadcrumbs */
+.breadcrumbs {
+  font-size: 0.82rem; color: var(--text-secondary, #888); margin: 12px 0 4px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
+}
+.breadcrumbs a { color: var(--text-secondary, #888); }
+.breadcrumbs a:hover { color: var(--color-gold, #C9A24B); }
+.crumb-sep { margin: 0 4px; opacity: 0.5; }
+.crumb-current { color: var(--text-primary, #1a1a1a); font-weight: 500; }
