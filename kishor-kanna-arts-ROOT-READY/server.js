@@ -823,20 +823,24 @@ app.get('/admin/orders', requireAdmin, ah(async (req, res) => {
 app.post('/admin/orders/:id/status', requireAdmin, ah(async (req, res) => {
   await db.updateById('orders', req.params.id, { status: req.body.status });
   const order = db.normalize(await db.findById('orders', req.params.id));
-  if (order && order.email) {
+  if (order) {
     const s = res.locals.settings;
     const trackUrl = `${req.protocol}://${req.get('host')}/track-order`;
     const data = { name: order.name, order_code: order.order_code, status: order.status, track_url: trackUrl, site_name: s.site_name };
-    mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_status_update_subject, data), html: renderTemplate(s.tmpl_status_update_body, data).replace(/\n/g, '<br>') });
+    if (order.email) {
+      mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_status_update_subject, data), html: renderTemplate(s.tmpl_status_update_body, data).replace(/\n/g, '<br>') });
+    }
+    notify.notifyOrder('status_update', order, data);
   }
-  notify.notifyOrder('status_update', order, data);
   res.redirect('/admin/orders');
 }));
 
 app.get('/admin/orders/:id/advance', requireAdmin, ah(async (req, res) => {
   const order = db.normalize(await db.findById('orders', req.params.id));
   if (!order) return res.redirect('/admin/orders');
-  res.render('admin/order-action', { order, actionType: 'advance', title: 'Request Advance Payment', actionUrl: `/admin/orders/${order.id}/advance`, defaultLink: res.locals.settings.default_payment_link, suggestedAmount: null, error: null });
+  const est = parseFloat(order.estimated_price);
+  const suggestedAmount = est ? (est * 0.5).toFixed(0) : null;
+  res.render('admin/order-action', { order, actionType: 'advance', title: 'Request Advance Payment', actionUrl: `/admin/orders/${order.id}/advance`, defaultLink: res.locals.settings.default_payment_link, suggestedAmount, error: null });
 }));
 
 app.post('/admin/orders/:id/advance', requireAdmin, ah(async (req, res) => {
@@ -973,10 +977,10 @@ app.post('/admin/orders/:id/shipped', requireAdmin, ah(async (req, res) => {
   const order = db.normalize(await db.findById('orders', req.params.id));
   if (!order) return res.redirect('/admin/orders');
   await db.updateById('orders', req.params.id, { status: 'Delivered' });
+  const s = res.locals.settings;
+  const trackUrl = `${req.protocol}://${req.get('host')}/track-order`;
+  const data = { name: order.name, order_code: order.order_code, track_url: trackUrl, site_name: s.site_name };
   if (order.email) {
-    const s = res.locals.settings;
-    const trackUrl = `${req.protocol}://${req.get('host')}/track-order`;
-    const data = { name: order.name, order_code: order.order_code, track_url: trackUrl, site_name: s.site_name };
     await mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_shipped_subject, data), html: renderTemplate(s.tmpl_shipped_body, data).replace(/\n/g, '<br>') });
   }
   notify.notifyOrder('shipped', order, data);
@@ -1004,10 +1008,10 @@ app.post('/admin/orders/:id/send-artwork', requireAdmin, memoryUpload.single('ar
     customer_confirmed_at: null
   };
   await db.updateById('orders', req.params.id, update);
+  const s = res.locals.settings;
+  const trackUrl = `${req.protocol}://${req.get('host')}/track-order?order_code=${encodeURIComponent(order.order_code)}`;
+  const data = { name: order.name, order_code: order.order_code, art_type: order.art_type, artwork_image: final_artwork_image, artwork_note: req.body.note || '', track_url: trackUrl, site_name: s.site_name };
   if (order.email && final_artwork_image) {
-    const s = res.locals.settings;
-    const trackUrl = `${req.protocol}://${req.get('host')}/track-order?order_code=${encodeURIComponent(order.order_code)}`;
-    const data = { name: order.name, order_code: order.order_code, art_type: order.art_type, artwork_image: final_artwork_image, artwork_note: req.body.note || '', track_url: trackUrl, site_name: s.site_name };
     await mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_artwork_ready_subject, data), html: renderTemplate(s.tmpl_artwork_ready_body, data).replace(/\n/g, '<br>') });
   }
   notify.notifyOrder('artwork_ready', order, data);
