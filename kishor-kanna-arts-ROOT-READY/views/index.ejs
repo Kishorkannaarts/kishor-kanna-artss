@@ -9,24 +9,27 @@
   <% } %>
   <div class="hero-inner">
     <div class="hero-content">
-      <span class="hero-eyebrow">Handmade in India • Since Day One</span>
-      <h1><%= settings.hero_title %></h1>
-      <p class="lead"><%= settings.hero_subtitle %></p>
-      <div class="hero-actions">
+      <span class="hero-eyebrow hero-anim" style="--d:0s">Handmade in India • Since Day One</span>
+      <h1 class="hero-anim" style="--d:0.12s"><%= settings.hero_title %></h1>
+      <p class="lead hero-anim" style="--d:0.24s"><%= settings.hero_subtitle %></p>
+      <div class="hero-actions hero-anim" style="--d:0.36s">
         <a class="btn btn-gold" href="/order">Order Your Artwork</a>
         <a class="btn btn-outline<%= settings.hero_image_url ? ' btn-outline-onimage' : '' %>" href="/portfolio">View Portfolio</a>
       </div>
     </div>
   </div>
+  <% if (settings.hero_image_url) { %>
+    <div class="hero-scroll-cue" aria-hidden="true"><span></span></div>
+  <% } %>
 </section>
 
 <!-- Trust bar -->
 <section class="trust-bar reveal">
   <div class="container trust-bar-inner">
-    <div class="trust-stat"><strong>1000+</strong><span>Portraits Delivered</span></div>
-    <div class="trust-stat"><strong>4.9★</strong><span>Average Rating</span></div>
-    <div class="trust-stat"><strong>28</strong><span>States Shipped To</span></div>
-    <div class="trust-stat"><strong>100%</strong><span>Hand-made, Never Printed</span></div>
+    <div class="trust-stat"><strong class="count-up" data-count-to="1000" data-suffix="+">0</strong><span>Portraits Delivered</span></div>
+    <div class="trust-stat"><strong class="count-up" data-count-to="4.9" data-decimals="1" data-suffix="★">0</strong><span>Average Rating</span></div>
+    <div class="trust-stat"><strong class="count-up" data-count-to="28" data-suffix="">0</strong><span>States Shipped To</span></div>
+    <div class="trust-stat"><strong class="count-up" data-count-to="100" data-suffix="%">0</strong><span>Hand-made, Never Printed</span></div>
   </div>
 </section>
 
