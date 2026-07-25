@@ -150,6 +150,7 @@ a:hover { color: var(--color-gold); }
   -webkit-backdrop-filter: blur(14px) saturate(160%);
   border-bottom: 1px solid transparent;
   transition: box-shadow var(--transition), border-color var(--transition), background var(--transition);
+  flex-wrap: nowrap; overflow: hidden;
 }
 [data-theme="dark"] .site-header { background: rgba(20,16,13,0.78); }
 .site-header.is-scrolled { box-shadow: var(--shadow-soft); border-bottom-color: var(--border-color); }
@@ -158,10 +159,11 @@ a:hover { color: var(--color-gold); }
 .logo:hover { color: var(--color-gold); }
 
 .nav {
-  display: flex; align-items: center; gap: 26px; margin-left: auto;
+  display: flex; align-items: center; gap: 22px; margin-left: auto; flex-wrap: nowrap;
 }
 .nav > a {
   color: var(--text-primary); font-weight: 500; font-size: 0.94rem; position: relative; padding: 6px 0;
+  white-space: nowrap;
 }
 .nav > a::after {
   content: ''; position: absolute; left: 0; bottom: 0; width: 0; height: 2px;
@@ -192,7 +194,7 @@ a:hover { color: var(--color-gold); }
   display: none; background: none; border: none; font-size: 1.6rem; cursor: pointer; color: var(--text-primary);
 }
 
-@media (max-width: 900px) {
+@media (max-width: 960px) {
   .menu-toggle { display: block; order: 3; }
   .nav {
     position: fixed; top: var(--header-h); left: 0; right: 0; bottom: 0;
@@ -546,3 +548,4 @@ a:hover { color: var(--color-gold); }
 .breadcrumbs a:hover { color: var(--color-gold); }
 .crumb-sep { margin: 0 4px; opacity: 0.5; }
 .crumb-current { color: var(--text-primary); font-weight: 500; }
+
