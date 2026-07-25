@@ -1,1097 +1,256 @@
-require('dotenv').config();
-const express = require('express');
-const session = require('express-session');
-const FileStore = require('session-file-store')(session);
-const bcrypt = require('bcryptjs');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-const cloudinary = require('cloudinary').v2;
-const compression = require('compression');
-const helmet = require('helmet');
-const db = require('./db');
-const mailer = require('./mailer');
+/* ============================================
+   KISHOR KANNA ARTS — PREMIUM DESIGN SYSTEM v1
+   ============================================ */
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 
-// Gzip/Brotli-style compression for every response — meaningful win for
-// Lighthouse/Core Web Vitals with near-zero code cost.
-app.use(compression());
+:root {
+  --color-white: #FFFFFF;
+  --color-off-white: #FAFAF8;
+  --color-charcoal: #1A1A1A;
+  --color-charcoal-soft: #2B2B2B;
+  --color-gold: #C9A24B;
+  --color-gold-light: #E4C878;
+  --color-gray: #6B6B6B;
+  --color-gray-light: #E5E3DE;
+  --color-accent: #7A5C3E;
 
-// Security headers. CSP is relaxed for the specific third parties this site
-// actually uses (Google Fonts, Cloudinary images, embedded YouTube videos) —
-// a default-deny CSP would silently break the hero fonts and video embeds.
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", 'https://www.googletagmanager.com', 'https://connect.facebook.net'],
-      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
-      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-      imgSrc: ["'self'", 'data:', 'https:'],
-      frameSrc: ["'self'", 'https://www.youtube.com', 'https://player.vimeo.com'],
-      connectSrc: ["'self'", 'https://www.google-analytics.com', 'https://www.facebook.com']
-    }
-  },
-  crossOriginEmbedderPolicy: false
-}));
+  --bg-primary: var(--color-white);
+  --bg-secondary: var(--color-off-white);
+  --text-primary: var(--color-charcoal);
+  --text-secondary: var(--color-gray);
+  --border-color: var(--color-gray-light);
 
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body: 'Inter', -apple-system, sans-serif;
 
-// ---------- Basic setup ----------
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
-app.use('/public', express.static(path.join(__dirname, 'public')));
+  --space-xs: 8px;
+  --space-sm: 16px;
+  --space-md: 24px;
+  --space-lg: 48px;
+  --space-xl: 96px;
 
-const sessionsDir = path.join(__dirname, 'data', 'sessions');
-if (!fs.existsSync(sessionsDir)) fs.mkdirSync(sessionsDir, { recursive: true });
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --shadow-soft: 0 4px 24px rgba(26,26,26,0.06);
+  --shadow-medium: 0 8px 40px rgba(26,26,26,0.10);
+  --shadow-gold: 0 8px 30px rgba(201,162,75,0.25);
 
-app.use(session({
-  store: new FileStore({ path: sessionsDir, logFn: () => {} }),
-  secret: process.env.SESSION_SECRET || 'insecure_dev_secret_change_me',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { maxAge: 1000 * 60 * 60 * 8 }
-}));
-
-// Make site settings available to every view
-app.use(async (req, res, next) => {
-  try {
-    res.locals.settings = await db.getAllSettings();
-    res.locals.isAdmin = !!(req.session && req.session.isAdmin);
-    res.locals.isCustomer = !!(req.session && req.session.customerId);
-    res.locals.customerName = (req.session && req.session.customerName) || '';
-    res.locals.popupOffer = await db.findOne('offers', { active: true }, { created_at: -1 });
-    res.locals.artTypes = await db.getArtTypes();
-    res.locals.sizes = await db.getSizes();
-    res.locals.priceForSize = priceForSize;
-    res.locals.siteUrl = (process.env.SITE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
-    res.locals.currentPath = req.originalUrl.split('?')[0];
-    res.locals.statusBadgeClass = function (status) {
-      if (status === 'Delivered' || status === 'Customer Confirmed') return 'badge-ok';
-      if (status === 'Cancelled') return 'badge-danger';
-      if (status === 'In Progress' || status === 'Artwork Sent - Awaiting Confirmation') return 'badge-progress';
-      return 'badge-new'; // Received, Confirmed, Completed
-    };
-    next();
-  } catch (err) { next(err); }
-});
-
-// ---------- Image uploads via Cloudinary ----------
-const memoryUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
-
-async function uploadImage(file, folder) {
-  if (!file) return null;
-  if (!process.env.CLOUDINARY_CLOUD_NAME) {
-    console.log('[uploads] Cloudinary not configured - image not saved. See README.');
-    return null;
-  }
-  const b64 = file.buffer.toString('base64');
-  const dataURI = `data:${file.mimetype};base64,${b64}`;
-  const result = await cloudinary.uploader.upload(dataURI, { folder: `kishor-kanna-arts/${folder}` });
-  return result.secure_url;
+  --transition: 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-// ---------- Helpers ----------
-function genOrderCode() {
-  const rand = Math.random().toString(36).slice(2, 7).toUpperCase();
-  return 'KKA-' + Date.now().toString().slice(-6) + '-' + rand;
+[data-theme="dark"] {
+  --bg-primary: #0F0F0F;
+  --bg-secondary: #1A1A1A;
+  --text-primary: #F5F5F3;
+  --text-secondary: #A8A8A8;
+  --border-color: #2E2E2E;
 }
 
-// Map a size name to the old fixed column name, so services saved before
-// the dynamic sizes/art-types feature still display correctly.
-function legacyPriceKey(size) {
-  const s = String(size || '').toLowerCase();
-  if (s === 'a5') return 'price_a5';
-  if (s === 'a4') return 'price_a4';
-  if (s === 'a3') return 'price_a3';
-  if (s === 'a2') return 'price_a2';
-  if (s === 'custom') return 'price_custom';
-  return null;
+.glass {
+  background: rgba(255,255,255,0.65);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.3);
+  box-shadow: var(--shadow-soft);
+}
+[data-theme="dark"] .glass {
+  background: rgba(26,26,26,0.55);
+  border: 1px solid rgba(255,255,255,0.08);
 }
 
-function priceForSize(service, size) {
-  if (!service) return '';
-  if (service.prices && service.prices[size]) return service.prices[size];
-  const lk = legacyPriceKey(size);
-  if (lk && service[lk]) return service[lk];
-  return '';
+.btn-primary {
+  background: var(--color-charcoal);
+  color: var(--color-white);
+}
+.btn-primary:hover { box-shadow: var(--shadow-medium); background: #000; }
+
+.btn-gold {
+  background: linear-gradient(135deg, var(--color-gold), var(--color-gold-light));
+  color: var(--color-charcoal);
+  border: none;
+}
+.btn-gold:hover { box-shadow: var(--shadow-gold); transform: translateY(-2px); }
+
+.hero-eyebrow {
+  display: inline-block;
+  padding: 6px 16px;
+  border-radius: 100px;
+  background: rgba(201,162,75,0.12);
+  color: var(--color-gold);
+  font-weight: 600;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: var(--space-sm);
+}
+.hero p.lead { font-size: 1.15rem; max-width: 480px; }
+.hero-actions { display: flex; gap: 16px; margin-top: var(--space-md); flex-wrap: wrap; }
+.hero-content { position: relative; z-index: 2; max-width: 640px; }
+
+.reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.8s ease, transform 0.8s ease; }
+.reveal.in-view { opacity: 1; transform: translateY(0); }
+
+.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid-4 { grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 900px) {
+  .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
 }
 
-// Multipart form bodies (parsed by multer) don't auto-nest bracket-style
-// field names the way express.urlencoded (qs) does, so pull `prices[X]`
-// fields out of req.body manually.
-function extractPrices(body) {
-  if (body.prices && typeof body.prices === 'object') return body.prices; // already nested (non-multipart submit)
-  const prices = {};
-  for (const key of Object.keys(body)) {
-    const m = key.match(/^prices\[(.+)\]$/);
-    if (m) prices[m[1]] = body[key];
-  }
-  return prices;
+/* Phase 2 additions */
+.trust-bar { padding: var(--space-md) 0; border-bottom: 1px solid var(--border-color); }
+.trust-bar-inner {
+  display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--space-md);
+}
+.trust-stat { display: flex; flex-direction: column; text-align: center; flex: 1; min-width: 120px; }
+.trust-stat strong { font-family: var(--font-display); font-size: 1.6rem; color: var(--color-gold); }
+.trust-stat span { font-size: 0.85rem; color: var(--text-secondary); }
+
+.offer-banner {
+  background: linear-gradient(135deg, #FFF7E5, #FDF0CE);
+  border: 1px solid var(--color-gold-light);
+  border-radius: var(--radius-sm);
+  padding: 14px 20px;
+  margin-bottom: 12px;
+  text-align: center;
 }
 
-function slugify(str) {
-  const base = String(str || '').toLowerCase().trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-  return base || 'post';
+.timeline {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-md);
+}
+.timeline-step {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  position: relative;
+}
+.timeline-num {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--color-charcoal); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-weight: 700; margin-bottom: 12px;
+}
+@media (max-width: 900px) { .timeline { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px) { .timeline { grid-template-columns: 1fr; } }
+
+/* Phase 3 — nav additions */
+.icon-btn {
+  background: none; border: none; cursor: pointer; padding: 6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--ink); border-radius: 50%; transition: background .15s;
+}
+.icon-btn:hover { background: rgba(0,0,0,0.06); }
+
+.nav-mega-menu {
+  position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  margin-top: 12px; background: #fff; border: 1px solid var(--border-color, var(--border));
+  border-radius: var(--radius-md, 12px); box-shadow: 0 20px 50px rgba(0,0,0,0.12);
+  min-width: 460px; padding: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; z-index: 60;
+}
+.nav-mega-menu a {
+  display: flex; flex-direction: column; padding: 10px 12px; border-radius: 8px; gap: 2px;
+}
+.nav-mega-menu a:hover { background: var(--bg-secondary, var(--paper)); }
+.nav-mega-menu a strong { font-size: 0.9rem; }
+.nav-mega-menu a span { font-size: 0.78rem; color: var(--text-secondary, #888); }
+.nav-mega-menu a::after { display: none; }
+.nav-mega-viewall {
+  grid-column: 1 / -1; text-align: center; font-weight: 600;
+  border-top: 1px solid var(--border-color, var(--border)); margin-top: 6px; padding-top: 12px !important;
 }
 
-function renderTemplate(str, data) {
-  return (str || '').replace(/{{\s*(\w+)\s*}}/g, (m, key) =>
-    (data[key] !== undefined && data[key] !== null) ? data[key] : '');
+.search-bar {
+  max-height: 0; overflow: hidden; border-bottom: 1px solid transparent;
+  transition: max-height .3s ease, border-color .3s ease; background: var(--bg-primary, #fff);
+}
+.search-bar.open { max-height: 80px; border-bottom-color: var(--border-color, var(--border)); }
+.search-bar input {
+  flex: 1; padding: 10px 16px; border-radius: 100px; border: 1px solid var(--border-color, var(--border));
+  font-family: var(--font-body); font-size: 0.95rem;
+}
+.search-bar input:focus { outline: none; border-color: var(--color-gold, var(--accent)); }
+
+@media (max-width: 900px) {
+  .nav-mega-menu { position: static; transform: none; min-width: auto; grid-template-columns: 1fr; box-shadow: none; border: none; margin-top: 4px; padding-left: 12px; }
 }
 
-function requireAdmin(req, res, next) {
-  if (req.session && req.session.isAdmin) return next();
-  return res.redirect('/admin/login');
+/* Phase 4 — order wizard */
+.wizard-box { max-width: 640px; margin: 0 auto; }
+.wizard-progress {
+  display: flex; justify-content: space-between; margin-bottom: var(--space-lg, 32px);
+  position: relative;
+}
+.wizard-progress::before {
+  content: ''; position: absolute; top: 16px; left: 5%; right: 5%; height: 2px;
+  background: var(--border-color, #e5e3de); z-index: 0;
+}
+.wizard-step-dot {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  position: relative; z-index: 1; flex: 1;
+}
+.wizard-step-dot span {
+  width: 32px; height: 32px; border-radius: 50%; background: #fff;
+  border: 2px solid var(--border-color, #e5e3de); display: flex; align-items: center; justify-content: center;
+  font-weight: 600; font-size: 0.85rem; color: var(--text-secondary, #888); transition: all .25s;
+}
+.wizard-step-dot label { font-size: 0.72rem; color: var(--text-secondary, #888); text-align: center; }
+.wizard-step-dot.active span { background: var(--color-gold, #C9A24B); border-color: var(--color-gold, #C9A24B); color: #fff; }
+.wizard-step-dot.active label { color: var(--text-primary, #1a1a1a); font-weight: 600; }
+.wizard-step-dot.done span { background: var(--color-charcoal, #1a1a1a); border-color: var(--color-charcoal, #1a1a1a); color: #fff; }
+
+.wizard-panel { display: none; animation: fadeSlide .35s ease; }
+.wizard-panel.active { display: block; }
+@keyframes fadeSlide { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+.wizard-nav { display: flex; justify-content: space-between; margin-top: 24px; gap: 12px; }
+.upload-preview img { display: block; }
+
+@media (max-width: 500px) {
+  .wizard-step-dot label { display: none; }
 }
 
-function requireCustomer(req, res, next) {
-  if (req.session && req.session.customerId) return next();
-  return res.redirect('/account/login?next=' + encodeURIComponent(req.originalUrl));
+/* Phase 5 — order tracking */
+.track-card { margin-bottom: 4px; }
+.track-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.track-percent {
+  background: var(--color-gold, #C9A24B); color: #fff; font-weight: 700; font-size: 0.85rem;
+  padding: 4px 14px; border-radius: 100px;
 }
 
-function ah(fn) {
-  return (req, res, next) => fn(req, res, next).catch(next);
+.progress-line-outer {
+  height: 6px; background: var(--border-color, #e5e3de); border-radius: 100px; overflow: hidden; margin-bottom: 24px;
+}
+.progress-line-inner {
+  height: 100%; background: linear-gradient(90deg, var(--color-gold, #C9A24B), var(--color-gold-light, #E4C878));
+  border-radius: 100px; transition: width 0.6s ease;
 }
 
-// =========================================================
-// PUBLIC ROUTES
-// =========================================================
-
-app.get('/robots.txt', (req, res) => {
-  res.type('text/plain').send(
-    `User-agent: *\n` +
-    `Disallow: /admin\n` +
-    `Disallow: /track-order\n` +
-    `Allow: /\n\n` +
-    `Sitemap: ${res.locals.siteUrl}/sitemap.xml\n`
-  );
-});
-
-app.get('/sitemap.xml', ah(async (req, res) => {
-  const base = res.locals.siteUrl;
-  const staticUrls = [
-    { loc: '/', priority: '1.0' },
-    { loc: '/portfolio', priority: '0.9' },
-    { loc: '/services', priority: '0.9' },
-    { loc: '/order', priority: '0.8' },
-    { loc: '/about', priority: '0.7' },
-    { loc: '/blog', priority: '0.7' },
-    { loc: '/contact', priority: '0.6' },
-    { loc: '/privacy-policy', priority: '0.3' },
-    { loc: '/terms', priority: '0.3' }
-  ];
-  if (res.locals.settings.courses_enabled) staticUrls.push({ loc: '/courses', priority: '0.6' });
-
-  const artworks = db.normalize(await db.find('artworks', {}, { created_at: -1 }));
-  const posts = db.normalize(await db.find('posts', { published: true }, { created_at: -1 }));
-
-  const urlEntries = [
-    ...staticUrls.map(u => ({ loc: base + u.loc, priority: u.priority })),
-    ...artworks.map(a => ({ loc: `${base}/portfolio/${a.id}`, priority: '0.6' })),
-    ...posts.map(p => ({ loc: `${base}/blog/${p.slug}`, priority: '0.5' }))
-  ];
-
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n` +
-    `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
-    urlEntries.map(u => `  <url><loc>${u.loc}</loc><priority>${u.priority}</priority></url>`).join('\n') +
-    `\n</urlset>`;
-
-  res.type('application/xml').send(xml);
-}));
-
-app.get('/', ah(async (req, res) => {
-  const featured  = db.normalize(await db.find('artworks', { featured: true }, { created_at: -1 }, 8));
-  const testimonials = db.normalize(await db.find('testimonials', { approved: true }, { created_at: -1 }, 6));
-  const videos    = db.normalize(await db.find('videos', {}, { created_at: -1 }, 12)).map(v => {
-  let embed = null;
-  let m = v.video_url.match(/youtu\.be\/([A-Za-z0-9_-]+)/) || v.video_url.match(/[?&]v=([A-Za-z0-9_-]+)/) || v.video_url.match(/youtube\.com\/shorts\/([A-Za-z0-9_-]+)/);
-  if (m) embed = `https://www.youtube.com/embed/${m[1]}?loop=1&playlist=${m[1]}`;
-  else { m = v.video_url.match(/drive\.google\.com\/file\/d\/([A-Za-z0-9_-]+)/); if (m) embed = `https://drive.google.com/file/d/${m[1]}/preview`; }
-  return { ...v, embed_url: embed };
-});
-  const services  = db.normalize(await db.find('services', {}, { created_at: -1 }));
-  const offers    = db.normalize(await db.find('offers', { active: true }, { created_at: -1 }));
-  const blocks    = db.normalize(await db.find('blocks', {}, { created_at: 1 }));
-  const recentPosts = db.normalize(await db.find('posts', { published: true }, { created_at: -1 }, 3));
-  res.render('index', { featured, testimonials, videos, services, offers, blocks, recentPosts });
-}));
-
-app.get('/portfolio', ah(async (req, res) => {
-  const category = req.query.category || null;
-  const filter = category ? { category } : {};
-  const artworks = db.normalize(await db.find('artworks', filter, { created_at: -1 }));
-  const categories = await db.getArtTypes();
-  res.render('portfolio', { artworks, categories, activeCategory: category });
-}));
-
-app.get('/portfolio/:id', ah(async (req, res) => {
-  const artwork = db.normalize(await db.findById('artworks', req.params.id));
-  if (!artwork) return res.status(404).send('Artwork not found');
-  res.render('artwork-detail', { artwork });
-}));
-
-app.get('/services', ah(async (req, res) => {
-  const services = db.normalize(await db.find('services', {}, { created_at: -1 }));
-  res.render('services', { services });
-}));
-
-app.get('/about', ah(async (req, res) => {
-  const testimonials = db.normalize(await db.find('testimonials', { approved: true }, { created_at: -1 }));
-  const faqs = db.normalize(await db.find('faqs', {}, { created_at: 1 }));
-  res.render('about', { testimonials, faqs });
-}));
-
-// Reserved for the future course platform (live classes, recorded courses,
-// student dashboard). For now it's a waitlist page — this keeps the URL and
-// nav slot stable so the real platform can slot in later without a redesign.
-app.get('/courses', (req, res) => res.render('courses', { submitted: false }));
-
-app.post('/courses/waitlist', ah(async (req, res) => {
-  const { name, email } = req.body;
-  if (name && email) {
-    const mdb = await db.getDB();
-    await mdb.collection('course_waitlist').updateOne(
-      { email: String(email).toLowerCase().trim() },
-      { $set: { name, email: String(email).toLowerCase().trim() }, $setOnInsert: { created_at: new Date().toISOString() } },
-      { upsert: true }
-    );
-  }
-  res.render('courses', { submitted: true });
-}));
-
-app.get('/contact', (req, res) => res.render('contact', { sent: false }));
-
-app.post('/contact', ah(async (req, res) => {
-  const { name, email, phone, subject, message } = req.body;
-  await db.insertOne('messages', { name, email, phone, subject, message, read: false });
-  res.render('contact', { sent: true });
-}));
-
-app.post('/newsletter', ah(async (req, res) => {
-  try { await db.insertOne('newsletter', { email: req.body.email }); } catch (e) {}
-  res.redirect(req.get('Referrer') || '/');
-}));
-
-app.get('/order', ah(async (req, res) => {
-  const blocked = await db.find('blocked_dates', {}, { date: 1 });
-  const services = db.normalize(await db.find('services', {}, { created_at: -1 }));
-  const activeOffer = await db.findOne('offers', { active: true });
-  const offerDiscount = activeOffer ? (activeOffer.discount_percent || 0) : 0;
-  const old = {};
-  if (req.query.art_type) old.art_type = req.query.art_type;
-  if (req.query.size) old.size = req.query.size;
-  const presetPrice = req.query.price || '';
-  res.render('order', { success: null, error: null, blockedDates: blocked.map(r => r.date), old, services, offerDiscount, presetPrice });
-}));
-
- app.post('/order', memoryUpload.single('reference_image'), ah(async (req, res) => {
-  const { name, phone, email, art_type, size, delivery_date, notes, estimated_price, address_line, city, state, pincode, coupon_code } = req.body;
-  const blocked = await db.find('blocked_dates', {}, { date: 1 });
-  const blockedDates = blocked.map(r => r.date);
-  const services = db.normalize(await db.find('services', {}, { created_at: -1 }));
-  const activeOffer = await db.findOne('offers', { active: true });
-  const offerDiscount = activeOffer ? (activeOffer.discount_percent || 0) : 0;
-
-  if (delivery_date && blockedDates.includes(delivery_date)) {
-    return res.render('order', { success: null, error: 'Sorry, that delivery date is not available. Please choose a different date.', blockedDates, old: req.body, services, offerDiscount, presetPrice: req.body.preset_price || '' });
-  }
-  if (!address_line || !city || !state || !pincode) {
-    return res.render('order', { success: null, error: 'Please fill in your full delivery address.', blockedDates, old: req.body, services, offerDiscount, presetPrice: req.body.preset_price || '' });
-  }
-
-  // Re-check the coupon on the server — the client-side discount is only a
-  // preview and must never be trusted for the final price or usage count.
-  let discount_percent_applied = offerDiscount;
-  let appliedCouponCode = null;
-  if (coupon_code) {
-    const couponResult = await checkCoupon(coupon_code);
-    if (couponResult.valid) {
-      discount_percent_applied = Math.max(offerDiscount, couponResult.coupon.discount_percent);
-      appliedCouponCode = couponResult.coupon.code;
-    }
-  }
-  const basePrice = parseFloat(String(estimated_price || '0').replace(/[^0-9.]/g, '')) || null;
-  const finalPrice = basePrice && discount_percent_applied
-    ? (basePrice / (1 - (parseFloat(req.body.discount_percent_applied || 0) || 0) / 100) * (1 - discount_percent_applied / 100))
-    : basePrice;
-
-  const order_code = genOrderCode();
-  const refImage = await uploadImage(req.file, 'orders');
-  await db.insertOne('orders', { order_code, name, phone, email, art_type, size, reference_image: refImage, delivery_date, notes, estimated_price: finalPrice ? finalPrice.toFixed(0) : (estimated_price || null), discount_percent_applied, coupon_code: appliedCouponCode, address_line, city, state, pincode, status: 'Received', advance_amount: null, advance_payment_link: null, advance_paid: false, balance_amount: null, balance_payment_link: null, balance_paid: false, customer_id: (req.session && req.session.customerId) || null });
-
-  if (appliedCouponCode) {
-    const mdb = await db.getDB();
-    await mdb.collection('coupons').updateOne({ code: appliedCouponCode }, { $inc: { used_count: 1 } });
-  }
-
-  const s = res.locals.settings;
-  const trackUrl = `${req.protocol}://${req.get('host')}/track-order`;
-  const data = { name, order_code, art_type, size, notes, track_url: trackUrl, site_name: s.site_name };
-
-  if (process.env.NOTIFY_EMAIL) {
-    const addressLine = [address_line, city, state, pincode].filter(Boolean).join(', ');
-    mailer.sendMail({ to: process.env.NOTIFY_EMAIL, subject: `New Order Received - ${order_code}`,
-      html: `<h2>New Order</h2><p><b>ID:</b> ${order_code}</p><p><b>Name:</b> ${name}</p><p><b>Phone:</b> ${phone}</p><p><b>Email:</b> ${email||'-'}</p><p><b>Type:</b> ${art_type} / ${size}</p><p><b>Coupon:</b> ${appliedCouponCode || '-'}</p><p><b>Delivery Address:</b> ${addressLine || '-'}</p><p><b>Date:</b> ${delivery_date||'-'}</p><p><b>Notes:</b> ${notes||'-'}</p>` });
-  }
-  if (email) {
-    mailer.sendMail({ to: email, subject: renderTemplate(s.tmpl_order_received_subject, data), html: renderTemplate(s.tmpl_order_received_body, data).replace(/\n/g, '<br>') });
-  }
-
-  res.render('order', { success: order_code, error: null, blockedDates, old: {}, services, offerDiscount, presetPrice: '' });
-}));
-
-app.get('/track-order', (req, res) => res.render('track-order', { order: null, searched: false, presetOrderCode: req.query.order_code || '' }));
-
-app.post('/track-order', ah(async (req, res) => {
-  const { order_code, phone } = req.body;
-  const order = db.normalize(await db.findOne('orders', { order_code, phone }));
-  res.render('track-order', { order: order || undefined, searched: true, presetOrderCode: order_code || '' });
-}));
-
-app.post('/track-order/confirm', ah(async (req, res) => {
-  const { order_code, phone } = req.body;
-  const order = db.normalize(await db.findOne('orders', { order_code, phone }));
-  if (order && order.final_artwork_image && !order.customer_confirmed) {
-    await db.updateById('orders', order.id, {
-      customer_confirmed: true,
-      customer_confirmed_at: new Date().toISOString(),
-      status: 'Customer Confirmed'
-    });
-    if (process.env.NOTIFY_EMAIL) {
-      const s = res.locals.settings;
-      const data = { name: order.name, order_code: order.order_code, site_name: s.site_name };
-      mailer.sendMail({ to: process.env.NOTIFY_EMAIL, subject: renderTemplate(s.tmpl_customer_confirmed_subject, data), html: renderTemplate(s.tmpl_customer_confirmed_body, data).replace(/\n/g, '<br>') });
-    }
-  }
-  const refreshed = db.normalize(await db.findOne('orders', { order_code, phone }));
-  res.render('track-order', { order: refreshed || undefined, searched: true, presetOrderCode: order_code || '' });
-}));
-
-// =========================================================
-// Customer Accounts
-// =========================================================
-app.get('/account/signup', (req, res) => {
-  if (req.session && req.session.customerId) return res.redirect('/account/dashboard');
-  res.render('account/signup', { error: null, old: {} });
-});
-
-app.post('/account/signup', ah(async (req, res) => {
-  const { name, email, phone, password } = req.body;
-  if (!name || !email || !password || password.length < 6) {
-    return res.render('account/signup', { error: 'Please fill all fields. Password must be at least 6 characters.', old: req.body });
-  }
-  const existing = await db.findOne('customers', { email: email.toLowerCase().trim() });
-  if (existing) {
-    return res.render('account/signup', { error: 'An account with this email already exists. Please log in instead.', old: req.body });
-  }
-  const password_hash = bcrypt.hashSync(password, 10);
-  const customer = await db.insertOne('customers', { name, email: email.toLowerCase().trim(), phone: phone || '', password_hash });
-  req.session.customerId = customer.id;
-  req.session.customerName = customer.name;
-  res.redirect(req.query.next || '/account/dashboard');
-}));
-
-app.get('/account/login', (req, res) => {
-  if (req.session && req.session.customerId) return res.redirect('/account/dashboard');
-  res.render('account/login', { error: null, oldEmail: '' });
-});
-
-app.post('/account/login', ah(async (req, res) => {
-  const { email, password } = req.body;
-  const customer = await db.findOne('customers', { email: (email || '').toLowerCase().trim() });
-  if (!customer || !bcrypt.compareSync(password || '', customer.password_hash)) {
-    return res.render('account/login', { error: 'Incorrect email or password.', oldEmail: email || '' });
-  }
-  req.session.customerId = customer._id.toString();
-  req.session.customerName = customer.name;
-  res.redirect(req.query.next || req.body.next || '/account/dashboard');
-}));
-
-app.post('/account/logout', (req, res) => {
-  req.session.customerId = null;
-  req.session.customerName = null;
-  res.redirect('/');
-});
-
-app.get('/account/dashboard', requireCustomer, ah(async (req, res) => {
-  const customer = db.normalize(await db.findById('customers', req.session.customerId));
-  const orders = db.normalize(await db.find('orders', { customer_id: req.session.customerId }, { created_at: -1 }));
-  res.render('account/dashboard', { customer, orders });
-}));
-
-app.post('/testimonials', ah(async (req, res) => {
-  const { name, message, rating } = req.body;
-  await db.insertOne('testimonials', { name, message, rating: parseInt(rating) || 5, approved: false });
-  res.redirect('/about?thanks=1');
-}));
-
-app.get('/blog', ah(async (req, res) => {
-  const posts = db.normalize(await db.find('posts', { published: true }, { created_at: -1 }));
-  res.render('blog_list', { posts });
-}));
-
-app.get('/blog/:slug', ah(async (req, res) => {
-  const post = db.normalize(await db.findOne('posts', { slug: req.params.slug, published: true }));
-  if (!post) return res.status(404).send('Post not found');
-  res.render('blog_post', { post });
-}));
-
-app.get('/privacy-policy', (req, res) => res.render('privacy-policy'));
-app.get('/terms', (req, res) => res.render('terms'));
-
-// =========================================================
-// ADMIN ROUTES
-// =========================================================
-
-app.get('/admin/login', (req, res) => {
-  if (req.session && req.session.isAdmin) return res.redirect('/admin/dashboard');
-  res.render('admin/login', { error: null });
-});
-
-app.post('/admin/login', (req, res) => {
-  const { username, password } = req.body;
-  const validUser = username === process.env.ADMIN_USERNAME;
-  const storedPass = process.env.ADMIN_PASSWORD || '';
-  let validPass = storedPass.startsWith('$2') ? bcrypt.compareSync(password, storedPass) : password === storedPass;
-  if (validUser && validPass) { req.session.isAdmin = true; return res.redirect('/admin/dashboard'); }
-  res.render('admin/login', { error: 'Invalid username or password' });
-});
-
-app.post('/admin/logout', requireAdmin, (req, res) => req.session.destroy(() => res.redirect('/admin/login')));
-
-app.get('/admin/dashboard', requireAdmin, ah(async (req, res) => {
-  const counts = {
-    artworks:     await db.count('artworks'),
-    orders:       await db.count('orders'),
-    newOrders:    await db.count('orders', { status: 'Received' }),
-    messages:     await db.count('messages', { read: false }),
-    testimonials: await db.count('testimonials', { approved: false }),
-    subscribers:  await db.count('newsletter')
-  };
-  const recentOrders = db.normalize(await db.find('orders', {}, { created_at: -1 }, 5));
-
-  const allOrders = db.normalize(await db.find('orders', {}, { created_at: -1 }));
-  let totalReceived = 0, totalPending = 0, totalExpenses = 0;
-  allOrders.forEach(o => {
-    const adv = parseFloat(o.advance_amount) || 0;
-    const bal = parseFloat(o.balance_amount) || 0;
-    const exp = parseFloat(o.expenses) || 0;
-    if (o.advance_amount) { if (o.advance_paid) totalReceived += adv; else totalPending += adv; }
-    if (o.balance_amount) { if (o.balance_paid) totalReceived += bal; else totalPending += bal; }
-    totalExpenses += exp;
-  });
-  const finance = { totalReceived, totalPending, totalExpenses, totalProfit: totalReceived - totalExpenses };
-
-  // Order status breakdown (for the dashboard bar chart)
-  const statusList = ['Received','Confirmed','In Progress','Completed','Artwork Sent - Awaiting Confirmation','Customer Confirmed','Delivered','Cancelled'];
-  const statusCounts = statusList
-    .map(s => ({ status: s, count: allOrders.filter(o => o.status === s).length }))
-    .filter(s => s.count > 0);
-  const maxStatusCount = Math.max(1, ...statusCounts.map(s => s.count));
-
-  // Orders placed per day, last 14 days
-  const days = [];
-  for (let i = 13; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
-    const count = allOrders.filter(o => String(o.created_at || '').slice(0, 10) === key).length;
-    days.push({ label: d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }), count });
-  }
-  const maxDayCount = Math.max(1, ...days.map(d => d.count));
-
-  // Orders needing admin follow-up
-  const now = new Date();
-  const soon = new Date(now.getTime() + 3 * 86400000);
-  const needsAttention = allOrders.filter(o => {
-    if (o.status === 'Delivered' || o.status === 'Cancelled') return false;
-    if (o.advance_amount && !o.advance_paid) return true;
-    if (o.balance_amount && !o.balance_paid) return true;
-    if (o.final_artwork_image && !o.customer_confirmed) return true;
-    if (o.delivery_date) { const dd = new Date(o.delivery_date); if (dd >= now && dd <= soon) return true; }
-    return false;
-  }).slice(0, 8).map(o => {
-    let reason = 'Delivery date coming up';
-    if (o.advance_amount && !o.advance_paid) reason = 'Advance payment pending';
-    else if (o.balance_amount && !o.balance_paid) reason = 'Balance payment pending';
-    else if (o.final_artwork_image && !o.customer_confirmed) reason = 'Awaiting customer confirmation';
-    return { ...o, reason };
-  });
-
-  res.render('admin/dashboard', { counts, recentOrders, finance, statusCounts, maxStatusCount, days, maxDayCount, needsAttention });
-}));
-
-// ---- Artworks ----
-app.get('/admin/artworks', requireAdmin, ah(async (req, res) => {
-  res.render('admin/artworks', { artworks: db.normalize(await db.find('artworks', {}, { created_at: -1 })) });
-}));
-
-app.get('/admin/artworks/new', requireAdmin, (req, res) => res.render('admin/artwork-form', { artwork: null }));
-
-app.get('/admin/artworks/:id/edit', requireAdmin, ah(async (req, res) => {
-  const artwork = db.normalize(await db.findById('artworks', req.params.id));
-  if (!artwork) return res.redirect('/admin/artworks');
-  res.render('admin/artwork-form', { artwork });
-}));
-
-app.post('/admin/artworks/save', requireAdmin, memoryUpload.single('image'), ah(async (req, res) => {
-  const { id, title, category, description, story, size, price, featured } = req.body;
-  const uploadedUrl = await uploadImage(req.file, 'artworks');
-  const featuredVal = !!featured;
-  if (id) {
-    const existing = await db.findById('artworks', id);
-    const image = uploadedUrl || (existing ? existing.image : null);
-    await db.updateById('artworks', id, { title, category, description, story, size, price, image, featured: featuredVal });
-  } else {
-    await db.insertOne('artworks', { title, category, description, story, size, price, image: uploadedUrl, featured: featuredVal });
-  }
-  res.redirect('/admin/artworks');
-}));
-
-app.post('/admin/artworks/:id/delete', requireAdmin, ah(async (req, res) => {
-  await db.deleteById('artworks', req.params.id);
-  res.redirect('/admin/artworks');
-}));
-
-// ---- Services ----
-app.get('/admin/services', requireAdmin, ah(async (req, res) => {
-  res.render('admin/services', { services: db.normalize(await db.find('services', {}, { created_at: -1 })) });
-}));
-
-app.post('/admin/services/save', requireAdmin, memoryUpload.single('image'), ah(async (req, res) => {
-  const { id, title, description } = req.body;
-  const prices = extractPrices(req.body);
-  const uploadedUrl = await uploadImage(req.file, 'services');
-  if (id) {
-    const existing = await db.findById('services', id);
-    const image = uploadedUrl || (existing ? existing.image : null);
-    await db.updateById('services', id, { title, description, image, prices });
-  } else {
-    await db.insertOne('services', { title, description, image: uploadedUrl, prices });
-  }
-  res.redirect('/admin/services');
-}));
-
-app.post('/admin/services/:id/delete', requireAdmin, ah(async (req, res) => {
-  await db.deleteById('services', req.params.id);
-  res.redirect('/admin/services');
-}));
-
-// ---- Videos ----
-app.get('/admin/videos', requireAdmin, ah(async (req, res) => {
-  res.render('admin/videos', { videos: db.normalize(await db.find('videos', {}, { created_at: -1 })) });
-}));
-
-app.post('/admin/videos/save', requireAdmin, ah(async (req, res) => {
-  await db.insertOne('videos', { title: req.body.title, video_url: req.body.video_url });
-  res.redirect('/admin/videos');
-}));
-
-app.post('/admin/videos/:id/delete', requireAdmin, ah(async (req, res) => {
-  await db.deleteById('videos', req.params.id);
-  res.redirect('/admin/videos');
-}));
-
-// ---- Orders ----
-app.get('/admin/orders', requireAdmin, ah(async (req, res) => {
-  const q = (req.query.q || '').trim();
-  const status = req.query.status || '';
-  const sort = req.query.sort || 'newest';
-  const filter = {};
-  if (status) filter.status = status;
-  if (q) {
-    const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-    filter.$or = [{ order_code: re }, { name: re }, { phone: re }, { email: re }];
-  }
-  const sortOpt = sort === 'oldest' ? { created_at: 1 } : { created_at: -1 };
-  const orders = db.normalize(await db.find('orders', filter, sortOpt));
-  res.render('admin/orders', { orders, q, status, sort });
-}));
-
-app.post('/admin/orders/:id/status', requireAdmin, ah(async (req, res) => {
-  await db.updateById('orders', req.params.id, { status: req.body.status });
-  const order = db.normalize(await db.findById('orders', req.params.id));
-  if (order && order.email) {
-    const s = res.locals.settings;
-    const trackUrl = `${req.protocol}://${req.get('host')}/track-order`;
-    const data = { name: order.name, order_code: order.order_code, status: order.status, track_url: trackUrl, site_name: s.site_name };
-    mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_status_update_subject, data), html: renderTemplate(s.tmpl_status_update_body, data).replace(/\n/g, '<br>') });
-  }
-  res.redirect('/admin/orders');
-}));
-
-app.get('/admin/orders/:id/advance', requireAdmin, ah(async (req, res) => {
-  const order = db.normalize(await db.findById('orders', req.params.id));
-  if (!order) return res.redirect('/admin/orders');
-  res.render('admin/order-action', { order, actionType: 'advance', title: 'Request Advance Payment', actionUrl: `/admin/orders/${order.id}/advance`, defaultLink: res.locals.settings.default_payment_link, suggestedAmount: null });
-}));
-
-app.post('/admin/orders/:id/advance', requireAdmin, ah(async (req, res) => {
-  const { amount, payment_link } = req.body;
-  const order = db.normalize(await db.findById('orders', req.params.id));
-  if (!order) return res.redirect('/admin/orders');
-  await db.updateById('orders', req.params.id, { status: 'Confirmed', advance_amount: amount, advance_payment_link: payment_link, advance_paid: false });
-  if (order.email) {
-    const s = res.locals.settings;
-    const trackUrl = `${req.protocol}://${req.get('host')}/track-order`;
-    const data = { name: order.name, order_code: order.order_code, art_type: order.art_type, amount, payment_link, track_url: trackUrl, site_name: s.site_name };
-    await mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_advance_subject, data), html: renderTemplate(s.tmpl_advance_body, data).replace(/\n/g, '<br>') });
-  }
-  res.redirect('/admin/orders');
-}));
-
-app.post('/admin/orders/:id/advance-paid', requireAdmin, ah(async (req, res) => {
-  const order = db.normalize(await db.findById('orders', req.params.id));
-  if (!order) return res.redirect('/admin/orders');
-  await db.updateById('orders', req.params.id, { advance_paid: true, status: 'In Progress' });
-  if (order.email) {
-    const s = res.locals.settings;
-    const trackUrl = `${req.protocol}://${req.get('host')}/track-order`;
-    const data = { name: order.name, order_code: order.order_code, status: 'In Progress', track_url: trackUrl, site_name: s.site_name };
-    await mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_status_update_subject, data), html: renderTemplate(s.tmpl_status_update_body, data).replace(/\n/g, '<br>') });
-  }
-  res.redirect('/admin/orders');
-}));
-
-app.get('/admin/orders/:id/reject', requireAdmin, ah(async (req, res) => {
-  const order = db.normalize(await db.findById('orders', req.params.id));
-  if (!order) return res.redirect('/admin/orders');
-  res.render('admin/order-action', { order, actionType: 'reject', title: 'Reject & Ask For a New Date', actionUrl: `/admin/orders/${order.id}/reject`, defaultLink: '', suggestedAmount: null });
-}));
-
-app.post('/admin/orders/:id/reject', requireAdmin, ah(async (req, res) => {
-  const { reason } = req.body;
-  const order = db.normalize(await db.findById('orders', req.params.id));
-  if (!order) return res.redirect('/admin/orders');
-  await db.updateById('orders', req.params.id, { status: 'Date Rejected - Awaiting Reply' });
-  if (order.email) {
-    const s = res.locals.settings;
-    const trackUrl = `${req.protocol}://${req.get('host')}/track-order`;
-    const data = { name: order.name, order_code: order.order_code, reason: reason || 'Requested date unavailable', track_url: trackUrl, site_name: s.site_name };
-    await mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_reject_subject, data), html: renderTemplate(s.tmpl_reject_body, data).replace(/\n/g, '<br>') });
-  }
-  res.redirect('/admin/orders');
-}));
-
-app.get('/admin/orders/:id/balance', requireAdmin, ah(async (req, res) => {
-  const order = db.normalize(await db.findById('orders', req.params.id));
-  if (!order) return res.redirect('/admin/orders');
-  let suggestedAmount = null;
-  const est = parseFloat(order.estimated_price);
-  const adv = parseFloat(order.advance_amount);
-  if (est && adv) suggestedAmount = (est - adv).toFixed(0);
-  res.render('admin/order-action', { order, actionType: 'balance', title: 'Request Balance (Final) Payment', actionUrl: `/admin/orders/${order.id}/balance`, defaultLink: res.locals.settings.default_payment_link, suggestedAmount });
-}));
-
-app.post('/admin/orders/:id/balance', requireAdmin, ah(async (req, res) => {
-  const { amount, payment_link } = req.body;
-  const order = db.normalize(await db.findById('orders', req.params.id));
-  if (!order) return res.redirect('/admin/orders');
-  await db.updateById('orders', req.params.id, { status: 'Completed', balance_amount: amount, balance_payment_link: payment_link, balance_paid: false });
-  if (order.email) {
-    const s = res.locals.settings;
-    const trackUrl = `${req.protocol}://${req.get('host')}/track-order`;
-    const data = { name: order.name, order_code: order.order_code, amount, payment_link, track_url: trackUrl, site_name: s.site_name };
-    await mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_balance_subject, data), html: renderTemplate(s.tmpl_balance_body, data).replace(/\n/g, '<br>') });
-  }
-  res.redirect('/admin/orders');
-}));
-
-app.post('/admin/orders/:id/balance-paid', requireAdmin, ah(async (req, res) => {
-  await db.updateById('orders', req.params.id, { balance_paid: true });
-  res.redirect('/admin/orders');
-}));
-
-app.post('/admin/orders/:id/expenses', requireAdmin, ah(async (req, res) => {
-  await db.updateById('orders', req.params.id, { expenses: req.body.expenses || 0 });
-  res.redirect('/admin/orders');
-}));
-
-app.post('/admin/orders/:id/shipped', requireAdmin, ah(async (req, res) => {
-  const order = db.normalize(await db.findById('orders', req.params.id));
-  if (!order) return res.redirect('/admin/orders');
-  await db.updateById('orders', req.params.id, { status: 'Delivered' });
-  if (order.email) {
-    const s = res.locals.settings;
-    const trackUrl = `${req.protocol}://${req.get('host')}/track-order`;
-    const data = { name: order.name, order_code: order.order_code, track_url: trackUrl, site_name: s.site_name };
-    await mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_shipped_subject, data), html: renderTemplate(s.tmpl_shipped_body, data).replace(/\n/g, '<br>') });
-  }
-  res.redirect('/admin/orders');
-}));
-
-// ---- Send Finished Artwork for Customer Confirmation ----
-app.get('/admin/orders/:id/send-artwork', requireAdmin, ah(async (req, res) => {
-  const order = db.normalize(await db.findById('orders', req.params.id));
-  if (!order) return res.redirect('/admin/orders');
-  res.render('admin/send-artwork', { order });
-}));
-
-app.post('/admin/orders/:id/send-artwork', requireAdmin, memoryUpload.single('artwork_image'), ah(async (req, res) => {
-  const order = db.normalize(await db.findById('orders', req.params.id));
-  if (!order) return res.redirect('/admin/orders');
-  const uploadedUrl = await uploadImage(req.file, 'final-artwork');
-  const final_artwork_image = uploadedUrl || order.final_artwork_image || null;
-  const update = {
-    final_artwork_image,
-    final_artwork_note: req.body.note || '',
-    status: 'Artwork Sent - Awaiting Confirmation',
-    artwork_sent_at: new Date().toISOString(),
-    customer_confirmed: false,
-    customer_confirmed_at: null
-  };
-  await db.updateById('orders', req.params.id, update);
-  if (order.email && final_artwork_image) {
-    const s = res.locals.settings;
-    const trackUrl = `${req.protocol}://${req.get('host')}/track-order?order_code=${encodeURIComponent(order.order_code)}`;
-    const data = { name: order.name, order_code: order.order_code, art_type: order.art_type, artwork_image: final_artwork_image, artwork_note: req.body.note || '', track_url: trackUrl, site_name: s.site_name };
-    await mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_artwork_ready_subject, data), html: renderTemplate(s.tmpl_artwork_ready_body, data).replace(/\n/g, '<br>') });
-  }
-  res.redirect('/admin/orders');
-}));
-
-// ---- Testimonials ----
-app.get('/admin/testimonials', requireAdmin, ah(async (req, res) => {
-  res.render('admin/testimonials', { testimonials: db.normalize(await db.find('testimonials', {}, { created_at: -1 })) });
-}));
-
-app.post('/admin/testimonials/add', requireAdmin, ah(async (req, res) => {
-  const { name, message, rating } = req.body;
-  await db.insertOne('testimonials', { name, message, rating: parseInt(rating) || 5, approved: true });
-  res.redirect('/admin/testimonials');
-}));
-
-app.post('/admin/testimonials/:id/approve', requireAdmin, ah(async (req, res) => {
-  await db.updateById('testimonials', req.params.id, { approved: true });
-  res.redirect('/admin/testimonials');
-}));
-
-app.post('/admin/testimonials/:id/delete', requireAdmin, ah(async (req, res) => {
-  await db.deleteById('testimonials', req.params.id);
-  res.redirect('/admin/testimonials');
-}));
-
-// ---- Messages ----
-app.get('/admin/messages', requireAdmin, ah(async (req, res) => {
-  const mdb = await db.getDB();
-  const messages = db.normalize(await db.find('messages', {}, { created_at: -1 }));
-  await mdb.collection('messages').updateMany({ read: false }, { $set: { read: true } });
-  res.render('admin/messages', { messages });
-}));
-
-app.post('/admin/messages/:id/delete', requireAdmin, ah(async (req, res) => {
-  await db.deleteById('messages', req.params.id);
-  res.redirect('/admin/messages');
-}));
-
-// ---- Newsletter ----
-app.get('/admin/newsletter', requireAdmin, ah(async (req, res) => {
-  res.render('admin/newsletter', { subscribers: db.normalize(await db.find('newsletter', {}, { created_at: -1 })), notice: null });
-}));
-
-// ---- Course Waitlist (reserved for the future course platform) ----
-app.get('/admin/course-waitlist', requireAdmin, ah(async (req, res) => {
-  res.render('admin/course-waitlist', { signups: db.normalize(await db.find('course_waitlist', {}, { created_at: -1 })) });
-}));
-
-app.get('/admin/newsletter/export', requireAdmin, ah(async (req, res) => {
-  const subscribers = await db.find('newsletter', {}, { created_at: -1 });
-  const csv = 'email,subscribed_at\n' + subscribers.map(s => `${s.email},${s.created_at}`).join('\n');
-  res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', 'attachment; filename=subscribers.csv');
-  res.send(csv);
-}));
-
-app.post('/admin/newsletter/send', requireAdmin, ah(async (req, res) => {
-  const { subject, message } = req.body;
-  const subscribers = await db.find('newsletter', {}, { created_at: -1 });
-  const siteName = res.locals.settings.site_name;
-  let sentCount = 0;
-  for (const s of subscribers) {
-    const result = await mailer.sendMail({ to: s.email, subject, html: `<div>${message.replace(/\n/g, '<br>')}</div><p style="margin-top:20px;color:#888;font-size:12px;">— ${siteName}</p>` });
-    if (result && result.sent) sentCount++;
-  }
-  res.render('admin/newsletter', {
-    subscribers: db.normalize(await db.find('newsletter', {}, { created_at: -1 })),
-    notice: mailer.isConfigured() ? `Sent to ${sentCount} of ${subscribers.length} subscribers.` : 'Email not configured yet — nothing was sent.'
-  });
-}));
-
-// ---- Art Types & Sizes (drives Portfolio categories, the Artwork form,
-//      Services pricing, and the Order form) ----
-app.get('/admin/taxonomy', requireAdmin, ah(async (req, res) => {
-  res.render('admin/taxonomy', { artTypesList: await db.getArtTypes(), sizesList: await db.getSizes() });
-}));
-
-app.post('/admin/taxonomy/art-types/add', requireAdmin, ah(async (req, res) => {
-  const list = await db.getArtTypes();
-  const val = (req.body.name || '').trim();
-  if (val && !list.includes(val)) list.push(val);
-  await db.saveArtTypes(list);
-  res.redirect('/admin/taxonomy');
-}));
-
-app.post('/admin/taxonomy/art-types/delete', requireAdmin, ah(async (req, res) => {
-  const list = (await db.getArtTypes()).filter(v => v !== req.body.value);
-  await db.saveArtTypes(list);
-  res.redirect('/admin/taxonomy');
-}));
-
-app.post('/admin/taxonomy/sizes/add', requireAdmin, ah(async (req, res) => {
-  const list = await db.getSizes();
-  const val = (req.body.name || '').trim();
-  if (val && !list.includes(val)) list.push(val);
-  await db.saveSizes(list);
-  res.redirect('/admin/taxonomy');
-}));
-
-app.post('/admin/taxonomy/sizes/delete', requireAdmin, ah(async (req, res) => {
-  const list = (await db.getSizes()).filter(v => v !== req.body.value);
-  await db.saveSizes(list);
-  res.redirect('/admin/taxonomy');
-}));
-
-// ---- Homepage Content ----
-app.get('/admin/homepage-content', requireAdmin, (req, res) => res.render('admin/homepage-content'));
-
-// ---- Blog ----
-app.get('/admin/blog', requireAdmin, ah(async (req, res) => {
-  res.render('admin/blog', { posts: db.normalize(await db.find('posts', {}, { created_at: -1 })) });
-}));
-
-app.get('/admin/blog/new', requireAdmin, (req, res) => res.render('admin/blog-form', { post: null }));
-
-app.get('/admin/blog/:id/edit', requireAdmin, ah(async (req, res) => {
-  const post = db.normalize(await db.findById('posts', req.params.id));
-  if (!post) return res.redirect('/admin/blog');
-  res.render('admin/blog-form', { post });
-}));
-
-app.post('/admin/blog/save', requireAdmin, memoryUpload.single('cover_image'), ah(async (req, res) => {
-  const { id, title, excerpt, content, published } = req.body;
-  const uploadedUrl = await uploadImage(req.file, 'blog');
-  if (id) {
-    const existing = await db.findById('posts', id);
-    const cover_image = uploadedUrl || (existing ? existing.cover_image : null);
-    await db.updateById('posts', id, { title, excerpt, content, cover_image, published: !!published });
-  } else {
-    let slug = slugify(title);
-    const clash = await db.findOne('posts', { slug });
-    if (clash) slug = slug + '-' + Date.now().toString().slice(-5);
-    await db.insertOne('posts', { title, slug, excerpt, content, cover_image: uploadedUrl, published: !!published });
-  }
-  res.redirect('/admin/blog');
-}));
-
-app.post('/admin/blog/:id/publish-toggle', requireAdmin, ah(async (req, res) => {
-  const post = await db.findById('posts', req.params.id);
-  if (post) await db.updateById('posts', req.params.id, { published: !post.published });
-  res.redirect('/admin/blog');
-}));
-
-app.post('/admin/blog/:id/delete', requireAdmin, ah(async (req, res) => {
-  await db.deleteById('posts', req.params.id);
-  res.redirect('/admin/blog');
-}));
-
-// ---- Custom Content Blocks (free-form fields, no code needed) ----
-app.get('/admin/blocks', requireAdmin, ah(async (req, res) => {
-  res.render('admin/blocks', { blocks: db.normalize(await db.find('blocks', {}, { created_at: 1 })) });
-}));
-
-app.post('/admin/blocks/save', requireAdmin, ah(async (req, res) => {
-  await db.insertOne('blocks', { title: req.body.title, text: req.body.text });
-  res.redirect('/admin/blocks');
-}));
-
-app.post('/admin/blocks/:id/delete', requireAdmin, ah(async (req, res) => {
-  await db.deleteById('blocks', req.params.id);
-  res.redirect('/admin/blocks');
-}));
-
-// ---- Settings ----
-app.get('/admin/settings', requireAdmin, (req, res) => res.render('admin/settings'));
-
-app.post('/admin/settings/save', requireAdmin, memoryUpload.fields([{ name: 'logo', maxCount: 1 }, { name: 'hero_image', maxCount: 1 }]), ah(async (req, res) => {
-  for (const [key, value] of Object.entries(req.body)) await db.setSetting(key, value);
-  // Checkboxes are absent from req.body entirely when unchecked, so the generic
-  // loop above can turn this ON but can never turn it back OFF. Handle it explicitly.
-  await db.setSetting('courses_enabled', req.body.courses_enabled === 'on' ? 'on' : 'off');
-  const logoFile = req.files && req.files.logo && req.files.logo[0];
-  const heroFile = req.files && req.files.hero_image && req.files.hero_image[0];
-  const uploadedLogo = await uploadImage(logoFile, 'logo');
-  if (uploadedLogo) await db.setSetting('logo_url', uploadedLogo);
-  const uploadedHero = await uploadImage(heroFile, 'hero');
-  if (uploadedHero) await db.setSetting('hero_image_url', uploadedHero);
-  res.redirect('/admin/settings');
-}));
-
-// ---- Calendar ----
-app.get('/admin/calendar', requireAdmin, ah(async (req, res) => {
-  res.render('admin/calendar', { blocked: await db.find('blocked_dates', {}, { date: 1 }) });
-}));
-
-app.post('/admin/calendar/block', requireAdmin, ah(async (req, res) => {
-  const { date, reason } = req.body;
-  if (date) {
-    const mdb = await db.getDB();
-    await mdb.collection('blocked_dates').updateOne({ date }, { $set: { date, reason: reason || '' } }, { upsert: true });
-  }
-  res.redirect('/admin/calendar');
-}));
-
-app.post('/admin/calendar/unblock', requireAdmin, ah(async (req, res) => {
-  const mdb = await db.getDB();
-  await mdb.collection('blocked_dates').deleteOne({ date: req.body.date });
-  res.redirect('/admin/calendar');
-}));
-
-// ---- Email Templates ----
-app.get('/admin/email-templates', requireAdmin, (req, res) => res.render('admin/email-templates'));
-
-app.post('/admin/email-templates/save', requireAdmin, ah(async (req, res) => {
-  for (const [key, value] of Object.entries(req.body)) {
-    if (key.startsWith('tmpl_') || key === 'default_payment_link') await db.setSetting(key, value);
-  }
-  res.redirect('/admin/email-templates');
-}));
-
-// ---- Offers ----
-app.get('/admin/offers', requireAdmin, ah(async (req, res) => {
-  res.render('admin/offers', { offers: db.normalize(await db.find('offers', {}, { created_at: -1 })) });
-}));
-
-app.post('/admin/offers/save', requireAdmin, memoryUpload.single('image'), ah(async (req, res) => {
-  const discount = parseFloat(req.body.discount_percent) || 0;
-  const uploadedUrl = await uploadImage(req.file, 'offers');
-  // A newly published offer becomes the one live offer, so the popup/banner
-  // never end up showing more than one offer at once.
-  const mdb = await db.getDB();
-  await mdb.collection('offers').updateMany({}, { $set: { active: false } });
-  await db.insertOne('offers', { title: req.body.title, message: req.body.message, discount_percent: discount, image: uploadedUrl, active: true });
-  res.redirect('/admin/offers');
-}));
-
-app.post('/admin/offers/:id/toggle', requireAdmin, ah(async (req, res) => {
-  const offer = await db.findById('offers', req.params.id);
-  if (offer) {
-    if (!offer.active) {
-      // Turning one offer on turns every other offer off, so there is only
-      // ever one live offer showing in the popup and homepage banner.
-      const mdb = await db.getDB();
-      await mdb.collection('offers').updateMany({}, { $set: { active: false } });
-      await db.updateById('offers', req.params.id, { active: true });
-    } else {
-      await db.updateById('offers', req.params.id, { active: false });
-    }
-  }
-  res.redirect('/admin/offers');
-}));
-
-app.post('/admin/offers/:id/delete', requireAdmin, ah(async (req, res) => {
-  await db.deleteById('offers', req.params.id);
-  res.redirect('/admin/offers');
-}));
-
-// ---- Coupon Codes ----
-app.get('/admin/coupons', requireAdmin, ah(async (req, res) => {
-  res.render('admin/coupons', { coupons: db.normalize(await db.find('coupons', {}, { created_at: -1 })) });
-}));
-
-app.post('/admin/coupons/save', requireAdmin, ah(async (req, res) => {
-  const code = String(req.body.code || '').trim().toUpperCase();
-  const discount_percent = parseFloat(req.body.discount_percent) || 0;
-  const max_uses = req.body.max_uses ? parseInt(req.body.max_uses) : null;
-  const expires_at = req.body.expires_at || null;
-  if (code && discount_percent > 0) {
-    // Codes are unique — re-creating an existing code replaces its terms rather
-    // than silently creating a confusing duplicate.
-    const mdb = await db.getDB();
-    await mdb.collection('coupons').deleteMany({ code });
-    await db.insertOne('coupons', { code, discount_percent, max_uses, used_count: 0, expires_at, active: true });
-  }
-  res.redirect('/admin/coupons');
-}));
-
-app.post('/admin/coupons/:id/toggle', requireAdmin, ah(async (req, res) => {
-  const coupon = await db.findById('coupons', req.params.id);
-  if (coupon) await db.updateById('coupons', req.params.id, { active: !coupon.active });
-  res.redirect('/admin/coupons');
-}));
-
-app.post('/admin/coupons/:id/delete', requireAdmin, ah(async (req, res) => {
-  await db.deleteById('coupons', req.params.id);
-  res.redirect('/admin/coupons');
-}));
-
-// Shared validity check used by both the live AJAX check and the final
-// server-side re-check on order submission — so a customer can never bypass
-// the rules by tampering with the client-side request.
-async function checkCoupon(codeRaw) {
-  const code = String(codeRaw || '').trim().toUpperCase();
-  if (!code) return { valid: false, message: 'Enter a coupon code.' };
-  const coupon = await db.findOne('coupons', { code });
-  if (!coupon || !coupon.active) return { valid: false, message: 'That coupon code is not valid.' };
-  if (coupon.expires_at && new Date(coupon.expires_at) < new Date(new Date().toDateString())) {
-    return { valid: false, message: 'That coupon code has expired.' };
-  }
-  if (coupon.max_uses && (coupon.used_count || 0) >= coupon.max_uses) {
-    return { valid: false, message: 'That coupon code has reached its usage limit.' };
-  }
-  return { valid: true, coupon };
+.track-details p { margin: 6px 0; font-size: 0.92rem; }
+
+.track-payment-box {
+  margin-top: 14px; padding: 16px; border-radius: var(--radius-md, 10px); border: 1px solid;
+}
+.track-payment-box.paid { background: #e6f4ea; border-color: #b7e0c4; }
+.track-payment-box.pending { background: #fff2cc; border-color: #e6cf87; }
+.track-payment-box.neutral { background: #eef2f7; border-color: #d5dee8; }
+
+.track-artwork-box {
+  margin-top: 20px; padding: 18px; border-radius: var(--radius-md, 10px);
+  background: var(--bg-secondary, #f4efe8); border: 1px solid var(--border-color, #e5e3de);
 }
 
-app.post('/coupon/validate', express.json(), ah(async (req, res) => {
-  const result = await checkCoupon(req.body.code);
-  if (!result.valid) return res.json({ valid: false, message: result.message });
-  res.json({ valid: true, discount_percent: result.coupon.discount_percent, message: `Coupon applied: ${result.coupon.discount_percent}% off` });
-}));
-// ---- FAQs ----
-app.get('/admin/faqs', requireAdmin, ah(async (req, res) => {
-  const faqs = db.normalize(await db.find('faqs', {}, { created_at: 1 }));
-  res.render('admin/faqs', { faqs });
-}));
-
-app.post('/admin/faqs/add', requireAdmin, ah(async (req, res) => {
-  const { question, answer } = req.body;
-  await db.insertOne('faqs', { question, answer });
-  res.redirect('/admin/faqs');
-}));
-
-app.post('/admin/faqs/:id/update', requireAdmin, ah(async (req, res) => {
-  const { question, answer } = req.body;
-  await db.updateById('faqs', req.params.id, { question, answer });
-  res.redirect('/admin/faqs');
-}));
-
-app.post('/admin/faqs/:id/delete', requireAdmin, ah(async (req, res) => {
-  await db.deleteById('faqs', req.params.id);
-  res.redirect('/admin/faqs');
-}));
-
-// ---------- 404 + Error handler ----------
-app.use((req, res) => res.status(404).send('Page not found'));
-app.use((err, req, res, next) => {
-  console.error('[error]', err.message);
-  res.status(500).send('Something went wrong. Please try again.');
-});
-
-// ---------- Start ----------
-db.initSchema().then(() => {
-  app.listen(PORT, () => console.log(`Kishor Kanna Arts running at http://localhost:${PORT}`));
-}).catch(err => {
-  console.error('Database connection failed:', err.message);
-  process.exit(1);
-});
-
+/* Phase 6 — breadcrumbs */
+.breadcrumbs {
+  font-size: 0.82rem; color: var(--text-secondary, #888); margin: 12px 0 4px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
+}
+.breadcrumbs a { color: var(--text-secondary, #888); }
+.breadcrumbs a:hover { color: var(--color-gold, #C9A24B); }
+.crumb-sep { margin: 0 4px; opacity: 0.5; }
+.crumb-current { color: var(--text-primary, #1a1a1a); font-weight: 500; }
