@@ -83,17 +83,32 @@
 </style>
 </head>
 <body>
-<header class="site-header">
+<header class="site-header" id="siteHeader">
   <a class="logo" href="/" style="display:flex; align-items:center; gap:10px;">
     <% if (settings.logo_url) { %><img src="<%= settings.logo_url %>" alt="<%= settings.site_name %>" style="height:42px; width:auto;"><% } %>
     <span><%= settings.site_name %></span>
   </a>
+
   <button class="menu-toggle" id="menuToggle" aria-label="Menu">&#9776;</button>
+
   <nav class="nav">
     <a href="/">Home</a>
     <a href="/portfolio">Portfolio</a>
-    <a href="/services">Services</a>
+
+    <details class="nav-more nav-mega">
+      <summary>Services</summary>
+      <div class="nav-mega-menu">
+        <a href="/services#pencil"><strong>Pencil Portraits</strong><span>Classic graphite, timeless detail</span></a>
+        <a href="/services#color"><strong>Color Portraits</strong><span>Vivid, lifelike color work</span></a>
+        <a href="/services#canvas"><strong>Canvas Paintings</strong><span>Gallery-ready framed art</span></a>
+        <a href="/services#couple"><strong>Couple &amp; Wedding</strong><span>Romantic keepsake portraits</span></a>
+        <a href="/services#pet"><strong>Pet Portraits</strong><span>Your pet, hand-painted</span></a>
+        <a href="/services" class="nav-mega-viewall">View All Services →</a>
+      </div>
+    </details>
+
     <a href="/track-order">Track Order</a>
+
     <details class="nav-more">
       <summary>More</summary>
       <div class="nav-more-menu">
@@ -103,22 +118,65 @@
         <a href="/contact">Contact</a>
       </div>
     </details>
-<% if (isCustomer) { %><a href="/account/dashboard">My Account</a><% } else { %><a href="/account/login">Login</a><% } %>
+
+    <button class="icon-btn" id="searchToggle" aria-label="Search">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </button>
+
+    <button class="icon-btn" id="theme-toggle" aria-label="Toggle dark mode">
+      <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    </button>
+
+    <% if (isCustomer) { %><a href="/account/dashboard">My Account</a><% } else { %><a href="/account/login">Login</a><% } %>
     <a class="nav-cta" href="/order">Order Now</a>
   </nav>
+
+  <div class="search-bar" id="searchBar">
+    <form action="/portfolio" method="get" class="container" style="display:flex; gap:10px; padding:14px 0;">
+      <input type="text" name="search" placeholder="Search artworks, e.g. 'pencil portrait'" autocomplete="off">
+      <button type="submit" class="btn btn-primary btn-sm">Search</button>
+    </form>
+  </div>
+
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     var btn = document.getElementById('menuToggle');
     var nav = document.querySelector('.nav');
     if (btn && nav) {
-      btn.addEventListener('click', function () {
-        nav.classList.toggle('open');
+      btn.addEventListener('click', function () { nav.classList.toggle('open'); });
+    }
+
+    var header = document.getElementById('siteHeader');
+    if (header) {
+      window.addEventListener('scroll', function () {
+        header.classList.toggle('is-scrolled', window.scrollY > 10);
+      }, { passive: true });
+    }
+
+    var searchToggle = document.getElementById('searchToggle');
+    var searchBar = document.getElementById('searchBar');
+    if (searchToggle && searchBar) {
+      searchToggle.addEventListener('click', function () {
+        searchBar.classList.toggle('open');
+        if (searchBar.classList.contains('open')) {
+          searchBar.querySelector('input').focus();
+        }
       });
     }
+
+    // Reflect saved theme on the sun/moon icon
+    function syncThemeIcon() {
+      var icon = document.querySelector('#theme-toggle .icon-sun');
+      if (!icon) return;
+      var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      icon.style.opacity = isDark ? '0.5' : '1';
+    }
+    syncThemeIcon();
+    var themeBtn = document.getElementById('theme-toggle');
+    if (themeBtn) themeBtn.addEventListener('click', syncThemeIcon);
   });
 </script>
 </header>
-
 <% if (typeof popupOffer !== 'undefined' && popupOffer && !isAdmin) { %>
 <div id="offerPopupOverlay" style="display:none; position:fixed; inset:0; background:rgba(10,8,6,0.7); z-index:9999; align-items:center; justify-content:center; padding:20px;">
   <div style="background:#151110; border-radius:18px; max-width:420px; width:100%; overflow:hidden; position:relative; box-shadow:0 24px 70px rgba(0,0,0,0.5); <% if (popupOffer.image) { %>min-height:440px; display:flex; flex-direction:column; justify-content:flex-end;<% } %>">
