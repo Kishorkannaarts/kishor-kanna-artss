@@ -68,12 +68,49 @@
           </div>
         </div>
       <% }) %>
-      <% if (featured.length === 0) { %>
+<% if (featured.length === 0) { %>
         <p class="sub">No artworks added yet — add some from the admin panel.</p>
       <% } %>
     </div>
   </div>
 </section>
+
+<% if (beforeAfter && beforeAfter.length > 0) { %>
+<section class="section section-tint">
+  <div class="container">
+    <h2 class="reveal">Before &amp; After</h2>
+    <p class="sub reveal">Drag the slider to see the photo become the artwork</p>
+    <div class="grid grid-2 grid-ba">
+      <% beforeAfter.forEach(a => { %>
+        <div class="ba-item reveal">
+          <div class="ba-slider" data-ba>
+            <img class="ba-after" src="<%= a.image %>" alt="<%= a.title %> — finished artwork" loading="lazy" decoding="async">
+            <img class="ba-before" src="<%= a.before_image %>" alt="<%= a.title %> — original reference photo" loading="lazy" decoding="async">
+            <div class="ba-handle" aria-hidden="true"></div>
+            <span class="ba-label ba-label-before">Photo</span>
+            <span class="ba-label ba-label-after">Artwork</span>
+            <input type="range" class="ba-range" min="0" max="100" value="50" aria-label="Drag to compare the photo and the finished artwork for <%= a.title %>">
+          </div>
+          <h3 style="margin:10px 0 0; font-size:1.05rem;"><%= a.title %></h3>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+</section>
+<script>
+  document.querySelectorAll('[data-ba]').forEach(function (el) {
+    var range = el.querySelector('.ba-range');
+    var beforeImg = el.querySelector('.ba-before');
+    var handle = el.querySelector('.ba-handle');
+    function update() {
+      beforeImg.style.clipPath = 'inset(0 ' + (100 - range.value) + '% 0 0)';
+      handle.style.left = range.value + '%';
+    }
+    range.addEventListener('input', update);
+    update();
+  });
+</script>
+<% } %>
 
 <section class="section section-tint">
   <div class="container">
