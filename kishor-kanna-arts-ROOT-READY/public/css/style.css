@@ -128,8 +128,20 @@ a:hover { color: var(--color-gold); }
   background: linear-gradient(135deg, var(--color-gold), var(--color-gold-light));
   color: #221a10;
   border: none;
+  position: relative; overflow: hidden;
 }
 .btn-gold:hover, .nav-cta:hover { box-shadow: var(--shadow-gold); transform: translateY(-2px); color: #221a10; }
+
+/* Subtle light sweep on hover — small premium touch, cheap to run */
+.btn-gold::before, .nav-cta::before, .cta-final .btn::before {
+  content: ''; position: absolute; top: 0; left: -60%; width: 40%; height: 100%;
+  background: linear-gradient(120deg, transparent, rgba(255,255,255,0.55), transparent);
+  transform: skewX(-20deg); transition: left 0.6s ease; pointer-events: none;
+}
+.btn-gold:hover::before, .nav-cta:hover::before, .cta-final .btn:hover::before { left: 130%; }
+@media (prefers-reduced-motion: reduce) {
+  .btn-gold::before, .nav-cta::before, .cta-final .btn::before { display: none; }
+}
 
 .btn-outline {
   background: transparent;
@@ -332,6 +344,36 @@ a:hover { color: var(--color-gold); }
 .hero p.lead { font-size: 1.1rem; max-width: 480px; margin-top: var(--space-md); }
 .hero-actions { display: flex; gap: 16px; margin-top: var(--space-md); flex-wrap: wrap; }
 
+/* First-paint entrance — the hero is visible immediately on load, so it can't
+   rely on the scroll-triggered .reveal system; each element fades/slides up
+   in its own beat instead of everything popping in at once. */
+.hero-anim {
+  opacity: 0; transform: translateY(18px);
+  animation: heroFadeUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: var(--d, 0s);
+}
+@keyframes heroFadeUp { to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) {
+  .hero-anim { animation: none; opacity: 1; transform: none; }
+}
+
+.hero-scroll-cue {
+  position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%);
+  z-index: 2; width: 26px; height: 42px; border: 2px solid rgba(255,255,255,0.55);
+  border-radius: 100px; display: none;
+}
+.hero-with-image .hero-scroll-cue { display: block; }
+.hero-scroll-cue span {
+  display: block; width: 4px; height: 8px; background: #fff; border-radius: 4px;
+  margin: 8px auto; animation: scrollCueBounce 1.8s ease-in-out infinite;
+}
+@keyframes scrollCueBounce {
+  0%, 100% { transform: translateY(0); opacity: 1; }
+  50% { transform: translateY(10px); opacity: 0.4; }
+}
+@media (max-width: 700px) { .hero-scroll-cue { display: none !important; } }
+@media (prefers-reduced-motion: reduce) { .hero-scroll-cue span { animation: none; } }
+
 @media (max-width: 700px) {
   .hero { padding: 56px 0 64px; min-height: auto; }
   .hero-with-image { min-height: 0; }
@@ -346,7 +388,7 @@ a:hover { color: var(--color-gold); }
 .trust-bar { padding: var(--space-md) 0; border-bottom: 1px solid var(--border-color); background: var(--bg-primary); }
 .trust-bar-inner { display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--space-md); }
 .trust-stat { display: flex; flex-direction: column; text-align: center; flex: 1; min-width: 120px; }
-.trust-stat strong { font-family: var(--font-display); font-size: 1.7rem; color: var(--color-gold); }
+.trust-stat strong { font-family: var(--font-display); font-size: 1.7rem; color: var(--color-gold); font-variant-numeric: tabular-nums; }
 .trust-stat span { font-size: 0.85rem; color: var(--text-secondary); }
 
 .offer-banner {
