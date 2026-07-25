@@ -150,7 +150,7 @@ a:hover { color: var(--color-gold); }
   -webkit-backdrop-filter: blur(14px) saturate(160%);
   border-bottom: 1px solid transparent;
   transition: box-shadow var(--transition), border-color var(--transition), background var(--transition);
-  flex-wrap: nowrap; overflow: hidden;
+  flex-wrap: nowrap;
 }
 [data-theme="dark"] .site-header { background: rgba(20,16,13,0.78); }
 .site-header.is-scrolled { box-shadow: var(--shadow-soft); border-bottom-color: var(--border-color); }
