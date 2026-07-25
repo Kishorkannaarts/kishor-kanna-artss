@@ -549,7 +549,71 @@ a:hover { color: var(--color-gold); }
   .wizard-step-dot label { text-align: left; font-size: 0.78rem; }
   .wizard-step-dot.active { border-color: var(--color-gold); }
 }
+/* ---------- Phase 4b — order flow polish ---------- */
+.wizard-eta {
+  text-align: center; font-size: 0.82rem; color: var(--text-secondary);
+  margin: -8px 0 20px;
+}
 
+.btn-sm { padding: 8px 14px; font-size: 0.82rem; }
+
+/* Drag-and-drop photo upload */
+.dropzone {
+  border: 2px dashed var(--border-color); border-radius: var(--radius-md);
+  background: var(--bg-secondary); cursor: pointer; padding: 28px 20px;
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  min-height: 160px; transition: border-color .2s, background .2s;
+}
+.dropzone:hover, .dropzone:focus-visible { border-color: var(--color-gold); outline: none; }
+.dropzone.dragover { border-color: var(--color-gold); background: rgba(201,154,58,0.08); }
+.dropzone-empty { color: var(--text-secondary); }
+.dropzone-empty svg { color: var(--color-gold); margin-bottom: 10px; }
+.dropzone-empty p { color: var(--text-primary); margin: 0 0 4px; line-height: 1.4; }
+.dropzone-empty span { font-size: 0.8rem; }
+.dropzone-filled { display: flex; align-items: center; gap: 16px; width: 100%; text-align: left; flex-wrap: wrap; }
+.dropzone-filled img { width: 88px; height: 88px; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid var(--border-color); flex-shrink: 0; }
+.dropzone-file-info { display: flex; flex-direction: column; gap: 10px; flex: 1; min-width: 140px; }
+.dropzone-file-info span { font-size: 0.85rem; color: var(--text-secondary); word-break: break-word; }
+.dropzone-loading { display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: 0.9rem; }
+.quality-msg { display: block; margin-top: 8px; font-size: 0.82rem; }
+.upload-error { display: block; margin-top: 8px; font-size: 0.82rem; }
+
+.spinner-small {
+  width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0;
+  border: 2px solid var(--border-color); border-top-color: var(--color-gold);
+  animation: spin 0.8s linear infinite;
+}
+.spinner-ring {
+  width: 40px; height: 40px; border-radius: 50%; display: inline-block; margin-bottom: 14px;
+  border: 3px solid rgba(255,255,255,0.25); border-top-color: var(--color-gold);
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Full-page overlay shown while the order is being submitted */
+.submit-overlay {
+  position: fixed; inset: 0; background: rgba(20,16,13,0.82); backdrop-filter: blur(3px);
+  display: none; align-items: center; justify-content: center; z-index: 999; text-align: center;
+}
+.submit-overlay.active { display: flex; }
+.submit-overlay-box { color: #fff; }
+.submit-overlay-box p { font-weight: 600; margin: 0 0 4px; }
+.submit-overlay-box small { color: rgba(255,255,255,0.65); }
+
+/* Sticky mobile CTA bar — keeps price + primary action one tap away */
+.mobile-order-bar { display: none; }
+@media (max-width: 680px) {
+  .mobile-order-bar {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+    background: var(--bg-primary); border-top: 1px solid var(--border-color);
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -8px 24px rgba(0,0,0,0.08);
+  }
+  .mobile-order-price { font-size: 0.82rem; color: var(--text-secondary); flex: 1; min-width: 0; }
+  .mobile-order-bar .btn { white-space: nowrap; }
+  .wizard-box { padding-bottom: 76px; }
+}
 /* ---------- Phase 5 — order tracking ---------- */
 .track-card { margin-bottom: 4px; }
 .track-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
