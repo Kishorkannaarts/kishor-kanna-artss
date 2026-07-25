@@ -8,19 +8,32 @@
     <div class="hero-overlay"></div>
   <% } %>
   <div class="hero-inner">
-    <h1><%= settings.hero_title %></h1>
-    <p><%= settings.hero_subtitle %></p>
-    <div class="hero-buttons">
-      <a class="btn" href="/order">Order Your Artwork</a>
-      <a class="btn btn-outline<%= settings.hero_image_url ? ' btn-outline-onimage' : '' %>" href="/portfolio">View Portfolio</a>
+    <div class="hero-content">
+      <span class="hero-eyebrow">Handmade in India • Since Day One</span>
+      <h1><%= settings.hero_title %></h1>
+      <p class="lead"><%= settings.hero_subtitle %></p>
+      <div class="hero-actions">
+        <a class="btn btn-gold" href="/order">Order Your Artwork</a>
+        <a class="btn btn-outline<%= settings.hero_image_url ? ' btn-outline-onimage' : '' %>" href="/portfolio">View Portfolio</a>
+      </div>
     </div>
+  </div>
+</section>
+
+<!-- Trust bar -->
+<section class="trust-bar reveal">
+  <div class="container trust-bar-inner">
+    <div class="trust-stat"><strong>1000+</strong><span>Portraits Delivered</span></div>
+    <div class="trust-stat"><strong>4.9★</strong><span>Average Rating</span></div>
+    <div class="trust-stat"><strong>28</strong><span>States Shipped To</span></div>
+    <div class="trust-stat"><strong>100%</strong><span>Hand-made, Never Printed</span></div>
   </div>
 </section>
 
 <% if (offers.length) { %>
 <div class="container" style="margin-bottom:10px;">
   <% offers.forEach(o => { %>
-    <div style="background:#fff2cc; border:1px solid #e6cf87; border-radius:10px; padding:14px 20px; margin-bottom:12px; text-align:center;">
+    <div class="offer-banner reveal">
       <strong><%= o.title %></strong>
       <% if (o.message) { %> — <%= o.message %><% } %>
     </div>
@@ -29,77 +42,116 @@
 <% } %>
 
 <section class="section">
-  <h2><%= settings.featured_heading || 'Featured Portfolio' %></h2>
-  <p class="sub"><%= settings.featured_sub || 'A glimpse of recent handcrafted pieces' %></p>
-  <div class="grid grid-arts">
-    <% featured.forEach(a => { %>
-      <div class="card">
-        <a href="/portfolio/<%= a.id %>">
-          <img src="<%= a.image || 'https://placehold.co/400x300?text=Artwork' %>" alt="<%= a.title %>" loading="lazy" decoding="async">
-        </a>
-        <div class="card-body">
-          <span class="tag"><%= a.category %></span>
-          <h3><a href="/portfolio/<%= a.id %>" style="color:inherit; text-decoration:none;"><%= a.title %></a></h3>
-          <p><%= a.description %></p>
-          <div class="card-footer">
-            <div class="meta">
-              <% if (a.size) { %><span>Size: <strong><%= a.size %></strong></span><% } %>
-              <% if (a.price) { %><span style="margin-left:10px;">₹<strong><%= a.price %></strong></span><% } %>
+  <div class="container">
+    <h2 class="reveal"><%= settings.featured_heading || 'Featured Portfolio' %></h2>
+    <p class="sub reveal"><%= settings.featured_sub || 'A glimpse of recent handcrafted pieces' %></p>
+    <div class="grid grid-3 grid-arts">
+      <% featured.forEach(a => { %>
+        <div class="card reveal">
+          <a href="/portfolio/<%= a.id %>">
+            <img src="<%= a.image || 'https://placehold.co/400x300?text=Artwork' %>" alt="<%= a.title %>" loading="lazy" decoding="async">
+          </a>
+          <div class="card-body">
+            <span class="tag"><%= a.category %></span>
+            <h3><a href="/portfolio/<%= a.id %>" style="color:inherit; text-decoration:none;"><%= a.title %></a></h3>
+            <p><%= a.description %></p>
+            <div class="card-footer">
+              <div class="meta">
+                <% if (a.size) { %><span>Size: <strong><%= a.size %></strong></span><% } %>
+                <% if (a.price) { %><span style="margin-left:10px;">₹<strong><%= a.price %></strong></span><% } %>
+              </div>
+              <a class="btn btn-sm btn-primary" href="/order?art_type=<%= encodeURIComponent(a.category) %>&size=<%= encodeURIComponent(a.size || '') %>&price=<%= encodeURIComponent(a.price || '') %>">Order This</a>
             </div>
-            <a class="btn btn-sm" href="/order?art_type=<%= encodeURIComponent(a.category) %>&size=<%= encodeURIComponent(a.size || '') %>&price=<%= encodeURIComponent(a.price || '') %>">Order This</a>
           </div>
         </div>
-      </div>
-    <% }) %>
-    <% if (featured.length === 0) { %>
-      <p class="sub">No artworks added yet — add some from the admin panel.</p>
-    <% } %>
+      <% }) %>
+      <% if (featured.length === 0) { %>
+        <p class="sub">No artworks added yet — add some from the admin panel.</p>
+      <% } %>
+    </div>
   </div>
 </section>
 
 <section class="section section-tint">
-  <h2><%= settings.services_heading || 'Services' %></h2>
-  <p class="sub"><%= settings.services_sub || 'Custom art made to order' %></p>
-  <div class="grid grid-services">
-    <% services.forEach(s => { %>
-      <div class="card">
-        <img src="<%= s.image || 'https://placehold.co/400x300?text=Service' %>" alt="<%= s.title %>" loading="lazy" decoding="async">
-        <div class="card-body">
-          <h3><%= s.title %></h3>
-          <p><%= s.description %></p>
-          <a class="btn btn-outline" href="/order">Order This</a>
+  <div class="container">
+    <h2 class="reveal"><%= settings.services_heading || 'Services' %></h2>
+    <p class="sub reveal"><%= settings.services_sub || 'Custom art made to order' %></p>
+    <div class="grid grid-4 grid-services">
+      <% services.forEach(s => { %>
+        <div class="card reveal">
+          <img src="<%= s.image || 'https://placehold.co/400x300?text=Service' %>" alt="<%= s.title %>" loading="lazy" decoding="async">
+          <div class="card-body">
+            <h3><%= s.title %></h3>
+            <p><%= s.description %></p>
+            <a class="btn btn-outline" href="/order">Order This</a>
+          </div>
         </div>
-      </div>
-    <% }) %>
+      <% }) %>
+    </div>
   </div>
 </section>
 
+<!-- Process timeline -->
 <section class="section">
-  <h2><%= settings.why_heading || 'Why Choose Us' %></h2>
-  <div class="grid">
-    <div class="card"><div class="card-body"><h3><%= settings.why1_title || '100% Hand-made' %></h3><p><%= settings.why1_text || 'Every artwork is drawn or painted by hand, never printed.' %></p></div></div>
-    <div class="card"><div class="card-body"><h3><%= settings.why2_title || 'Made From Your Photos' %></h3><p><%= settings.why2_text || 'Send a photo and we turn it into a keepsake artwork.' %></p></div></div>
-    <div class="card"><div class="card-body"><h3><%= settings.why3_title || 'Tracked Orders' %></h3><p><%= settings.why3_text || 'Follow your order status from start to delivery.' %></p></div></div>
-    <div class="card"><div class="card-body"><h3><%= settings.why4_title || 'Nationwide Delivery' %></h3><p><%= settings.why4_text || 'Carefully packed and shipped anywhere in India.' %></p></div></div>
+  <div class="container">
+    <h2 class="reveal">How It Works</h2>
+    <p class="sub reveal">From your photo to your wall in 4 simple steps</p>
+    <div class="timeline">
+      <div class="timeline-step reveal">
+        <div class="timeline-num">1</div>
+        <h3>Choose &amp; Upload</h3>
+        <p>Pick your art type, size, and upload the photo you love.</p>
+      </div>
+      <div class="timeline-step reveal">
+        <div class="timeline-num">2</div>
+        <h3>We Create</h3>
+        <p>Our artist hand-draws or paints your portrait with care.</p>
+      </div>
+      <div class="timeline-step reveal">
+        <div class="timeline-num">3</div>
+        <h3>You Track It</h3>
+        <p>Watch live progress updates, right from your dashboard.</p>
+      </div>
+      <div class="timeline-step reveal">
+        <div class="timeline-num">4</div>
+        <h3>Delivered</h3>
+        <p>Safely packed and shipped straight to your door.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section section-tint">
+  <div class="container">
+    <h2 class="reveal"><%= settings.why_heading || 'Why Choose Us' %></h2>
+    <div class="grid grid-4">
+      <div class="card reveal"><div class="card-body"><h3><%= settings.why1_title || '100% Hand-made' %></h3><p><%= settings.why1_text || 'Every artwork is drawn or painted by hand, never printed.' %></p></div></div>
+      <div class="card reveal"><div class="card-body"><h3><%= settings.why2_title || 'Made From Your Photos' %></h3><p><%= settings.why2_text || 'Send a photo and we turn it into a keepsake artwork.' %></p></div></div>
+      <div class="card reveal"><div class="card-body"><h3><%= settings.why3_title || 'Tracked Orders' %></h3><p><%= settings.why3_text || 'Follow your order status from start to delivery.' %></p></div></div>
+      <div class="card reveal"><div class="card-body"><h3><%= settings.why4_title || 'Nationwide Delivery' %></h3><p><%= settings.why4_text || 'Carefully packed and shipped anywhere in India.' %></p></div></div>
+    </div>
   </div>
 </section>
 
 <% if (typeof blocks !== 'undefined' && blocks.length) { %>
-<section class="section section-tint">
-  <h2>More From Us</h2>
-  <div class="grid">
-    <% blocks.forEach(b => { %>
-      <div class="card"><div class="card-body"><h3><%= b.title %></h3><p><%= b.text %></p></div></div>
-    <% }) %>
+<section class="section">
+  <div class="container">
+    <h2 class="reveal">More From Us</h2>
+    <div class="grid grid-3">
+      <% blocks.forEach(b => { %>
+        <div class="card reveal"><div class="card-body"><h3><%= b.title %></h3><p><%= b.text %></p></div></div>
+      <% }) %>
+    </div>
   </div>
 </section>
 <% } %>
 
 <% if (videos.length) { %>
 <section class="section section-tint">
-  <h2><%= settings.videos_heading || 'Videos' %></h2>
-  <p class="sub"><%= settings.videos_sub || 'Watch the artwork process' %></p>
-
+  <div class="container">
+    <h2 class="reveal"><%= settings.videos_heading || 'Videos' %></h2>
+    <p class="sub reveal"><%= settings.videos_sub || 'Watch the artwork process' %></p>
+  </div>
   <div class="videos-marquee">
     <div class="videos-track" id="videosTrack">
       <% videos.forEach(v => { %>
@@ -132,9 +184,6 @@
     function loadFacade(facade, muted) {
       const embed = facade.getAttribute('data-embed');
       const sep = embed.includes('?') ? '&' : '?';
-      // mute=1 is what actually lets these autoplay: every major mobile
-      // browser (and in-app browsers like WhatsApp/Instagram) block
-      // unmuted autoplay outright, but allow it once the iframe is muted.
       const params = muted ? 'autoplay=1&mute=1&playsinline=1' : 'autoplay=1&playsinline=1';
       const iframe = document.createElement('iframe');
       iframe.src = embed + sep + params;
@@ -148,10 +197,6 @@
       facade.dataset.muted = muted ? '1' : '0';
     }
 
-    // Autoplay (muted) each video the moment it scrolls into view — like a
-    // reel — instead of waiting for a tap. Muted autoplay is reliably
-    // allowed everywhere, which is what actually fixes autoplay not working;
-    // a genuinely unmuted autoplay can't be guaranteed cross-browser.
     const facades = Array.from(track.querySelectorAll('.video-facade'));
     if ('IntersectionObserver' in window) {
       const io = new IntersectionObserver(function (entries) {
@@ -167,7 +212,6 @@
       facades.forEach(function (f) { loadFacade(f, true); });
     }
 
-    // Tap a playing (muted) video to turn its sound on.
     track.addEventListener('click', function (e) {
       const facade = e.target.closest('.video-facade');
       if (!facade) return;
@@ -180,8 +224,10 @@
 
 <% if (testimonials.length) { %>
 <section class="section">
-  <h2><%= settings.reviews_heading || 'Reviews' %></h2>
-  <p class="sub"><%= settings.reviews_sub || 'What our customers say' %></p>
+  <div class="container">
+    <h2 class="reveal"><%= settings.reviews_heading || 'Reviews' %></h2>
+    <p class="sub reveal"><%= settings.reviews_sub || 'What our customers say' %></p>
+  </div>
   <div class="reviews-marquee">
     <div class="reviews-track" id="reviewsTrack">
       <% testimonials.forEach(t => {
@@ -236,27 +282,31 @@
 
 <% if (typeof recentPosts !== 'undefined' && recentPosts.length) { %>
 <section class="section section-tint">
-  <h2>From the Blog</h2>
-  <p class="sub">Tips, stories, and behind-the-scenes</p>
-  <div class="grid">
-    <% recentPosts.forEach(p => { %>
-      <a class="card" href="/blog/<%= p.slug %>" style="text-decoration:none; color:inherit;">
-        <img src="<%= p.cover_image || 'https://placehold.co/400x300?text=Blog' %>" alt="<%= p.title %>" loading="lazy" decoding="async">
-        <div class="card-body">
-          <h3><%= p.title %></h3>
-          <p><%= p.excerpt %></p>
-        </div>
-      </a>
-    <% }) %>
+  <div class="container">
+    <h2 class="reveal">From the Blog</h2>
+    <p class="sub reveal">Tips, stories, and behind-the-scenes</p>
+    <div class="grid grid-3">
+      <% recentPosts.forEach(p => { %>
+        <a class="card reveal" href="/blog/<%= p.slug %>" style="text-decoration:none; color:inherit;">
+          <img src="<%= p.cover_image || 'https://placehold.co/400x300?text=Blog' %>" alt="<%= p.title %>" loading="lazy" decoding="async">
+          <div class="card-body">
+            <h3><%= p.title %></h3>
+            <p><%= p.excerpt %></p>
+          </div>
+        </a>
+      <% }) %>
+    </div>
+    <div style="text-align:center; margin-top:24px;"><a class="btn btn-outline" href="/blog">View All Posts</a></div>
   </div>
-  <div style="text-align:center; margin-top:10px;"><a class="btn btn-outline" href="/blog">View All Posts</a></div>
 </section>
 <% } %>
 
-<section class="section section-tint" style="text-align:center;">
-  <h2><%= settings.cta_title || 'Ready to Order Your Custom Artwork?' %></h2>
-  <p class="sub"><%= settings.cta_subtitle || "Tell us your idea — we'll bring it to life." %></p>
-  <a class="btn" href="/order"><%= settings.cta_button_text || 'Start Your Order' %></a>
+<section class="section section-tint cta-final" style="text-align:center;">
+  <div class="container">
+    <h2 class="reveal"><%= settings.cta_title || 'Ready to Order Your Custom Artwork?' %></h2>
+    <p class="sub reveal"><%= settings.cta_subtitle || "Tell us your idea — we'll bring it to life." %></p>
+    <a class="btn btn-gold reveal" href="/order"><%= settings.cta_button_text || 'Start Your Order' %></a>
+  </div>
 </section>
 
 <%- include('partials/footer') %>
