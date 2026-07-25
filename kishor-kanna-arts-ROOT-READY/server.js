@@ -44,7 +44,13 @@ cloudinary.config({
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
+const cloudinaryTransform = require('./cloudinary-transform');
 // ---------- Basic setup ----------
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
