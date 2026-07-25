@@ -1,4 +1,5 @@
 // Reserved for future front-end enhancements (e.g. image lightbox, form validation).
+
 // Scroll reveal animation
 document.addEventListener('DOMContentLoaded', () => {
   const revealEls = document.querySelectorAll('.reveal');
@@ -12,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }, { threshold: 0.15 });
   revealEls.forEach(el => observer.observe(el));
 
-  // Dark mode toggle (expects a button with id="theme-toggle")
+  // Dark mode toggle (button with id="theme-toggle")
   const themeToggle = document.getElementById('theme-toggle');
   const savedTheme = localStorage.getItem('kka-theme');
   if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
