@@ -127,6 +127,20 @@ async function uploadImage(file, folder) {
   return result.secure_url;
 }
 
+// Same as uploadImage, but for when the browser already sent a ready-made
+// base64 data URI (the order form's fallback for when the raw <input
+// type=file> handle goes stale — see ERR_UPLOAD_FILE_CHANGED on some
+// Android Chrome versions with camera-captured photos).
+async function uploadImageDataUri(dataUri, folder) {
+  if (!dataUri || !dataUri.startsWith('data:image/')) return null;
+  if (!process.env.CLOUDINARY_CLOUD_NAME) {
+    console.log('[uploads] Cloudinary not configured - image not saved. See README.');
+    return null;
+  }
+  const result = await cloudinary.uploader.upload(dataUri, { folder: `kishor-kanna-arts/${folder}` });
+  return result.secure_url;
+}
+
 // ---------- Helpers ----------
 function genOrderCode() {
   const rand = Math.random().toString(36).slice(2, 7).toUpperCase();
@@ -444,7 +458,12 @@ app.get('/order', ah(async (req, res) => {
     : null; // Custom size (or unrecognised art type) — price to be confirmed manually, same as before
 
   const order_code = genOrderCode();
-  const refImage = await uploadImage(req.file, 'orders');
+  // Prefer the pre-compressed base64 image sent as a hidden field — the raw
+  // <input type=file> handle can go stale on some Android Chrome versions
+  // (ERR_UPLOAD_FILE_CHANGED), which was silently failing the whole order.
+  const refImage = req.body.compressed_image_data
+    ? await uploadImageDataUri(req.body.compressed_image_data, 'orders')
+    : await uploadImage(req.file, 'orders');
   await db.insertOne('orders', { order_code, name, phone, email, art_type, size, reference_image: refImage, delivery_date, notes, estimated_price: finalPrice ? finalPrice.toFixed(0) : null, discount_percent_applied, coupon_code: appliedCouponCode, address_line, city, state, pincode, status: 'Received', advance_amount: null, advance_payment_link: null, advance_paid: false, balance_amount: null, balance_payment_link: null, balance_paid: false, customer_id: (req.session && req.session.customerId) || null });
   if (appliedCouponCode) {
     const mdb = await db.getDB();
