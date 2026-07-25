@@ -752,3 +752,43 @@ textarea { resize: vertical; min-height: 100px; }
 }
 @media (max-width: 900px) { .timeline { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 600px) { .timeline { grid-template-columns: 1fr; } }
+/* Phase 3 — nav additions */
+.icon-btn {
+  background: none; border: none; cursor: pointer; padding: 6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--ink); border-radius: 50%; transition: background .15s;
+}
+.icon-btn:hover { background: rgba(0,0,0,0.06); }
+
+.nav-mega-menu {
+  position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  margin-top: 12px; background: #fff; border: 1px solid var(--border-color, var(--border));
+  border-radius: var(--radius-md, 12px); box-shadow: 0 20px 50px rgba(0,0,0,0.12);
+  min-width: 460px; padding: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; z-index: 60;
+}
+.nav-mega-menu a {
+  display: flex; flex-direction: column; padding: 10px 12px; border-radius: 8px; gap: 2px;
+}
+.nav-mega-menu a:hover { background: var(--bg-secondary, var(--paper)); }
+.nav-mega-menu a strong { font-size: 0.9rem; }
+.nav-mega-menu a span { font-size: 0.78rem; color: var(--text-secondary, #888); }
+.nav-mega-menu a::after { display: none; }
+.nav-mega-viewall {
+  grid-column: 1 / -1; text-align: center; font-weight: 600;
+  border-top: 1px solid var(--border-color, var(--border)); margin-top: 6px; padding-top: 12px !important;
+}
+
+.search-bar {
+  max-height: 0; overflow: hidden; border-bottom: 1px solid transparent;
+  transition: max-height .3s ease, border-color .3s ease; background: var(--bg-primary, #fff);
+}
+.search-bar.open { max-height: 80px; border-bottom-color: var(--border-color, var(--border)); }
+.search-bar input {
+  flex: 1; padding: 10px 16px; border-radius: 100px; border: 1px solid var(--border-color, var(--border));
+  font-family: var(--font-body); font-size: 0.95rem;
+}
+.search-bar input:focus { outline: none; border-color: var(--color-gold, var(--accent)); }
+
+@media (max-width: 900px) {
+  .nav-mega-menu { position: static; transform: none; min-width: auto; grid-template-columns: 1fr; box-shadow: none; border: none; margin-top: 4px; padding-left: 12px; }
+}
