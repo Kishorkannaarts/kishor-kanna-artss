@@ -1,0 +1,69 @@
+<% pageTitle = 'Saved Addresses' %>
+<%- include('../partials/header') %>
+
+<section class="section">
+  <div class="account-header">
+    <div>
+      <h2>Hi, <%= customer.name %></h2>
+      <p class="sub">Save an address once, use it for every future order.</p>
+    </div>
+    <form action="/account/logout" method="POST">
+      <button class="btn btn-outline" type="submit">Log Out</button>
+    </form>
+  </div>
+
+  <% activeTab = 'addresses' %>
+  <%- include('../partials/account-nav') %>
+
+  <% if (addressError) { %><div class="alert alert-error" style="margin-top:20px;"><%= addressError %></div><% } %>
+
+  <div class="account-panels">
+    <div>
+      <h3>Your Addresses</h3>
+      <% if (!addresses.length) { %>
+        <p class="sub">You haven't saved any addresses yet.</p>
+      <% } else { %>
+        <div class="address-grid">
+          <% addresses.forEach(a => { %>
+            <div class="address-card <%= a.is_default ? 'is-default' : '' %>">
+              <% if (a.is_default) { %><span class="tag" style="margin-bottom:8px; display:inline-block;">Default</span><% } %>
+              <strong><%= a.label || 'Address' %></strong>
+              <p><%= a.name %><% if (a.phone) { %> &middot; <%= a.phone %><% } %></p>
+              <p><%= a.address_line %>, <%= a.city %>, <%= a.state %> - <%= a.pincode %></p>
+              <div class="address-actions">
+                <a class="btn btn-sm btn-outline" href="/order?address_line=<%= encodeURIComponent(a.address_line) %>&city=<%= encodeURIComponent(a.city) %>&state=<%= encodeURIComponent(a.state) %>&pincode=<%= encodeURIComponent(a.pincode) %>&name=<%= encodeURIComponent(a.name) %>&phone=<%= encodeURIComponent(a.phone || '') %>">Use for New Order</a>
+                <% if (!a.is_default) { %>
+                <form action="/account/addresses/<%= a.id %>/default" method="POST" style="display:inline;">
+                  <button class="btn btn-sm btn-outline" type="submit">Make Default</button>
+                </form>
+                <% } %>
+                <form action="/account/addresses/<%= a.id %>/delete" method="POST" style="display:inline;" onsubmit="return confirm('Remove this address?');">
+                  <button class="btn btn-sm btn-outline" type="submit">Remove</button>
+                </form>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="form-box">
+      <h3>Add New Address</h3>
+      <form action="/account/addresses" method="POST">
+        <div class="form-group"><label>Label (e.g. Home, Office)</label><input type="text" name="label" placeholder="Home"></div>
+        <div class="form-group"><label>Full Name</label><input type="text" name="name" value="<%= customer.name %>" required></div>
+        <div class="form-group"><label>Phone Number</label><input type="tel" name="phone" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" value="<%= customer.phone || '' %>" placeholder="10-digit mobile number"></div>
+        <div class="form-group"><label>Address</label><input type="text" name="address_line" placeholder="House / Street / Area" required></div>
+        <div class="form-group"><label>City</label><input type="text" name="city" required></div>
+        <div class="form-group"><label>State</label><input type="text" name="state" required></div>
+        <div class="form-group"><label>Pincode</label><input type="text" name="pincode" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required></div>
+        <label style="display:flex; align-items:center; gap:8px; margin-bottom:16px; font-size:0.9rem;">
+          <input type="checkbox" name="is_default" value="1" style="width:auto;"> Set as default address
+        </label>
+        <button class="btn btn-primary" type="submit">Save Address</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>
