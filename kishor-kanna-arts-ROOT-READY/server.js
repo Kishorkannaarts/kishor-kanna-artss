@@ -269,7 +269,9 @@ app.get('/', ah(async (req, res) => {
   const offers    = db.normalize(await db.find('offers', { active: true }, { created_at: -1 }));
   const blocks    = db.normalize(await db.find('blocks', {}, { created_at: 1 }));
   const recentPosts = db.normalize(await db.find('posts', { published: true }, { created_at: -1 }, 3));
-  res.render('index', { featured, testimonials, videos, services, offers, blocks, recentPosts });
+  const beforeAfter = db.normalize(await db.find('artworks', { before_image: { $exists: true, $ne: null } }, { created_at: -1 }, 6))
+    .filter(a => a.image && a.before_image);
+  res.render('index', { featured, testimonials, videos, services, offers, blocks, recentPosts, beforeAfter });
 }));
 
 app.get('/portfolio', ah(async (req, res) => {
