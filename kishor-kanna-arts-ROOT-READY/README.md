@@ -214,10 +214,63 @@ Go to `/admin/testimonials` → scroll to **"Add a Review Directly"** → copy t
 
 ## 8. Adding things later
 
-Everything editable — artworks, services, videos, banner text, contact details — is done through the admin panel, no coding needed. If later you want:
-- Online payments (UPI/cards)
-- Customer accounts / login
-- SMS or WhatsApp order notifications
-- A booking calendar
+Everything editable — artworks, services, videos, banner text, contact details — is done through the admin panel, no coding needed. Online payments, customer accounts, and SMS/WhatsApp notifications are already built in — see section 9 to switch them on. A booking calendar is a natural next addition on top of this same codebase.
 
-...these are all natural next additions on top of this same codebase.
+## 9. Payments, WhatsApp & SMS Setup
+
+Out of the box the site works fully on email alone (as described above). The three integrations below are **optional** — nothing breaks if you skip any of them, they just stay switched off until their environment variables are set. All variables go in your `.env` file (or your host's environment variables panel if not running locally).
+
+### 9a. Payments (Razorpay)
+
+**What this does:** when you click "Request Advance Payment" or "Request Balance Payment" for an order and leave the Payment Link field blank, the site now creates a real Razorpay payment link automatically — no more copy-pasting a link by hand. Once Razorpay confirms the customer paid, the order is marked paid and moved to the next status **automatically**, with no admin click needed.
+
+**Setup:**
+1. Create a Razorpay account at [razorpay.com](https://razorpay.com) and complete KYC (only needed to accept *live* payments — test mode works immediately).
+2. Go to **Dashboard → Settings → API Keys**, generate a Key ID + Key Secret. Put these in `.env` as `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET`.
+3. For automatic "paid" detection, go to **Dashboard → Settings → Webhooks → Add New Webhook**:
+   - URL: `https://yourdomain.com/webhooks/razorpay`
+   - Active event: `payment_link.paid`
+   - Copy the **Webhook Secret** shown there into `.env` as `RAZORPAY_WEBHOOK_SECRET`
+4. Restart the app. Test it by requesting an advance payment on a test order (test mode uses fake card/UPI details from Razorpay's docs) and confirming the order flips to "In Progress" without you touching anything.
+
+You can still paste a manual link (a UPI link, another gateway, etc.) into the Payment Link field any time — Razorpay auto-generation only kicks in when that field is left empty.
+
+### 9b. WhatsApp order updates (Meta Cloud API)
+
+**What this does:** sends a WhatsApp message to the customer's phone at key moments — order received, advance requested, payment confirmed, artwork ready, shipped, etc.
+
+**Setup:**
+1. Create a Meta developer app at [developers.facebook.com](https://developers.facebook.com) and add the **WhatsApp** product to it.
+2. Under **WhatsApp → API Setup**, note your **Phone Number ID**, and generate a **permanent access token** (a System User token — the default 24-hour test token will stop working after a day).
+3. Put these in `.env` as `WHATSAPP_TOKEN` and `WHATSAPP_PHONE_NUMBER_ID`.
+4. Under **WhatsApp Manager → Message Templates**, create and submit these templates for approval (category: *Utility*). Meta requires every business-initiated message to use a pre-approved template — free text is not allowed outside a 24-hour reply window. Each template's body should have as many `{{1}}`, `{{2}}`... placeholders as listed:
+
+   | Template name | Placeholders (in order) |
+   |---|---|
+   | `kka_order_received` | customer name, order code |
+   | `kka_advance_requested` | name, order code, amount, payment link |
+   | `kka_payment_confirmed` | name, order code, amount |
+   | `kka_balance_requested` | name, order code, amount, payment link |
+   | `kka_status_update` | name, order code, status |
+   | `kka_date_rejected` | name, order code, reason |
+   | `kka_artwork_ready` | name, order code |
+   | `kka_shipped` | name, order code |
+
+   Approval is usually a few minutes, occasionally a day or two. Until a template is approved, that specific notification is silently skipped (logged, not shown to the customer or admin) — everything else keeps working.
+5. Customer phone numbers are assumed to be Indian 10-digit numbers unless they already include a country code; change this with `DEFAULT_COUNTRY_CODE` in `.env` if most of your customers are elsewhere.
+
+### 9c. SMS order updates (Twilio)
+
+**What this does:** sends a short plain-text SMS for the same order events as WhatsApp above — useful as a backup for customers without WhatsApp, or if you'd rather not go through WhatsApp template approval yet.
+
+**Setup:**
+1. Create a Twilio account at [twilio.com](https://twilio.com).
+2. Buy (or use the free trial) a phone number capable of sending SMS.
+3. From the Twilio Console dashboard, copy your **Account SID** and **Auth Token** into `.env` as `TWILIO_ACCOUNT_SID` and `TWILIO_AUTH_TOKEN`.
+4. Put your Twilio number (in `+E.164` format, e.g. `+14155551234`) in `.env` as `TWILIO_FROM_NUMBER`.
+5. On a trial account, Twilio only delivers to phone numbers you've manually verified in the console — upgrade to a paid account to message any customer.
+
+### Notes
+
+- WhatsApp and SMS are both **best-effort**: if a send fails (bad number, template not approved yet, account issue), it's logged to the server console and silently skipped — it never blocks the order flow or shows an error to the customer/admin. Email remains the reliable channel of record for every event.
+- You can turn on any combination of these three (all three, just payments, just SMS, none) — each is independently gated on its own environment variables being present.
