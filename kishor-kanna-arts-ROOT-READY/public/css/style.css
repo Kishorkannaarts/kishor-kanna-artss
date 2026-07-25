@@ -226,6 +226,8 @@ a:hover { color: var(--color-gold); }
 
 /* ---------- Grid & Cards ---------- */
 .grid { display: grid; gap: var(--space-md); }
+.artwork-detail-grid { grid-template-columns: 1fr 1fr; align-items: start; }
+@media (max-width: 700px) { .artwork-detail-grid { grid-template-columns: 1fr; } }
 .grid-2 { grid-template-columns: repeat(2, 1fr); }
 .grid-3 { grid-template-columns: repeat(3, 1fr); }
 .grid-4 { grid-template-columns: repeat(4, 1fr); }
