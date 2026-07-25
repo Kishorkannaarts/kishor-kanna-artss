@@ -366,7 +366,13 @@ a:hover { color: var(--color-gold); }
   font-family: var(--font-display); font-weight: 700; margin-bottom: 12px;
 }
 @media (max-width: 900px) { .timeline { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 600px) { .timeline { grid-template-columns: 1fr; } }
+@media (max-width: 500px) {
+  .timeline { gap: 14px; }
+  .timeline-step { padding: 18px 16px; }
+  .timeline-num { width: 34px; height: 34px; font-size: 0.95rem; margin-bottom: 10px; }
+  .timeline-step h3 { font-size: 1rem; }
+  .timeline-step p { font-size: 0.85rem; margin-bottom: 0; }
+}
 
 /* ---------- Marquees (videos / reviews) ---------- */
 .videos-marquee, .reviews-marquee { overflow: hidden; padding: 8px 0 var(--space-lg); }
@@ -571,4 +577,3 @@ a:hover { color: var(--color-gold); }
 .breadcrumbs a:hover { color: var(--color-gold); }
 .crumb-sep { margin: 0 4px; opacity: 0.5; }
 .crumb-current { color: var(--text-primary); font-weight: 500; }
-
