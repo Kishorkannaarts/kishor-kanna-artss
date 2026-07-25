@@ -16,6 +16,7 @@
     <% } else { %>
       <% if (error) { %><div class="alert alert-error"><%= error %></div><% } %>
       <form action="/order" method="POST" enctype="multipart/form-data" id="orderForm">
+        <div id="orderFields">
         <div class="form-row">
           <div class="form-group"><label>Full Name</label><input type="text" name="name" value="<%= old.name || '' %>" required></div>
           <div class="form-group"><label>Phone Number</label><input type="text" name="phone" value="<%= old.phone || '' %>" required></div>
@@ -81,7 +82,31 @@
           <small id="dateWarning" style="color:#a2231d; display:none;">That date isn't available — please pick another.</small>
         </div>
         <div class="form-group"><label>Notes / Special Instructions</label><textarea name="notes"><%= old.notes || '' %></textarea></div>
-        <button class="btn" type="submit" id="orderSubmitBtn">Place Order</button>
+        <button class="btn" type="button" id="reviewOrderBtn">Review Order</button>
+        </div>
+
+        <div id="orderPreview" style="display:none;">
+          <h3 style="margin-top:0;">Review Your Order</h3>
+          <p style="color:var(--muted, #777); font-size:0.9rem;">Please check everything below before confirming.</p>
+          <div style="background:#f7f7f7; border-radius:8px; padding:16px; margin-bottom:16px;">
+            <img id="pv_photo" style="display:none; max-width:160px; border-radius:8px; margin-bottom:12px;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.92rem;">
+              <tr><td style="padding:6px 0; color:var(--muted, #777); width:40%;">Name</td><td id="pv_name" style="padding:6px 0;"></td></tr>
+              <tr><td style="padding:6px 0; color:var(--muted, #777);">Phone</td><td id="pv_phone" style="padding:6px 0;"></td></tr>
+              <tr><td style="padding:6px 0; color:var(--muted, #777);">Email</td><td id="pv_email" style="padding:6px 0;"></td></tr>
+              <tr><td style="padding:6px 0; color:var(--muted, #777);">Art Type / Size</td><td id="pv_art" style="padding:6px 0;"></td></tr>
+              <tr><td style="padding:6px 0; color:var(--muted, #777);">Estimated Price</td><td id="pv_price" style="padding:6px 0;"></td></tr>
+              <tr id="pv_coupon_row" style="display:none;"><td style="padding:6px 0; color:var(--muted, #777);">Coupon</td><td id="pv_coupon" style="padding:6px 0;"></td></tr>
+              <tr><td style="padding:6px 0; color:var(--muted, #777);">Delivery Address</td><td id="pv_address" style="padding:6px 0;"></td></tr>
+              <tr><td style="padding:6px 0; color:var(--muted, #777);">Delivery Date</td><td id="pv_date" style="padding:6px 0;"></td></tr>
+              <tr id="pv_notes_row" style="display:none;"><td style="padding:6px 0; color:var(--muted, #777); vertical-align:top;">Notes</td><td id="pv_notes" style="padding:6px 0;"></td></tr>
+            </table>
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn btn-ghost" type="button" id="editOrderBtn">← Edit Details</button>
+            <button class="btn" type="submit" id="confirmOrderBtn">Confirm &amp; Place Order</button>
+          </div>
+        </div>
       </form>
     <% } %>
   </div>
@@ -190,7 +215,7 @@
   const blockedDates = <%- JSON.stringify(blockedDates || []) %>;
   const dateInput = document.getElementById('deliveryDate');
   const warning = document.getElementById('dateWarning');
-  const submitBtn = document.getElementById('orderSubmitBtn');
+  const submitBtn = document.getElementById('reviewOrderBtn');
   if (dateInput) {
     dateInput.addEventListener('change', function () {
       if (blockedDates.includes(dateInput.value)) {
@@ -202,6 +227,63 @@
       }
     });
   }
+
+  // ---- Review Order step ----
+  const orderForm = document.getElementById('orderForm');
+  const orderFields = document.getElementById('orderFields');
+  const orderPreview = document.getElementById('orderPreview');
+  const reviewOrderBtn = document.getElementById('reviewOrderBtn');
+  const editOrderBtn = document.getElementById('editOrderBtn');
+
+  reviewOrderBtn.addEventListener('click', function () {
+    if (!orderForm.reportValidity()) return;
+
+    document.getElementById('pv_name').textContent = orderForm.name.value;
+    document.getElementById('pv_phone').textContent = orderForm.phone.value;
+    document.getElementById('pv_email').textContent = orderForm.email.value || '—';
+    document.getElementById('pv_art').textContent = artTypeSelect.value + ' / ' + sizeSelect.value;
+    document.getElementById('pv_price').textContent = priceDisplay.textContent || 'To be confirmed';
+
+    const couponRow = document.getElementById('pv_coupon_row');
+    if (couponCodeInput.value) {
+      couponRow.style.display = '';
+      document.getElementById('pv_coupon').textContent = couponCodeInput.value + ' (' + couponDiscount + '% off)';
+    } else {
+      couponRow.style.display = 'none';
+    }
+
+    const addressParts = [orderForm.address_line.value, orderForm.city.value, orderForm.state.value, orderForm.pincode.value].filter(Boolean);
+    document.getElementById('pv_address').textContent = addressParts.join(', ');
+    document.getElementById('pv_date').textContent = dateInput.value || 'Not specified';
+
+    const notesRow = document.getElementById('pv_notes_row');
+    if (orderForm.notes.value.trim()) {
+      notesRow.style.display = '';
+      document.getElementById('pv_notes').textContent = orderForm.notes.value;
+    } else {
+      notesRow.style.display = 'none';
+    }
+
+    const pvPhoto = document.getElementById('pv_photo');
+    const fileInput = orderForm.querySelector('input[name="reference_image"]');
+    if (fileInput.files && fileInput.files[0]) {
+      const reader = new FileReader();
+      reader.onload = function (e) { pvPhoto.src = e.target.result; pvPhoto.style.display = 'block'; };
+      reader.readAsDataURL(fileInput.files[0]);
+    } else {
+      pvPhoto.style.display = 'none';
+    }
+
+    orderFields.style.display = 'none';
+    orderPreview.style.display = 'block';
+    orderPreview.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  editOrderBtn.addEventListener('click', function () {
+    orderPreview.style.display = 'none';
+    orderFields.style.display = 'block';
+    orderFields.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
 </script>
 
 <%- include('partials/footer') %>
