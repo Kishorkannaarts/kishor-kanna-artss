@@ -2,7 +2,7 @@
 <%- include('../partials/header') %>
 
 <section class="section">
-  <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
+  <div class="account-header">
     <div>
       <h2>Hi, <%= customer.name %></h2>
       <p class="sub"><%= customer.email %><% if (customer.phone) { %> &nbsp;|&nbsp; <%= customer.phone %><% } %></p>
@@ -12,22 +12,30 @@
     </form>
   </div>
 
-  <h3 style="margin-top:32px;">My Orders</h3>
+  <% activeTab = 'orders' %>
+  <%- include('../partials/account-nav') %>
+
+  <h3 style="margin-top:28px;">My Orders</h3>
   <% if (!orders.length) { %>
     <p class="sub">No orders yet. <a href="/order">Place your first order</a>.</p>
   <% } else { %>
-    <table>
-      <tr><th>Order ID</th><th>Type / Size</th><th>Status</th><th>Placed On</th><th></th></tr>
-      <% orders.forEach(o => { %>
-        <tr>
-          <td><%= o.order_code %></td>
-          <td><%= o.art_type %> / <%= o.size %></td>
-          <td><span class="badge <%= statusBadgeClass(o.status) %>"><%= o.status %></span></td>
-          <td><small style="color:var(--muted);"><%= o.created_at %></small></td>
-          <td><a class="btn btn-outline" href="/track-order?order_code=<%= o.order_code %>">Track</a></td>
-        </tr>
-      <% }) %>
-    </table>
+    <div class="account-table-wrap">
+      <table>
+        <tr><th>Order ID</th><th>Type / Size</th><th>Status</th><th>Placed On</th><th></th></tr>
+        <% orders.forEach(o => { %>
+          <tr>
+            <td><%= o.order_code %></td>
+            <td><%= o.art_type %> / <%= o.size %></td>
+            <td><span class="badge <%= statusBadgeClass(o.status) %>"><%= o.status %></span></td>
+            <td><small style="color:var(--text-secondary);"><%= new Date(o.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) %></small></td>
+            <td style="white-space:nowrap;">
+              <a class="btn btn-sm btn-outline" href="/track-order?order_code=<%= o.order_code %>">Track</a>
+              <a class="btn btn-sm btn-outline" href="/account/invoice/<%= o.id %>">Invoice</a>
+            </td>
+          </tr>
+        <% }) %>
+      </table>
+    </div>
   <% } %>
 </section>
 
