@@ -1,0 +1,44 @@
+// sms.js
+// Sends order-update SMS via Twilio's REST API using plain fetch — no SDK
+// dependency, same pattern as mailer.js's Brevo integration.
+//
+// SETUP (see README "SMS Setup" for the full walkthrough):
+// 1. Create a Twilio account at twilio.com and verify it.
+// 2. Buy (or use the trial) a phone number capable of sending SMS.
+// 3. Copy your Account SID + Auth Token from the Twilio Console dashboard.
+// 4. Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_FROM_NUMBER
+//    (the number you bought, in +E.164 format, e.g. +14155551234) in .env.
+//
+// On a trial account Twilio will only deliver to phone numbers you've
+// verified in the console — upgrade to a paid account to message anyone.
+
+function isConfigured() {
+  return !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM_NUMBER);
+}
+
+async function sendSMS({ to, body }) {
+  if (!isConfigured()) {
+    console.log('[sms] Not configured - skipped message to', to);
+    return { skipped: true };
+  }
+  const sid = process.env.TWILIO_ACCOUNT_SID;
+  const url = `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`;
+  const auth = Buffer.from(`${sid}:${process.env.TWILIO_AUTH_TOKEN}`).toString('base64');
+  const params = new URLSearchParams({ To: to, From: process.env.TWILIO_FROM_NUMBER, Body: body });
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${auth}`,
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: params
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`Twilio API error (${res.status}): ${errText}`);
+  }
+  return res.json();
+}
+
+module.exports = { isConfigured, sendSMS };
