@@ -489,6 +489,57 @@ a:hover { color: var(--color-gold); }
 .alert-success { background: #e6f4ea; color: #1c6b38; border: 1px solid #b7e0c4; }
 .alert-error { background: #fdecec; color: #a3282c; border: 1px solid #f3b9bb; }
 
+/* ---------- Customer Account Area (dashboard, profile, addresses, wishlist) ---------- */
+.account-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; }
+
+.account-nav {
+  display: flex; gap: 6px; flex-wrap: wrap; margin-top: 24px; padding-bottom: 4px;
+  border-bottom: 1px solid var(--border-color);
+}
+.account-nav a {
+  padding: 10px 16px; font-size: 0.92rem; font-weight: 600; color: var(--text-secondary);
+  text-decoration: none; border-radius: 10px 10px 0 0; border-bottom: 2px solid transparent;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+.account-nav a:hover { color: var(--text-primary); }
+.account-nav a.active { color: var(--color-gold); border-bottom-color: var(--color-gold); }
+
+.account-panels { display: grid; grid-template-columns: 1fr; gap: var(--space-md); margin-top: 24px; }
+@media (min-width: 760px) { .account-panels { grid-template-columns: 1fr 1fr; align-items: start; } }
+
+.account-table-wrap { overflow-x: auto; margin-top: 12px; }
+.account-table-wrap table { width: 100%; border-collapse: collapse; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; }
+.account-table-wrap th, .account-table-wrap td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; }
+.account-table-wrap tr:last-child td { border-bottom: none; }
+
+.badge { padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 600; display: inline-block; }
+.badge-new { background: #f4e9d0; color: #8c6a1f; }
+.badge-ok { background: #dcf1e3; color: #1c6b38; }
+.badge-progress { background: #dbe6f7; color: #2a5aa8; }
+.badge-danger { background: #fdecec; color: #a3282c; }
+
+.address-grid { display: grid; grid-template-columns: 1fr; gap: 14px; margin-top: 12px; }
+@media (min-width: 500px) { .address-grid { grid-template-columns: 1fr 1fr; } }
+.address-card {
+  border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px;
+  background: var(--bg-primary); font-size: 0.9rem; line-height: 1.5;
+}
+.address-card.is-default { border-color: var(--color-gold); }
+.address-card p { margin: 2px 0; color: var(--text-secondary); }
+.address-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+.wishlist-heart-form { position: absolute; top: 10px; right: 10px; z-index: 2; }
+.wishlist-heart {
+  position: absolute; top: 10px; right: 10px; z-index: 2;
+  width: 36px; height: 36px; border-radius: 50%; border: none; cursor: pointer;
+  background: rgba(255,255,255,0.85); color: var(--text-secondary); font-size: 1rem;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15); transition: transform 0.15s ease, color 0.15s ease;
+  text-decoration: none;
+}
+.wishlist-heart:hover { transform: scale(1.1); }
+.wishlist-heart.is-wished { color: #d1364a; }
+.btn.is-wished { color: #d1364a; border-color: #d1364a; }
 .newsletter-form { display: flex; gap: 8px; margin-top: 10px; }
 .newsletter-form input { flex: 1; padding: 10px 14px; border-radius: 100px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.06); color: #fff; }
 .newsletter-form button {
