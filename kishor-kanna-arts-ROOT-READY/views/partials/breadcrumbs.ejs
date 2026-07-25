@@ -1,0 +1,28 @@
+<%
+  // Usage: pass a `crumbs` array to the page, e.g.
+  // crumbs = [{ name: 'Home', url: '/' }, { name: 'Portfolio', url: '/portfolio' }, { name: artwork.title }]
+  const _crumbs = typeof crumbs !== 'undefined' ? crumbs : [];
+%>
+<% if (_crumbs.length) { %>
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <% _crumbs.forEach((c, i) => { %>
+    <% if (c.url && i < _crumbs.length - 1) { %>
+      <a href="<%= c.url %>"><%= c.name %></a><span class="crumb-sep">/</span>
+    <% } else { %>
+      <span class="crumb-current"><%= c.name %></span>
+    <% } %>
+  <% }) %>
+</nav>
+<script type="application/ld+json">
+<%- JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": _crumbs.map((c, i) => ({
+    "@type": "ListItem",
+    "position": i + 1,
+    "name": c.name,
+    "item": c.url ? siteUrl + c.url : undefined
+  }))
+}) %>
+</script>
+<% } %>
