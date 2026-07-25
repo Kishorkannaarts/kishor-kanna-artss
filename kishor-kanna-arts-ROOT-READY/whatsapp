@@ -1,0 +1,64 @@
+// whatsapp.js
+// Sends WhatsApp order updates via Meta's WhatsApp Cloud API using plain
+// fetch — no SDK dependency, same pattern as mailer.js's Brevo integration.
+//
+// SETUP (see README "WhatsApp Setup" for the full walkthrough):
+// 1. Create a Meta developer app at developers.facebook.com and add the
+//    "WhatsApp" product to it.
+// 2. Under WhatsApp > API Setup, note your Phone Number ID and generate a
+//    permanent access token (System User token, not the 24-hour test token).
+// 3. Under WhatsApp Manager > Message Templates, create and submit each
+//    template named below for approval (category: Utility). Each template's
+//    body must contain the same number of {{1}}, {{2}}... placeholders, in
+//    the same order, as the `params` list for that event in notify.js.
+//    Approval is usually minutes, occasionally up to a day or two.
+// 4. Set WHATSAPP_TOKEN and WHATSAPP_PHONE_NUMBER_ID in .env.
+//
+// IMPORTANT: Meta only allows free-form text replies within a 24-hour
+// window after the customer messages you first. Anything the business
+// sends first — which is every notification in this file — MUST use an
+// approved template, or the API will reject it. That's why this module
+// only exposes sendTemplate(), not a plain-text send.
+
+const API_VERSION = 'v20.0';
+
+function isConfigured() {
+  return !!(process.env.WHATSAPP_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID);
+}
+
+async function sendTemplate({ to, template, params, language }) {
+  if (!isConfigured()) {
+    console.log('[whatsapp] Not configured - skipped message to', to);
+    return { skipped: true };
+  }
+  const url = `https://graph.facebook.com/${API_VERSION}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`;
+  const body = {
+    messaging_product: 'whatsapp',
+    to: to.replace(/^\+/, ''), // Graph API wants digits only, no leading +
+    type: 'template',
+    template: {
+      name: template,
+      language: { code: language || 'en' },
+      components: [{
+        type: 'body',
+        parameters: (params || []).map(p => ({ type: 'text', text: String(p ?? '') }))
+      }]
+    }
+  };
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.WHATSAPP_TOKEN}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`WhatsApp API error (${res.status}): ${errText}`);
+  }
+  return res.json();
+}
+
+module.exports = { isConfigured, sendTemplate };
