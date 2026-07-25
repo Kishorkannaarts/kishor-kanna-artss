@@ -226,7 +226,15 @@ a:hover { color: var(--color-gold); }
   .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 600px) {
-  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  .grid-2 { gap: 12px; }
+}
+@media (max-width: 420px) {
+  .grid-2 .card-body { padding: 14px; }
+  .grid-2 .card-body h3 { font-size: 1rem; }
+  .grid-2 .card-body p { font-size: 0.82rem; margin-bottom: 8px; }
+  .grid-2 .card-footer { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .grid-2 .card-footer .btn { width: 100%; text-align: center; }
 }
 
 .card {
