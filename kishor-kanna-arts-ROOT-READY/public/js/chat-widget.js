@@ -7,10 +7,20 @@
   var log = document.getElementById('kka-chat-log');
   if (!bubble || !panel || !form) return;
 
+  // Backstop in case the model ever ignores the "no links" instruction:
+  // strips markdown-style [label](url) down to just the label, and removes
+  // any bare URL outright, so nothing clickable/linky ever reaches the DOM.
+  function stripLinks(text) {
+    return text
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '$1')
+      .replace(/https?:\/\/\S+/g, '')
+      .replace(/\*\*([^*]+)\*\*/g, '$1');
+  }
+
   function addMessage(text, who) {
     var row = document.createElement('div');
     row.className = 'kka-chat-msg kka-chat-msg-' + who;
-    row.textContent = text;
+    row.textContent = who === 'bot' ? stripLinks(text) : text;
     log.appendChild(row);
     log.scrollTop = log.scrollHeight;
   }
