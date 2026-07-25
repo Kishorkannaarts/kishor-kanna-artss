@@ -2,113 +2,150 @@
 <%- include('partials/header') %>
 
 <section class="section">
-  <h2>Order Your Custom Artwork</h2>
-  <p class="sub">Fill in the details below — we'll confirm your order shortly</p>
+  <div class="container">
+    <h2>Order Your Custom Artwork</h2>
+    <p class="sub">Takes about 60 seconds — we'll confirm your order shortly</p>
 
-  <div class="form-box">
-    <% if (success) { %>
-      <div class="alert alert-success">
-        Order placed successfully! Your Order ID is:<br>
-        <span class="order-code"><%= success %></span><br><br>
-        Save this ID — you'll need it (with your phone number) to track your order on the
-        <a href="/track-order">Track Order</a> page.
-      </div>
-    <% } else { %>
-      <% if (error) { %><div class="alert alert-error"><%= error %></div><% } %>
-      <form action="/order" method="POST" enctype="multipart/form-data" id="orderForm">
-        <div id="orderFields">
-        <div class="form-row">
-          <div class="form-group"><label>Full Name</label><input type="text" name="name" value="<%= old.name || '' %>" required></div>
-          <div class="form-group"><label>Phone Number</label><input type="text" name="phone" value="<%= old.phone || '' %>" required></div>
+    <div class="form-box wizard-box">
+      <% if (success) { %>
+        <div class="alert alert-success">
+          Order placed successfully! Your Order ID is:<br>
+          <span class="order-code"><%= success %></span><br><br>
+          Save this ID — you'll need it (with your phone number) to track your order on the
+          <a href="/track-order">Track Order</a> page.
         </div>
-        <div class="form-group"><label>Email</label><input type="email" name="email" value="<%= old.email || '' %>"></div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Art Type</label>
-            <% const artTypeOptions = artTypes.slice(); if (old.art_type && !artTypeOptions.includes(old.art_type)) artTypeOptions.unshift(old.art_type); %>
-            <select name="art_type" id="artTypeSelect" required>
-              <% artTypeOptions.forEach(t => { %>
-                <option value="<%= t %>" <%= old.art_type === t ? 'selected' : '' %>><%= t %></option>
-              <% }) %>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Size</label>
-            <% const sizeOptions = sizes.slice(); if (old.size && !sizeOptions.includes(old.size)) sizeOptions.unshift(old.size); %>
-            <select name="size" id="sizeSelect" required>
-              <% sizeOptions.forEach(sz => { %>
-                <option value="<%= sz %>" <%= old.size === sz ? 'selected' : '' %>><%= sz %></option>
-              <% }) %>
-            </select>
-          </div>
+      <% } else { %>
+        <% if (error) { %><div class="alert alert-error"><%= error %></div><% } %>
+
+        <!-- Progress bar -->
+        <div class="wizard-progress" id="wizardProgress">
+          <div class="wizard-step-dot active" data-step="1"><span>1</span><label>Art &amp; Size</label></div>
+          <div class="wizard-step-dot" data-step="2"><span>2</span><label>Photo</label></div>
+          <div class="wizard-step-dot" data-step="3"><span>3</span><label>Delivery</label></div>
+          <div class="wizard-step-dot" data-step="4"><span>4</span><label>Review</label></div>
         </div>
 
-        <div class="form-group" id="priceBox" style="background:#f7f7f7; border-radius:8px; padding:12px 16px; display:none;">
-          <strong>Estimated Price: <span id="priceDisplay"></span></strong>
-        </div>
-        <div class="form-group">
-          <label>Coupon Code (optional)</label>
-          <div style="display:flex; gap:8px;">
-            <input type="text" id="couponInput" placeholder="Enter coupon code" style="flex:1;">
-            <button type="button" class="btn btn-outline" id="applyCouponBtn">Apply</button>
-          </div>
-          <small id="couponMessage" style="display:block; margin-top:6px;"></small>
-        </div>
-        <input type="hidden" name="coupon_code" id="couponCodeInput">
-        <div class="form-group" id="customNote" style="background:#fff2cc; border:1px solid #e6cf87; border-radius:8px; padding:12px 16px; display:none;">
-          Picked Custom? Tell us the size or idea in the notes below — we'll confirm the price with you before your order is final.
-        </div>
-        <input type="hidden" name="estimated_price" id="estimatedPriceInput">
-        <input type="hidden" name="discount_percent_applied" id="discountAppliedInput">
-        <input type="hidden" name="preset_price" id="presetPriceInput" value="<%= typeof presetPrice !== 'undefined' ? presetPrice : '' %>">
+        <form action="/order" method="POST" enctype="multipart/form-data" id="orderForm">
+          <div id="orderFields">
 
-        <div class="form-group">
-          <label>Upload Reference Photo</label>
-          <input type="file" name="reference_image" accept="image/*">
-        </div>
-        <div class="form-group"><label>Delivery Address</label>
-          <input type="text" name="address_line" placeholder="House / Street / Area" value="<%= old.address_line || '' %>" required>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label>City</label><input type="text" name="city" value="<%= old.city || '' %>" required></div>
-          <div class="form-group"><label>State</label><input type="text" name="state" value="<%= old.state || '' %>" required></div>
-        </div>
-        <div class="form-group"><label>Pincode</label>
-          <input type="text" name="pincode" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" value="<%= old.pincode || '' %>" required>
-        </div>
-        <div class="form-group">
-          <label>Preferred Delivery Date</label>
-          <input type="date" name="delivery_date" id="deliveryDate" value="<%= old.delivery_date || '' %>">
-          <small id="dateWarning" style="color:#a2231d; display:none;">That date isn't available — please pick another.</small>
-        </div>
-        <div class="form-group"><label>Notes / Special Instructions</label><textarea name="notes"><%= old.notes || '' %></textarea></div>
-        <button class="btn" type="button" id="reviewOrderBtn">Review Order</button>
-        </div>
+            <!-- STEP 1: Art type + size + contact -->
+            <div class="wizard-panel active" data-panel="1">
+              <div class="form-row">
+                <div class="form-group"><label>Full Name</label><input type="text" name="name" value="<%= old.name || '' %>" required></div>
+                <div class="form-group"><label>Phone Number</label><input type="text" name="phone" value="<%= old.phone || '' %>" required></div>
+              </div>
+              <div class="form-group"><label>Email</label><input type="email" name="email" value="<%= old.email || '' %>"></div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Art Type</label>
+                  <% const artTypeOptions = artTypes.slice(); if (old.art_type && !artTypeOptions.includes(old.art_type)) artTypeOptions.unshift(old.art_type); %>
+                  <select name="art_type" id="artTypeSelect" required>
+                    <% artTypeOptions.forEach(t => { %>
+                      <option value="<%= t %>" <%= old.art_type === t ? 'selected' : '' %>><%= t %></option>
+                    <% }) %>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Size</label>
+                  <% const sizeOptions = sizes.slice(); if (old.size && !sizeOptions.includes(old.size)) sizeOptions.unshift(old.size); %>
+                  <select name="size" id="sizeSelect" required>
+                    <% sizeOptions.forEach(sz => { %>
+                      <option value="<%= sz %>" <%= old.size === sz ? 'selected' : '' %>><%= sz %></option>
+                    <% }) %>
+                  </select>
+                </div>
+              </div>
 
-        <div id="orderPreview" style="display:none;">
-          <h3 style="margin-top:0;">Review Your Order</h3>
-          <p style="color:var(--muted, #777); font-size:0.9rem;">Please check everything below before confirming.</p>
-          <div style="background:#f7f7f7; border-radius:8px; padding:16px; margin-bottom:16px;">
-            <img id="pv_photo" style="display:none; max-width:160px; border-radius:8px; margin-bottom:12px;">
-            <table style="width:100%; border-collapse:collapse; font-size:0.92rem;">
-              <tr><td style="padding:6px 0; color:var(--muted, #777); width:40%;">Name</td><td id="pv_name" style="padding:6px 0;"></td></tr>
-              <tr><td style="padding:6px 0; color:var(--muted, #777);">Phone</td><td id="pv_phone" style="padding:6px 0;"></td></tr>
-              <tr><td style="padding:6px 0; color:var(--muted, #777);">Email</td><td id="pv_email" style="padding:6px 0;"></td></tr>
-              <tr><td style="padding:6px 0; color:var(--muted, #777);">Art Type / Size</td><td id="pv_art" style="padding:6px 0;"></td></tr>
-              <tr><td style="padding:6px 0; color:var(--muted, #777);">Estimated Price</td><td id="pv_price" style="padding:6px 0;"></td></tr>
-              <tr id="pv_coupon_row" style="display:none;"><td style="padding:6px 0; color:var(--muted, #777);">Coupon</td><td id="pv_coupon" style="padding:6px 0;"></td></tr>
-              <tr><td style="padding:6px 0; color:var(--muted, #777);">Delivery Address</td><td id="pv_address" style="padding:6px 0;"></td></tr>
-              <tr><td style="padding:6px 0; color:var(--muted, #777);">Delivery Date</td><td id="pv_date" style="padding:6px 0;"></td></tr>
-              <tr id="pv_notes_row" style="display:none;"><td style="padding:6px 0; color:var(--muted, #777); vertical-align:top;">Notes</td><td id="pv_notes" style="padding:6px 0;"></td></tr>
-            </table>
+              <div class="form-group" id="priceBox" style="background:var(--bg-secondary,#f7f7f7); border-radius:8px; padding:12px 16px; display:none;">
+                <strong>Estimated Price: <span id="priceDisplay"></span></strong>
+              </div>
+              <div class="form-group">
+                <label>Coupon Code (optional)</label>
+                <div style="display:flex; gap:8px;">
+                  <input type="text" id="couponInput" placeholder="Enter coupon code" style="flex:1;">
+                  <button type="button" class="btn btn-outline" id="applyCouponBtn">Apply</button>
+                </div>
+                <small id="couponMessage" style="display:block; margin-top:6px;"></small>
+              </div>
+              <input type="hidden" name="coupon_code" id="couponCodeInput">
+              <div class="form-group" id="customNote" style="background:#fff2cc; border:1px solid #e6cf87; border-radius:8px; padding:12px 16px; display:none;">
+                Picked Custom? Tell us the size or idea in the notes below — we'll confirm the price with you before your order is final.
+              </div>
+              <input type="hidden" name="estimated_price" id="estimatedPriceInput">
+              <input type="hidden" name="discount_percent_applied" id="discountAppliedInput">
+              <input type="hidden" name="preset_price" id="presetPriceInput" value="<%= typeof presetPrice !== 'undefined' ? presetPrice : '' %>">
+
+              <div class="wizard-nav">
+                <span></span>
+                <button type="button" class="btn btn-primary wizard-next" data-next="2">Next: Add Photo →</button>
+              </div>
+            </div>
+
+            <!-- STEP 2: Upload photo -->
+            <div class="wizard-panel" data-panel="2">
+              <div class="form-group">
+                <label>Upload Reference Photo</label>
+                <input type="file" name="reference_image" accept="image/*" id="refImageInput">
+                <div class="upload-preview" id="uploadPreview"></div>
+              </div>
+              <div class="form-group"><label>Notes / Special Instructions</label><textarea name="notes"><%= old.notes || '' %></textarea></div>
+              <div class="wizard-nav">
+                <button type="button" class="btn btn-outline wizard-back" data-back="1">← Back</button>
+                <button type="button" class="btn btn-primary wizard-next" data-next="3">Next: Delivery →</button>
+              </div>
+            </div>
+
+            <!-- STEP 3: Delivery details -->
+            <div class="wizard-panel" data-panel="3">
+              <div class="form-group"><label>Delivery Address</label>
+                <input type="text" name="address_line" placeholder="House / Street / Area" value="<%= old.address_line || '' %>" required>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>City</label><input type="text" name="city" value="<%= old.city || '' %>" required></div>
+                <div class="form-group"><label>State</label><input type="text" name="state" value="<%= old.state || '' %>" required></div>
+              </div>
+              <div class="form-group"><label>Pincode</label>
+                <input type="text" name="pincode" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" value="<%= old.pincode || '' %>" required>
+              </div>
+              <div class="form-group">
+                <label>Preferred Delivery Date</label>
+                <input type="date" name="delivery_date" id="deliveryDate" value="<%= old.delivery_date || '' %>">
+                <small id="dateWarning" style="color:#a2231d; display:none;">That date isn't available — please pick another.</small>
+              </div>
+              <div class="wizard-nav">
+                <button type="button" class="btn btn-outline wizard-back" data-back="2">← Back</button>
+                <button class="btn btn-gold" type="button" id="reviewOrderBtn">Review Order →</button>
+              </div>
+            </div>
+
           </div>
-          <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <button class="btn btn-ghost" type="button" id="editOrderBtn">← Edit Details</button>
-            <button class="btn" type="submit" id="confirmOrderBtn">Confirm &amp; Place Order</button>
+
+          <!-- STEP 4: Review -->
+          <div id="orderPreview" class="wizard-panel" data-panel="4" style="display:none;">
+            <h3 style="margin-top:0;">Review Your Order</h3>
+            <p style="color:var(--text-secondary,#777); font-size:0.9rem;">Please check everything below before confirming.</p>
+            <div style="background:var(--bg-secondary,#f7f7f7); border-radius:8px; padding:16px; margin-bottom:16px;">
+              <img id="pv_photo" style="display:none; max-width:160px; border-radius:8px; margin-bottom:12px;">
+              <table style="width:100%; border-collapse:collapse; font-size:0.92rem;">
+                <tr><td style="padding:6px 0; color:var(--text-secondary,#777); width:40%;">Name</td><td id="pv_name" style="padding:6px 0;"></td></tr>
+                <tr><td style="padding:6px 0; color:var(--text-secondary,#777);">Phone</td><td id="pv_phone" style="padding:6px 0;"></td></tr>
+                <tr><td style="padding:6px 0; color:var(--text-secondary,#777);">Email</td><td id="pv_email" style="padding:6px 0;"></td></tr>
+                <tr><td style="padding:6px 0; color:var(--text-secondary,#777);">Art Type / Size</td><td id="pv_art" style="padding:6px 0;"></td></tr>
+                <tr><td style="padding:6px 0; color:var(--text-secondary,#777);">Estimated Price</td><td id="pv_price" style="padding:6px 0;"></td></tr>
+                <tr id="pv_coupon_row" style="display:none;"><td style="padding:6px 0; color:var(--text-secondary,#777);">Coupon</td><td id="pv_coupon" style="padding:6px 0;"></td></tr>
+                <tr><td style="padding:6px 0; color:var(--text-secondary,#777);">Delivery Address</td><td id="pv_address" style="padding:6px 0;"></td></tr>
+                <tr><td style="padding:6px 0; color:var(--text-secondary,#777);">Delivery Date</td><td id="pv_date" style="padding:6px 0;"></td></tr>
+                <tr id="pv_notes_row" style="display:none;"><td style="padding:6px 0; color:var(--text-secondary,#777); vertical-align:top;">Notes</td><td id="pv_notes" style="padding:6px 0;"></td></tr>
+              </table>
+            </div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button class="btn btn-outline" type="button" id="editOrderBtn">← Edit Details</button>
+              <button class="btn btn-gold" type="submit" id="confirmOrderBtn">Confirm &amp; Place Order</button>
+            </div>
           </div>
-        </div>
-      </form>
-    <% } %>
+        </form>
+      <% } %>
+    </div>
   </div>
 </section>
 
@@ -178,15 +215,17 @@
     estimatedPriceInput.value = discounted.toFixed(0);
     discountAppliedInput.value = bestDiscount;
   }
-  artTypeSelect.addEventListener('change', updatePrice);
-  sizeSelect.addEventListener('change', updatePrice);
-  updatePrice();
+  if (artTypeSelect) {
+    artTypeSelect.addEventListener('change', updatePrice);
+    sizeSelect.addEventListener('change', updatePrice);
+    updatePrice();
+  }
 
-  applyCouponBtn.addEventListener('click', async function () {
+  if (applyCouponBtn) applyCouponBtn.addEventListener('click', async function () {
     const code = couponInput.value.trim();
     if (!code) return;
     couponMessage.textContent = 'Checking...';
-    couponMessage.style.color = 'var(--muted, #777)';
+    couponMessage.style.color = 'var(--text-secondary,#777)';
     try {
       const res = await fetch('/coupon/validate', {
         method: 'POST',
@@ -228,6 +267,47 @@
     });
   }
 
+  // ---- Wizard step navigation ----
+  const panels = document.querySelectorAll('.wizard-panel');
+  const dots = document.querySelectorAll('.wizard-step-dot');
+  function goToStep(n) {
+    panels.forEach(p => p.classList.toggle('active', p.dataset.panel === String(n)));
+    dots.forEach(d => {
+      const step = parseInt(d.dataset.step, 10);
+      d.classList.toggle('active', step === n);
+      d.classList.toggle('done', step < n);
+    });
+    document.querySelector('.wizard-box').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  document.querySelectorAll('.wizard-next').forEach(btn => {
+    btn.addEventListener('click', function () {
+      const panel = btn.closest('.wizard-panel');
+      const requiredFields = panel.querySelectorAll('[required]');
+      for (const f of requiredFields) { if (!f.reportValidity()) return; }
+      goToStep(parseInt(btn.dataset.next, 10));
+    });
+  });
+  document.querySelectorAll('.wizard-back').forEach(btn => {
+    btn.addEventListener('click', function () { goToStep(parseInt(btn.dataset.back, 10)); });
+  });
+
+  // Live photo preview on step 2
+  const refImageInput = document.getElementById('refImageInput');
+  const uploadPreview = document.getElementById('uploadPreview');
+  if (refImageInput) refImageInput.addEventListener('change', function () {
+    uploadPreview.innerHTML = '';
+    if (refImageInput.files && refImageInput.files[0]) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const img = document.createElement('img');
+        img.src = e.target.result;
+        img.style.cssText = 'max-width:200px; border-radius:8px; margin-top:10px;';
+        uploadPreview.appendChild(img);
+      };
+      reader.readAsDataURL(refImageInput.files[0]);
+    }
+  });
+
   // ---- Review Order step ----
   const orderForm = document.getElementById('orderForm');
   const orderFields = document.getElementById('orderFields');
@@ -235,7 +315,7 @@
   const reviewOrderBtn = document.getElementById('reviewOrderBtn');
   const editOrderBtn = document.getElementById('editOrderBtn');
 
-  reviewOrderBtn.addEventListener('click', function () {
+  if (reviewOrderBtn) reviewOrderBtn.addEventListener('click', function () {
     if (!orderForm.reportValidity()) return;
 
     document.getElementById('pv_name').textContent = orderForm.name.value;
@@ -276,13 +356,13 @@
 
     orderFields.style.display = 'none';
     orderPreview.style.display = 'block';
-    orderPreview.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    goToStep(4);
   });
 
-  editOrderBtn.addEventListener('click', function () {
+  if (editOrderBtn) editOrderBtn.addEventListener('click', function () {
     orderPreview.style.display = 'none';
     orderFields.style.display = 'block';
-    orderFields.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    goToStep(3);
   });
 </script>
 
