@@ -3,28 +3,30 @@
 <%- include('partials/header') %>
 
 <section class="section">
-  <h2>Services</h2>
-  <p class="sub">Choose a service and size to get started</p>
-  <div class="grid grid-services">
-    <% services.forEach(s => { %>
-      <div class="card">
-        <img src="<%= s.image || 'https://placehold.co/400x300?text=Service' %>" alt="<%= s.title %>" loading="lazy" decoding="async">
-        <div class="card-body">
-          <h3><%= s.title %></h3>
-          <p><%= s.description %></p>
-          <table style="width:100%; font-size:0.9rem; margin-bottom:14px;">
-            <% sizes.forEach(sz => { const p = priceForSize(s, sz); %>
-              <% if (p) { %><tr><td><%= sz %></td><td style="text-align:right;"><%= sz.toLowerCase() === 'custom' ? 'from ' + p : p %></td></tr><% } %>
-            <% }) %>
-          </table>
-          <% if (priceForSize(s, sizes.find(sz => sz.toLowerCase() === 'custom') || 'Custom')) { %><p class="sub" style="text-align:left; font-size:0.8rem; margin:-8px 0 12px;">Custom sizes: final price confirmed after we review your request.</p><% } %>
-          <a class="btn" href="/order">Order</a>
+  <div class="container">
+    <h2>Services</h2>
+    <p class="sub">Choose a service and size to get started</p>
+    <div class="grid grid-3 grid-services">
+      <% services.forEach(s => { %>
+        <div class="card">
+          <img src="<%= s.image || 'https://placehold.co/400x300?text=Service' %>" alt="<%= s.title %>" loading="lazy" decoding="async">
+          <div class="card-body">
+            <h3><%= s.title %></h3>
+            <p><%= s.description %></p>
+            <table style="width:100%; font-size:0.9rem; margin-bottom:14px; border-collapse:collapse;">
+              <% sizes.forEach(sz => { const p = priceForSize(s, sz); %>
+                <% if (p) { %><tr><td style="padding:4px 0; color:var(--text-secondary);"><%= sz %></td><td style="text-align:right; padding:4px 0; font-weight:600;"><%= sz.toLowerCase() === 'custom' ? 'from ' + p : p %></td></tr><% } %>
+              <% }) %>
+            </table>
+            <% if (priceForSize(s, sizes.find(sz => sz.toLowerCase() === 'custom') || 'Custom')) { %><p class="sub" style="text-align:left; font-size:0.8rem; margin:-8px 0 12px;">Custom sizes: final price confirmed after we review your request.</p><% } %>
+            <a class="btn btn-primary" href="/order">Order</a>
+          </div>
         </div>
-      </div>
-    <% }) %>
-    <% if (services.length === 0) { %>
-      <p class="sub">No services added yet.</p>
-    <% } %>
+      <% }) %>
+      <% if (services.length === 0) { %>
+        <p class="sub">No services added yet.</p>
+      <% } %>
+    </div>
   </div>
 </section>
 
