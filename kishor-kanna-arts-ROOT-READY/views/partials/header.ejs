@@ -164,7 +164,6 @@
       });
     }
 
-    // Reflect saved theme on the sun/moon icon
     function syncThemeIcon() {
       var icon = document.querySelector('#theme-toggle .icon-sun');
       if (!icon) return;
@@ -177,6 +176,7 @@
   });
 </script>
 </header>
+
 <% if (typeof popupOffer !== 'undefined' && popupOffer && !isAdmin) { %>
 <div id="offerPopupOverlay" style="display:none; position:fixed; inset:0; background:rgba(10,8,6,0.7); z-index:9999; align-items:center; justify-content:center; padding:20px;">
   <div style="background:#151110; border-radius:18px; max-width:420px; width:100%; overflow:hidden; position:relative; box-shadow:0 24px 70px rgba(0,0,0,0.5); <% if (popupOffer.image) { %>min-height:440px; display:flex; flex-direction:column; justify-content:flex-end;<% } %>">
@@ -210,11 +210,6 @@
     var overlay = document.getElementById('offerPopupOverlay');
     if (overlay) {
       overlay.addEventListener('click', function (e) {
-        // Only the actual "Order Now" link should NOT close the popup —
-        // every other tap (backdrop, image, title, message, gradient area)
-        // dismisses it. Previously only an exact click on the outer
-        // backdrop worked, so tapping the image/dark area appeared to do
-        // nothing.
         if (e.target.closest('a.btn')) return;
         closeOfferPopup();
       });
