@@ -65,6 +65,16 @@
           <label>Upload Reference Photo</label>
           <input type="file" name="reference_image" accept="image/*">
         </div>
+        <div class="form-group"><label>Delivery Address</label>
+          <input type="text" name="address_line" placeholder="House / Street / Area" value="<%= old.address_line || '' %>" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>City</label><input type="text" name="city" value="<%= old.city || '' %>" required></div>
+          <div class="form-group"><label>State</label><input type="text" name="state" value="<%= old.state || '' %>" required></div>
+        </div>
+        <div class="form-group"><label>Pincode</label>
+          <input type="text" name="pincode" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" value="<%= old.pincode || '' %>" required>
+        </div>
         <div class="form-group">
           <label>Preferred Delivery Date</label>
           <input type="date" name="delivery_date" id="deliveryDate" value="<%= old.delivery_date || '' %>">
