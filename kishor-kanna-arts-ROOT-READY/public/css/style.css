@@ -683,8 +683,8 @@ a:hover { color: var(--color-gold); }
 .tracker-step:not(:last-child)::before {
   content: ''; position: absolute; left: 11px; top: 26px; bottom: -4px; width: 2px; background: var(--border-color);
 }
-.tracker-dot { width: 24px; height: 24px; border-radius: 50%; background: var(--bg-primary); border: 2px solid var(--border-color); flex-shrink: 0; z-index: 1; }
-.tracker-step.current .tracker-dot, .tracker-step.completed .tracker-dot { background: var(--color-gold); border-color: var(--color-gold); }
+.tracker-dot { width: 24px; height: 24px; border-radius: 50%; background: var(--bg-primary); border: 2px solid var(--border-color); flex-shrink: 0; z-index: 1; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); line-height: 1; }
+.tracker-step.current .tracker-dot, .tracker-step.completed .tracker-dot { background: var(--color-gold); border-color: var(--color-gold); color: #fff; }
 .tracker-label { font-weight: 500; padding-top: 2px; color: var(--text-secondary); }
 .tracker-step.current .tracker-label, .tracker-step.completed .tracker-label { color: var(--text-primary); font-weight: 600; }
 .tracker-cancelled { color: #a3282c; font-weight: 600; }
