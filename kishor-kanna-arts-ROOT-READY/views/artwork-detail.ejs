@@ -9,16 +9,16 @@
 
 <section class="section">
   <div class="container" style="max-width:900px;">
-    <div class="grid" style="grid-template-columns: 1fr 1fr;">
-      <img src="<%= artwork.image || 'https://placehold.co/500x500?text=Artwork' %>" alt="<%= artwork.title %>" loading="lazy" decoding="async" style="border-radius:14px;">
+    <div class="grid artwork-detail-grid">
+      <img src="<%= artwork.image || 'https://placehold.co/500x500?text=Artwork' %>" alt="<%= artwork.title %>" loading="lazy" decoding="async" style="border-radius:14px; width:100%;">
       <div>
         <span class="tag"><%= artwork.category %></span>
         <h1><%= artwork.title %></h1>
         <p><%= artwork.description %></p>
-        <% if (artwork.story) { %><p style="color:var(--muted); font-style:italic;"><%= artwork.story %></p><% } %>
+        <% if (artwork.story) { %><p style="color:var(--text-secondary); font-style:italic;"><%= artwork.story %></p><% } %>
         <p><strong>Size:</strong> <%= artwork.size || '—' %></p>
         <% if (artwork.price) { %><p><strong>Price:</strong> <%= artwork.price %></p><% } %>
-        <a class="btn" href="/order?art_type=<%= encodeURIComponent(artwork.category) %>&size=<%= encodeURIComponent(artwork.size || '') %>&price=<%= encodeURIComponent(artwork.price || '') %>">Order Similar Artwork</a>
+        <a class="btn btn-gold" href="/order?art_type=<%= encodeURIComponent(artwork.category) %>&size=<%= encodeURIComponent(artwork.size || '') %>&price=<%= encodeURIComponent(artwork.price || '') %>">Order Similar Artwork</a>
       </div>
     </div>
   </div>
