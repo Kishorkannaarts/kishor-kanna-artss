@@ -662,12 +662,55 @@ app.get('/admin/artworks', requireAdmin, ah(async (req, res) => {
   res.render('admin/artworks', { artworks: db.normalize(await db.find('artworks', {}, { created_at: -1 })) });
 }));
 
-app.get('/admin/artworks/new', requireAdmin, (req, res) => res.render('admin/artwork-form', { artwork: null }));
+app.get('/admin/artworks/new', requireAdmin, (req, res) => res.render('admin/artwork-form', { artwork: null, ai: null }));
 
 app.get('/admin/artworks/:id/edit', requireAdmin, ah(async (req, res) => {
   const artwork = db.normalize(await db.findById('artworks', req.params.id));
   if (!artwork) return res.redirect('/admin/artworks');
-  res.render('admin/artwork-form', { artwork });
+  res.render('admin/artwork-form', { artwork, ai: req.query.ai || null });
+}));
+
+// AI image tools (Cloudinary add-ons) — background removal for artwork
+// photos, and AI upscale for blurry reference photos. Both replace the
+// artwork's live image with the transformed result and keep the very first
+// original around (image_original) so it can be reverted.
+app.post('/admin/artworks/:id/remove-bg', requireAdmin, ah(async (req, res) => {
+  const artwork = await db.findById('artworks', req.params.id);
+  if (!artwork || !artwork.image) return res.redirect('/admin/artworks');
+  try {
+    const newUrl = await cloudinaryTransform.removeBackground(artwork.image, 'artworks');
+    await db.updateById('artworks', req.params.id, {
+      image: newUrl,
+      image_original: artwork.image_original || artwork.image
+    });
+    res.redirect(`/admin/artworks/${req.params.id}/edit?ai=bg_ok`);
+  } catch (err) {
+    console.error('[cloudinary-transform] background removal failed:', err.message);
+    res.redirect(`/admin/artworks/${req.params.id}/edit?ai=bg_error`);
+  }
+}));
+
+app.post('/admin/artworks/:id/upscale', requireAdmin, ah(async (req, res) => {
+  const artwork = await db.findById('artworks', req.params.id);
+  if (!artwork || !artwork.image) return res.redirect('/admin/artworks');
+  try {
+    const newUrl = await cloudinaryTransform.upscaleImage(artwork.image, 'artworks');
+    await db.updateById('artworks', req.params.id, {
+      image: newUrl,
+      image_original: artwork.image_original || artwork.image
+    });
+    res.redirect(`/admin/artworks/${req.params.id}/edit?ai=upscale_ok`);
+  } catch (err) {
+    console.error('[cloudinary-transform] upscale failed:', err.message);
+    res.redirect(`/admin/artworks/${req.params.id}/edit?ai=upscale_error`);
+  }
+}));
+
+app.post('/admin/artworks/:id/revert-image', requireAdmin, ah(async (req, res) => {
+  const artwork = await db.findById('artworks', req.params.id);
+  if (!artwork || !artwork.image_original) return res.redirect('/admin/artworks');
+  await db.updateById('artworks', req.params.id, { image: artwork.image_original });
+  res.redirect(`/admin/artworks/${req.params.id}/edit?ai=revert_ok`);
 }));
 
 app.post('/admin/artworks/save', requireAdmin, memoryUpload.single('image'), ah(async (req, res) => {
