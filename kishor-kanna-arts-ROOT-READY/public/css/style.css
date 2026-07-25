@@ -429,6 +429,7 @@ a:hover { color: var(--color-gold); }
 }
 .reviews-track { animation-duration: 55s; }
 .videos-marquee:hover .videos-track, .reviews-marquee:hover .reviews-track { animation-play-state: paused; }
+.videos-marquee.playing .videos-track { animation-play-state: paused; }
 @keyframes marqueeScroll {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
