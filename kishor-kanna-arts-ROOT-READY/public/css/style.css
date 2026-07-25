@@ -63,6 +63,12 @@ html { scroll-behavior: smooth; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+  /* The video/review marquees are a slow, user-pausable scroll (hover to
+     pause) — not the sudden motion prefers-reduced-motion is meant to stop.
+     The blanket rule above freezes them mid-frame instead of helping, so
+     give them their normal speed back explicitly. */
+  .videos-track, .reviews-track { animation-duration: 42s !important; animation-iteration-count: infinite !important; }
+  .reviews-track { animation-duration: 55s !important; }
 }
 
 body {
