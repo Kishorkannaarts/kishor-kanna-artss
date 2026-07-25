@@ -105,7 +105,10 @@ app.use(async (req, res, next) => {
 // limit is a safety net, not something customers should normally hit.
 const memoryUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 15 * 1024 * 1024 },
+  // fieldSize covers the base64 "compressed_image_data" hidden field (order
+  // form's fallback for when the raw file upload goes stale) — multer's
+  // 1MB default is too small for a base64-encoded photo.
+  limits: { fileSize: 15 * 1024 * 1024, fieldSize: 20 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype && file.mimetype.startsWith('image/')) return cb(null, true);
     cb(new Error('INVALID_FILE_TYPE'));
