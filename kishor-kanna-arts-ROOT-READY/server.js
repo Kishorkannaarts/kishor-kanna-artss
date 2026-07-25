@@ -85,7 +85,17 @@ app.use(async (req, res, next) => {
 });
 
 // ---------- Image uploads via Cloudinary ----------
-const memoryUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
+// fileFilter keeps this to real images only — the order form's client-side
+// compression already downsizes photos before they reach the server, so this
+// limit is a safety net, not something customers should normally hit.
+const memoryUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype && file.mimetype.startsWith('image/')) return cb(null, true);
+    cb(new Error('INVALID_FILE_TYPE'));
+  }
+});
 
 async function uploadImage(file, folder) {
   if (!file) return null;
@@ -309,7 +319,24 @@ app.get('/order', ah(async (req, res) => {
   res.render('order', { success: null, error: null, blockedDates: blocked.map(r => r.date), old, services, offerDiscount, presetPrice });
 }));
 
- app.post('/order', memoryUpload.single('reference_image'), ah(async (req, res) => {
+ app.post('/order', (req, res, next) => {
+  memoryUpload.single('reference_image')(req, res, (err) => {
+    if (!err) return next();
+    // Upload-specific failures (bad file type, too large) get a friendly,
+    // in-context message instead of falling through to the generic 500 page —
+    // the customer is mid-checkout and shouldn't lose their progress.
+    (async () => {
+      const blocked = await db.find('blocked_dates', {}, { date: 1 });
+      const services = db.normalize(await db.find('services', {}, { created_at: -1 }));
+      const activeOffer = await db.findOne('offers', { active: true });
+      const offerDiscount = activeOffer ? (activeOffer.discount_percent || 0) : 0;
+      const message = err.message === 'INVALID_FILE_TYPE'
+        ? 'That file doesn\'t look like a photo. Please upload a JPG or PNG image.'
+        : 'That photo is too large to upload. Please choose a smaller photo (under 15MB).';
+      res.render('order', { success: null, error: message, blockedDates: blocked.map(r => r.date), old: req.body, services, offerDiscount, presetPrice: req.body.preset_price || '' });
+    })().catch(next);
+  });
+}, ah(async (req, res) => {
   const { name, phone, email, art_type, size, delivery_date, notes, estimated_price, address_line, city, state, pincode, coupon_code } = req.body;
   const blocked = await db.find('blocked_dates', {}, { date: 1 });
   const blockedDates = blocked.map(r => r.date);
