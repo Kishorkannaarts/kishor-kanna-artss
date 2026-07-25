@@ -13,6 +13,7 @@ const db = require('./db');
 const mailer = require('./mailer');
 const notify = require('./notify');
 const razorpay = require('./razorpay');
+const chatbot = require('./chatbot');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -336,6 +337,38 @@ app.post('/contact', ah(async (req, res) => {
   res.render('contact', { sent: true });
 }));
 
+// Chat widget backend. Conversation history lives in the session (capped
+// to the last few turns) so the model has short-term memory without a DB
+// table. Failures never surface a raw error to the visitor — just a plain
+// fallback message pointing them at Contact/WhatsApp instead.
+app.post('/api/chat', ah(async (req, res) => {
+  const userMessage = String((req.body && req.body.message) || '').trim();
+  if (!userMessage) return res.status(400).json({ error: 'Message is required.' });
+  if (userMessage.length > 800) return res.status(400).json({ error: 'Message is too long.' });
+
+  if (!req.session.chatHistory) req.session.chatHistory = [];
+  req.session.chatHistory.push({ role: 'user', content: userMessage });
+  req.session.chatHistory = req.session.chatHistory.slice(-12);
+
+  if (!chatbot.isConfigured()) {
+    return res.json({ reply: "Chat isn't set up on this site yet — please reach out via the Contact page or WhatsApp instead." });
+  }
+
+  try {
+    const [artTypes, sizes, services] = await Promise.all([
+      db.getArtTypes(),
+      db.getSizes(),
+      db.find('services', {}, { created_at: -1 })
+    ]);
+    const reply = await chatbot.chat(req.session.chatHistory, { artTypes, sizes, services, siteUrl: res.locals.siteUrl });
+    req.session.chatHistory.push({ role: 'assistant', content: reply });
+    req.session.chatHistory = req.session.chatHistory.slice(-12);
+    res.json({ reply });
+  } catch (err) {
+    console.error('[chatbot] reply failed:', err.message);
+    res.json({ reply: "Sorry, I'm having trouble replying right now — please reach us via the Contact page or WhatsApp instead." });
+  }
+}));
 app.post('/newsletter', ah(async (req, res) => {
   try { await db.insertOne('newsletter', { email: req.body.email }); } catch (e) {}
   res.redirect(req.get('Referrer') || '/');
