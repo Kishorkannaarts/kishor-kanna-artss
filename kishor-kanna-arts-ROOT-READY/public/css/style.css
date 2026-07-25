@@ -195,18 +195,20 @@ a:hover { color: var(--color-gold); }
 }
 
 @media (max-width: 960px) {
-  .menu-toggle { display: block; order: 3; }
+  .menu-toggle { display: block !important; order: 3; position: relative; z-index: 5; }
   .nav {
-    position: fixed; top: var(--header-h); left: 0; right: 0; bottom: 0;
+    position: fixed !important; top: var(--header-h); left: 0; right: 0; bottom: 0;
     background: var(--bg-primary); flex-direction: column; align-items: flex-start;
-    padding: 24px; gap: 4px; overflow-y: auto; z-index: 90;
-    transform: translateX(100%); visibility: hidden; opacity: 0;
+    padding: 24px; gap: 4px; overflow-y: auto; z-index: 10001;
+    transform: translateX(100%) !important; visibility: hidden !important; opacity: 0 !important;
     transition: transform var(--transition), visibility 0s linear var(--transition), opacity var(--transition);
     margin-left: 0; box-shadow: -8px 0 30px rgba(0,0,0,0.08);
   }
-  .nav.open { transform: translateX(0); visibility: visible; opacity: 1; transition: transform var(--transition), opacity var(--transition); }
+  .nav.open {
+    transform: translateX(0) !important; visibility: visible !important; opacity: 1 !important;
+    transition: transform var(--transition), opacity var(--transition);
+  }
   .nav > a, .nav-more { width: 100%; padding: 12px 4px; border-bottom: 1px solid var(--border-color); }
-  .nav-more-menu, .nav-mega-menu { position: static; box-shadow: none; border: none; margin: 4px 0 0; width: 100%; }
   .nav-cta { margin-top: 12px; width: 100%; }
 }
 
@@ -485,8 +487,16 @@ a:hover { color: var(--color-gold); }
 }
 .search-bar input:focus { outline: none; border-color: var(--color-gold); }
 
-@media (max-width: 900px) {
-  .nav-mega-menu { position: static; transform: none; min-width: auto; grid-template-columns: 1fr; box-shadow: none; border: none; margin-top: 4px; padding-left: 12px; }
+@media (max-width: 960px) {
+  .nav-mega-menu {
+    position: static !important; transform: none !important; min-width: auto !important;
+    grid-template-columns: 1fr !important; box-shadow: none !important; border: none !important;
+    margin-top: 4px !important; padding-left: 12px !important;
+  }
+  .nav-more-menu {
+    position: static !important; box-shadow: none !important; border: none !important;
+    margin: 4px 0 0 !important; width: 100% !important; padding-left: 12px;
+  }
 }
 
 /* ---------- Phase 4 — order wizard ---------- */
@@ -514,7 +524,20 @@ a:hover { color: var(--color-gold); }
 .wizard-nav { display: flex; justify-content: space-between; margin-top: 24px; gap: 12px; }
 .upload-preview img { display: block; border-radius: var(--radius-sm); }
 
-@media (max-width: 500px) { .wizard-step-dot label { display: none; } }
+@media (max-width: 500px) {
+  .wizard-progress {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px 10px;
+  }
+  .wizard-progress::before { display: none; }
+  .wizard-step-dot {
+    flex-direction: row; align-items: center; justify-content: flex-start; gap: 10px;
+    background: var(--bg-secondary); border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm); padding: 10px 12px;
+  }
+  .wizard-step-dot span { flex-shrink: 0; }
+  .wizard-step-dot label { text-align: left; font-size: 0.78rem; }
+  .wizard-step-dot.active { border-color: var(--color-gold); }
+}
 
 /* ---------- Phase 5 — order tracking ---------- */
 .track-card { margin-bottom: 4px; }
