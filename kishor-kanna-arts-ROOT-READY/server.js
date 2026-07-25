@@ -490,7 +490,43 @@ app.get('/admin/dashboard', requireAdmin, ah(async (req, res) => {
   });
   const finance = { totalReceived, totalPending, totalExpenses, totalProfit: totalReceived - totalExpenses };
 
-  res.render('admin/dashboard', { counts, recentOrders, finance });
+  // Order status breakdown (for the dashboard bar chart)
+  const statusList = ['Received','Confirmed','In Progress','Completed','Artwork Sent - Awaiting Confirmation','Customer Confirmed','Delivered','Cancelled'];
+  const statusCounts = statusList
+    .map(s => ({ status: s, count: allOrders.filter(o => o.status === s).length }))
+    .filter(s => s.count > 0);
+  const maxStatusCount = Math.max(1, ...statusCounts.map(s => s.count));
+
+  // Orders placed per day, last 14 days
+  const days = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    const count = allOrders.filter(o => String(o.created_at || '').slice(0, 10) === key).length;
+    days.push({ label: d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }), count });
+  }
+  const maxDayCount = Math.max(1, ...days.map(d => d.count));
+
+  // Orders needing admin follow-up
+  const now = new Date();
+  const soon = new Date(now.getTime() + 3 * 86400000);
+  const needsAttention = allOrders.filter(o => {
+    if (o.status === 'Delivered' || o.status === 'Cancelled') return false;
+    if (o.advance_amount && !o.advance_paid) return true;
+    if (o.balance_amount && !o.balance_paid) return true;
+    if (o.final_artwork_image && !o.customer_confirmed) return true;
+    if (o.delivery_date) { const dd = new Date(o.delivery_date); if (dd >= now && dd <= soon) return true; }
+    return false;
+  }).slice(0, 8).map(o => {
+    let reason = 'Delivery date coming up';
+    if (o.advance_amount && !o.advance_paid) reason = 'Advance payment pending';
+    else if (o.balance_amount && !o.balance_paid) reason = 'Balance payment pending';
+    else if (o.final_artwork_image && !o.customer_confirmed) reason = 'Awaiting customer confirmation';
+    return { ...o, reason };
+  });
+
+  res.render('admin/dashboard', { counts, recentOrders, finance, statusCounts, maxStatusCount, days, maxDayCount, needsAttention });
 }));
 
 // ---- Artworks ----
@@ -566,7 +602,18 @@ app.post('/admin/videos/:id/delete', requireAdmin, ah(async (req, res) => {
 
 // ---- Orders ----
 app.get('/admin/orders', requireAdmin, ah(async (req, res) => {
-  res.render('admin/orders', { orders: db.normalize(await db.find('orders', {}, { created_at: -1 })) });
+  const q = (req.query.q || '').trim();
+  const status = req.query.status || '';
+  const sort = req.query.sort || 'newest';
+  const filter = {};
+  if (status) filter.status = status;
+  if (q) {
+    const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    filter.$or = [{ order_code: re }, { name: re }, { phone: re }, { email: re }];
+  }
+  const sortOpt = sort === 'oldest' ? { created_at: 1 } : { created_at: -1 };
+  const orders = db.normalize(await db.find('orders', filter, sortOpt));
+  res.render('admin/orders', { orders, q, status, sort });
 }));
 
 app.post('/admin/orders/:id/status', requireAdmin, ah(async (req, res) => {
@@ -1044,3 +1091,4 @@ db.initSchema().then(() => {
   console.error('Database connection failed:', err.message);
   process.exit(1);
 });
+
