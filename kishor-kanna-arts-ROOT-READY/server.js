@@ -775,16 +775,20 @@ app.post('/admin/artworks/:id/revert-image', requireAdmin, ah(async (req, res) =
   res.redirect(`/admin/artworks/${req.params.id}/edit?ai=revert_ok`);
 }));
 
-app.post('/admin/artworks/save', requireAdmin, memoryUpload.single('image'), ah(async (req, res) => {
+app.post('/admin/artworks/save', requireAdmin, memoryUpload.fields([{ name: 'image', maxCount: 1 }, { name: 'before_image', maxCount: 1 }]), ah(async (req, res) => {
   const { id, title, category, description, story, size, price, featured } = req.body;
-  const uploadedUrl = await uploadImage(req.file, 'artworks');
+  const imageFile = req.files && req.files.image && req.files.image[0];
+  const beforeFile = req.files && req.files.before_image && req.files.before_image[0];
+  const uploadedUrl = await uploadImage(imageFile, 'artworks');
+  const uploadedBeforeUrl = await uploadImage(beforeFile, 'artworks');
   const featuredVal = !!featured;
   if (id) {
     const existing = await db.findById('artworks', id);
     const image = uploadedUrl || (existing ? existing.image : null);
-    await db.updateById('artworks', id, { title, category, description, story, size, price, image, featured: featuredVal });
+    const before_image = uploadedBeforeUrl || (existing ? existing.before_image : null);
+    await db.updateById('artworks', id, { title, category, description, story, size, price, image, before_image, featured: featuredVal });
   } else {
-    await db.insertOne('artworks', { title, category, description, story, size, price, image: uploadedUrl, featured: featuredVal });
+    await db.insertOne('artworks', { title, category, description, story, size, price, image: uploadedUrl, before_image: uploadedBeforeUrl || null, featured: featuredVal });
   }
   res.redirect('/admin/artworks');
 }));
