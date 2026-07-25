@@ -185,6 +185,7 @@
     Array.from(track.children).forEach(card => track.appendChild(card.cloneNode(true)));
 
     function loadFacade(facade, muted) {
+    function loadFacade(facade, muted) {
       const embed = facade.getAttribute('data-embed');
       const sep = embed.includes('?') ? '&' : '?';
       const params = muted ? 'autoplay=1&mute=1&playsinline=1' : 'autoplay=1&playsinline=1';
@@ -198,6 +199,9 @@
       facade.appendChild(iframe);
       facade.dataset.played = '1';
       facade.dataset.muted = muted ? '1' : '0';
+      // Stop the row from sliding a playing video off-screen.
+      const marquee = facade.closest('.videos-marquee');
+      if (marquee) marquee.classList.add('playing');
     }
 
     const facades = Array.from(track.querySelectorAll('.video-facade'));
