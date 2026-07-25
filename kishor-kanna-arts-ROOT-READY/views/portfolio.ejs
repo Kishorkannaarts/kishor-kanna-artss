@@ -20,10 +20,19 @@
 
     <div class="grid grid-2 grid-arts">
       <% artworks.forEach(a => { %>
-        <div class="card">
+        <div class="card" style="position:relative;">
           <a href="/portfolio/<%= a.id %>">
             <img src="<%= a.image || 'https://placehold.co/400x300?text=Artwork' %>" alt="<%= a.title %>" loading="lazy" decoding="async">
           </a>
+          <% if (isCustomer) { %>
+            <% const wished = typeof wishlistIds !== 'undefined' && wishlistIds.includes(a.id); %>
+            <form action="/wishlist/<%= a.id %>/toggle" method="POST" class="wishlist-heart-form">
+              <input type="hidden" name="redirect_to" value="/portfolio<%= activeCategory ? '?category=' + encodeURIComponent(activeCategory) : '' %>">
+              <button type="submit" class="wishlist-heart <%= wished ? 'is-wished' : '' %>" aria-label="<%= wished ? 'Remove from wishlist' : 'Save to wishlist' %>" title="<%= wished ? 'Saved to wishlist' : 'Save to wishlist' %>">&#10084;</button>
+            </form>
+          <% } else { %>
+            <a href="/account/login?next=<%= encodeURIComponent('/portfolio') %>" class="wishlist-heart" aria-label="Log in to save to wishlist" title="Log in to save to wishlist">&#10084;</a>
+          <% } %>
           <div class="card-body">
             <span class="tag"><%= a.category %></span>
             <h3><a href="/portfolio/<%= a.id %>" style="color:inherit; text-decoration:none;"><%= a.title %></a></h3>
