@@ -205,6 +205,20 @@
     }
 
     const facades = Array.from(track.querySelectorAll('.video-facade'));
+
+    // Belt-and-suspenders visibility check: some mobile browsers delay or
+    // never fire IntersectionObserver callbacks reliably for elements inside
+    // a horizontally-animating row. This manual check runs alongside the
+    // observer and catches anything it misses.
+    function checkVisibilityFallback() {
+      facades.forEach(function (f) {
+        if (f.dataset.played) return;
+        const r = f.getBoundingClientRect();
+        const visible = r.top < window.innerHeight && r.bottom > 0 && r.left < window.innerWidth && r.right > 0;
+        if (visible) loadFacade(f, true);
+      });
+    }
+
     if ('IntersectionObserver' in window) {
       const io = new IntersectionObserver(function (entries) {
         entries.forEach(function (entry) {
@@ -213,11 +227,14 @@
             loadFacade(facade, true);
           }
         });
-      }, { root: null, threshold: 0.5 });
+      }, { root: null, threshold: 0.25 });
       facades.forEach(function (f) { io.observe(f); });
-    } else {
-      facades.forEach(function (f) { loadFacade(f, true); });
     }
+    // Always also run the manual check on load and on scroll, in case the
+    // observer never fires (older/low-power mobile browsers).
+    checkVisibilityFallback();
+    window.addEventListener('scroll', checkVisibilityFallback, { passive: true });
+    window.addEventListener('load', checkVisibilityFallback);
 
     track.addEventListener('click', function (e) {
       const facade = e.target.closest('.video-facade');
