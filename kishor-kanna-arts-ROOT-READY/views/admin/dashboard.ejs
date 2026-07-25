@@ -32,6 +32,48 @@
       <div class="stat-card"><div class="num"><%= counts.subscribers %></div><div class="label">Newsletter Subscribers</div></div>
     </div>
 
+    <% if (needsAttention.length > 0) { %>
+      <h2 style="font-size:1.1rem;">Needs Attention</h2>
+      <table>
+        <tr><th>Order ID</th><th>Customer</th><th>Reason</th><th>Delivery Date</th><th></th></tr>
+        <% needsAttention.forEach(o => { %>
+          <tr>
+            <td><%= o.order_code %></td>
+            <td><%= o.name %><br><small style="color:var(--muted);"><%= o.phone %></small></td>
+            <td><span class="badge badge-new"><%= o.reason %></span></td>
+            <td><%= o.delivery_date || '—' %></td>
+            <td><a class="btn btn-ghost btn-sm" href="/admin/orders">View</a></td>
+          </tr>
+        <% }) %>
+      </table>
+    <% } %>
+
+    <div class="chart-row">
+      <div class="chart-card">
+        <h2 style="font-size:1.1rem;">Orders — Last 14 Days</h2>
+        <div class="chart-bars">
+          <% days.forEach(d => { %>
+            <div class="chart-bar" title="<%= d.label %>: <%= d.count %> orders">
+              <div class="chart-bar-fill" style="height:<%= Math.round((d.count / maxDayCount) * 100) %>%;"><% if (d.count > 0) { %><span class="chart-bar-value"><%= d.count %></span><% } %></div>
+              <div class="chart-bar-label"><%= d.label %></div>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h2 style="font-size:1.1rem;">Orders by Status</h2>
+        <div class="chart-hbars">
+          <% statusCounts.forEach(s => { %>
+            <div class="chart-hbar-row">
+              <div class="chart-hbar-label"><%= s.status %></div>
+              <div class="chart-hbar-track"><div class="chart-hbar-fill" style="width:<%= Math.round((s.count / maxStatusCount) * 100) %>%;"></div></div>
+              <div class="chart-hbar-value"><%= s.count %></div>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+    </div>
+
     <h2 style="font-size:1.1rem;">Recent Orders</h2>
     <table>
       <tr><th>Order ID</th><th>Name</th><th>Art Type</th><th>Status</th><th>Placed</th></tr>
