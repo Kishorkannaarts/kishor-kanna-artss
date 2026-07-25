@@ -295,7 +295,7 @@ app.get('/order', ah(async (req, res) => {
   res.render('order', { success: null, error: null, blockedDates: blocked.map(r => r.date), old, services, offerDiscount, presetPrice });
 }));
 
-app.post('/order', memoryUpload.single('reference_image'), ah(async (req, res) => {
+ app.post('/order', memoryUpload.single('reference_image'), ah(async (req, res) => {
   const { name, phone, email, art_type, size, delivery_date, notes, estimated_price, address_line, city, state, pincode, coupon_code } = req.body;
   const blocked = await db.find('blocked_dates', {}, { date: 1 });
   const blockedDates = blocked.map(r => r.date);
@@ -305,6 +305,9 @@ app.post('/order', memoryUpload.single('reference_image'), ah(async (req, res) =
 
   if (delivery_date && blockedDates.includes(delivery_date)) {
     return res.render('order', { success: null, error: 'Sorry, that delivery date is not available. Please choose a different date.', blockedDates, old: req.body, services, offerDiscount, presetPrice: req.body.preset_price || '' });
+  }
+  if (!address_line || !city || !state || !pincode) {
+    return res.render('order', { success: null, error: 'Please fill in your full delivery address.', blockedDates, old: req.body, services, offerDiscount, presetPrice: req.body.preset_price || '' });
   }
 
   // Re-check the coupon on the server — the client-side discount is only a
