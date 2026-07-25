@@ -379,6 +379,43 @@
   }
   function clearUploadError() { uploadError.style.display = 'none'; }
 
+  // Blur detector: downscales the photo to a small fixed size and runs the
+  // classic "variance of Laplacian" edge-detection heuristic — sharp photos
+  // have lots of strong, varied edges (high variance); blurry photos have
+  // smooth, muted transitions (low variance). This is a plain client-side
+  // computation (no AI service, no upload needed), so it runs instantly and
+  // for free before the customer even submits the order.
+  function computeSharpness(img, w, h) {
+    const size = 240;
+    const scale = size / Math.max(w, h);
+    const sw = Math.max(1, Math.round(w * scale));
+    const sh = Math.max(1, Math.round(h * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = sw; canvas.height = sh;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, sw, sh);
+    const { data } = ctx.getImageData(0, 0, sw, sh);
+
+    const gray = new Float32Array(sw * sh);
+    for (let i = 0, p = 0; i < data.length; i += 4, p++) {
+      gray[p] = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+    }
+
+    let sum = 0, sumSq = 0, count = 0;
+    for (let y = 1; y < sh - 1; y++) {
+      for (let x = 1; x < sw - 1; x++) {
+        const idx = y * sw + x;
+        const lap = -4 * gray[idx] + gray[idx - 1] + gray[idx + 1] + gray[idx - sw] + gray[idx + sw];
+        sum += lap;
+        sumSq += lap * lap;
+        count++;
+      }
+    }
+    if (!count) return null;
+    const mean = sum / count;
+    return (sumSq / count) - (mean * mean); // variance of the Laplacian
+  }
+
   // Resize/re-compress large phone photos in the browser before upload —
   // most camera photos are 4-12MB; this gets them down to a fraction of that
   // with no visible quality loss, which matters a lot on slower mobile data.
@@ -396,10 +433,13 @@
     try {
       const { img, url } = await loadImageEl(file);
       const w = img.naturalWidth, h = img.naturalHeight;
+      // Measure sharpness on the original photo, before any resizing or
+      // re-compression softens it.
+      const sharpness = computeSharpness(img, w, h);
       // Skip re-encoding if it's already small — no point spending CPU.
       if (file.size < 600 * 1024 && Math.max(w, h) <= maxDim) {
         URL.revokeObjectURL(url);
-        return { file, width: w, height: h };
+        return { file, width: w, height: h, sharpness };
       }
       let targetW = w, targetH = h;
       if (Math.max(w, h) > maxDim) {
@@ -412,11 +452,11 @@
       canvas.getContext('2d').drawImage(img, 0, 0, targetW, targetH);
       URL.revokeObjectURL(url);
       const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', quality));
-      if (!blob || blob.size >= file.size) return { file, width: w, height: h };
+      if (!blob || blob.size >= file.size) return { file, width: w, height: h, sharpness };
       const newName = file.name.replace(/\.[^.]+$/, '') + '.jpg';
-      return { file: new File([blob], newName, { type: 'image/jpeg' }), width: w, height: h };
+      return { file: new File([blob], newName, { type: 'image/jpeg' }), width: w, height: h, sharpness };
     } catch (e) {
-      return { file, width: null, height: null };
+      return { file, width: null, height: null, sharpness: null };
     }
   }
 
@@ -431,14 +471,29 @@
     }
   }
 
-  function checkQuality(w, h) {
+  // Threshold picked from typical phone-camera photos at the 240px
+  // measurement size used above. If you notice it flagging clearly sharp
+  // photos as blurry (or missing obviously blurry ones) once real customer
+  // photos start coming through, adjust this number — lower = more lenient.
+  const BLUR_THRESHOLD = 150;
+
+  function checkQuality(w, h, sharpness) {
     if (!w || !h) { qualityMsg.style.display = 'none'; return; }
     const shortSide = Math.min(w, h);
-    if (shortSide < 700) {
+    const lowRes = shortSide < 700;
+    const blurry = sharpness !== null && sharpness !== undefined && sharpness < BLUR_THRESHOLD;
+
+    if (blurry && lowRes) {
+      qualityMsg.textContent = "This photo looks a little blurry and is low resolution — for the best portrait, a sharper, clearer photo works best if you have one. You can still continue.";
+      qualityMsg.style.color = '#a2231d';
+    } else if (blurry) {
+      qualityMsg.textContent = 'This photo looks a little blurry — a steady, well-lit photo will give the sharpest result. You can still continue.';
+      qualityMsg.style.color = '#a2231d';
+    } else if (lowRes) {
       qualityMsg.textContent = "This photo's resolution is a bit low — for the sharpest large portrait, a clearer photo works best. You can still continue.";
       qualityMsg.style.color = '#a2691d';
     } else {
-      qualityMsg.textContent = 'This photo looks sharp — great for a detailed portrait.';
+      qualityMsg.textContent = 'This photo looks sharp and clear — great for a detailed portrait.';
       qualityMsg.style.color = '#1a7a3f';
     }
     qualityMsg.style.display = 'block';
@@ -459,14 +514,14 @@
     dropzoneFilled.style.display = 'none';
     dropzoneLoading.style.display = 'flex';
 
-    const { file, width, height } = await compressImage(rawFile, 1900, 0.82);
+    const { file, width, height, sharpness } = await compressImage(rawFile, 1900, 0.82);
     setInputFile(file);
 
     dropzoneLoading.style.display = 'none';
     dropzoneFilled.style.display = 'flex';
     previewImg.src = URL.createObjectURL(file);
     fileNameLabel.textContent = rawFile.name + (file.size < rawFile.size ? ' · optimized for upload' : '');
-    checkQuality(width, height);
+    checkQuality(width, height, sharpness);
   }
 
   if (dropzone) {
