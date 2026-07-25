@@ -33,13 +33,15 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       imgSrc: ["'self'", 'data:', 'https:'],
-      frameSrc: ["'self'", 'https://www.youtube.com', 'https://player.vimeo.com'],
+      // Google Maps (contact page embed) and Google Drive (video embeds) need
+      // their own domains here too — without these the browser silently
+      // blocks the iframe and it just shows blank.
+      frameSrc: ["'self'", 'https://www.youtube.com', 'https://player.vimeo.com', 'https://www.google.com', 'https://maps.google.com', 'https://drive.google.com'],
       connectSrc: ["'self'", 'https://www.google-analytics.com', 'https://www.facebook.com']
     }
   },
   crossOriginEmbedderPolicy: false
 }));
-
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
