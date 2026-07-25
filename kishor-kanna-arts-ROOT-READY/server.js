@@ -290,7 +290,14 @@ app.get('/portfolio', ah(async (req, res) => {
   }
 
   const categories = await db.getArtTypes();
-  res.render('portfolio', { artworks, categories, activeCategory: category, searchQuery: search });
+  // Only look up wishlist state for logged-in customers — keeps the page fast
+  // and avoids an unnecessary query for anonymous visitors.
+  let wishlistIds = [];
+  if (req.session && req.session.customerId) {
+    const wishRows = await db.find('wishlist', { customer_id: req.session.customerId });
+    wishlistIds = wishRows.map(w => w.artwork_id);
+  }
+  res.render('portfolio', { artworks, categories, activeCategory: category, searchQuery: search, wishlistIds });
 }));
 
 app.get('/portfolio/:id', ah(async (req, res) => {
@@ -318,7 +325,12 @@ app.get('/portfolio/:id', ah(async (req, res) => {
     related = related.concat(fillers);
   }
 
-  res.render('artwork-detail', { artwork, related });
+  let isWishlisted = false;
+  if (req.session && req.session.customerId) {
+    isWishlisted = !!(await db.findOne('wishlist', { customer_id: req.session.customerId, artwork_id: artwork.id }));
+  }
+
+  res.render('artwork-detail', { artwork, related, isWishlisted });
 }));
 
 app.get('/services', ah(async (req, res) => {
@@ -403,6 +415,22 @@ app.get('/order', ah(async (req, res) => {
   const old = {};
   if (req.query.art_type) old.art_type = req.query.art_type;
   if (req.query.size) old.size = req.query.size;
+  // Prefill contact + delivery address fields when they arrive as query params —
+  // this is how "Use for New Order" on a saved address links here.
+  ['name', 'phone', 'email', 'address_line', 'city', 'state', 'pincode'].forEach(f => {
+    if (req.query[f]) old[f] = req.query[f];
+  });
+  // If nothing was passed in and the customer is logged in, quietly prefill
+  // their contact details from their account so returning customers don't
+  // have to retype their name/phone/email every single order.
+  if (req.session && req.session.customerId) {
+    const loggedInCustomer = await db.findById('customers', req.session.customerId);
+    if (loggedInCustomer) {
+      if (!old.name) old.name = loggedInCustomer.name;
+      if (!old.phone && loggedInCustomer.phone) old.phone = loggedInCustomer.phone;
+      if (!old.email && loggedInCustomer.email) old.email = loggedInCustomer.email;
+    }
+  }
   const presetPrice = req.query.price || '';
   res.render('order', { success: null, error: null, blockedDates: blocked.map(r => r.date), old, services, offerDiscount, presetPrice });
 }));
@@ -617,6 +645,140 @@ app.get('/account/dashboard', requireCustomer, ah(async (req, res) => {
   const customer = db.normalize(await db.findById('customers', req.session.customerId));
   const orders = db.normalize(await db.find('orders', { customer_id: req.session.customerId }, { created_at: -1 }));
   res.render('account/dashboard', { customer, orders });
+}));
+
+// ---------- Profile ----------
+app.get('/account/profile', requireCustomer, ah(async (req, res) => {
+  const customer = db.normalize(await db.findById('customers', req.session.customerId));
+  res.render('account/profile', {
+    customer,
+    profileSuccess: req.query.saved === '1',
+    profileError: null,
+    passwordSuccess: req.query.pw === '1',
+    passwordError: null
+  });
+}));
+
+app.post('/account/profile', requireCustomer, ah(async (req, res) => {
+  const { name, phone } = req.body;
+  if (!name || !name.trim()) {
+    const customer = db.normalize(await db.findById('customers', req.session.customerId));
+    return res.render('account/profile', { customer, profileSuccess: false, profileError: 'Name is required.', passwordSuccess: false, passwordError: null });
+  }
+  await db.updateById('customers', req.session.customerId, { name: name.trim(), phone: (phone || '').trim() });
+  req.session.customerName = name.trim();
+  res.redirect('/account/profile?saved=1');
+}));
+
+app.post('/account/password', requireCustomer, ah(async (req, res) => {
+  const { current_password, new_password, confirm_password } = req.body;
+  const customer = await db.findById('customers', req.session.customerId);
+  const renderErr = (msg) => res.render('account/profile', {
+    customer: db.normalize(customer), profileSuccess: false, profileError: null, passwordSuccess: false, passwordError: msg
+  });
+
+  if (!bcrypt.compareSync(current_password || '', customer.password_hash)) {
+    return renderErr('Your current password is incorrect.');
+  }
+  if (!new_password || new_password.length < 6) {
+    return renderErr('New password must be at least 6 characters.');
+  }
+  if (new_password !== confirm_password) {
+    return renderErr('New password and confirmation do not match.');
+  }
+  const password_hash = bcrypt.hashSync(new_password, 10);
+  await db.updateById('customers', req.session.customerId, { password_hash });
+  res.redirect('/account/profile?pw=1');
+}));
+
+// ---------- Saved Addresses ----------
+app.get('/account/addresses', requireCustomer, ah(async (req, res) => {
+  const customer = db.normalize(await db.findById('customers', req.session.customerId));
+  const addresses = db.normalize(await db.find('addresses', { customer_id: req.session.customerId }, { created_at: -1 }));
+  res.render('account/addresses', { customer, addresses, addressError: null });
+}));
+
+app.post('/account/addresses', requireCustomer, ah(async (req, res) => {
+  const { label, name, phone, address_line, city, state, pincode } = req.body;
+  if (!name || !address_line || !city || !state || !pincode) {
+    const customer = db.normalize(await db.findById('customers', req.session.customerId));
+    const addresses = db.normalize(await db.find('addresses', { customer_id: req.session.customerId }, { created_at: -1 }));
+    return res.render('account/addresses', { customer, addresses, addressError: 'Please fill in all the required address fields.' });
+  }
+  const isDefault = req.body.is_default === '1';
+  // Only one address can be marked default — clear the flag on the rest
+  // first so we never end up with two "defaults" showing at once.
+  if (isDefault) {
+    await db.getDB().then(d => d.collection('addresses').updateMany({ customer_id: req.session.customerId }, { $set: { is_default: false } }));
+  }
+  const existingCount = await db.count('addresses', { customer_id: req.session.customerId });
+  await db.insertOne('addresses', {
+    customer_id: req.session.customerId,
+    label: (label || '').trim() || 'Address',
+    name: name.trim(),
+    phone: (phone || '').trim(),
+    address_line: address_line.trim(),
+    city: city.trim(),
+    state: state.trim(),
+    pincode: pincode.trim(),
+    is_default: isDefault || existingCount === 0 // first saved address defaults automatically
+  });
+  res.redirect('/account/addresses');
+}));
+
+app.post('/account/addresses/:id/default', requireCustomer, ah(async (req, res) => {
+  const db_ = await db.getDB();
+  await db_.collection('addresses').updateMany({ customer_id: req.session.customerId }, { $set: { is_default: false } });
+  await db.updateById('addresses', req.params.id, { is_default: true });
+  res.redirect('/account/addresses');
+}));
+
+app.post('/account/addresses/:id/delete', requireCustomer, ah(async (req, res) => {
+  // Ownership check — a customer can only ever delete their own saved address,
+  // never one belonging to someone else even if they guess the id.
+  const address = await db.findById('addresses', req.params.id);
+  if (address && address.customer_id === req.session.customerId) {
+    await db.deleteById('addresses', req.params.id);
+  }
+  res.redirect('/account/addresses');
+}));
+
+// ---------- Wishlist ----------
+app.post('/wishlist/:artworkId/toggle', requireCustomer, ah(async (req, res) => {
+  const existing = await db.findOne('wishlist', { customer_id: req.session.customerId, artwork_id: req.params.artworkId });
+  if (existing) {
+    await db.deleteById('wishlist', existing._id.toString());
+  } else {
+    await db.insertOne('wishlist', { customer_id: req.session.customerId, artwork_id: req.params.artworkId });
+  }
+  // Send the visitor back to wherever they clicked the heart from (portfolio
+  // grid, artwork detail page, or the wishlist page itself when removing).
+  res.redirect(req.body.redirect_to || req.get('Referer') || '/portfolio');
+}));
+
+app.get('/account/wishlist', requireCustomer, ah(async (req, res) => {
+  const customer = db.normalize(await db.findById('customers', req.session.customerId));
+  const wishRows = await db.find('wishlist', { customer_id: req.session.customerId }, { created_at: -1 });
+  const artworkIds = wishRows.map(w => w.artwork_id).filter(Boolean);
+  let artworks = [];
+  if (artworkIds.length) {
+    const db_ = await db.getDB();
+    const validIds = artworkIds.filter(id => { try { new db.ObjectId(id); return true; } catch { return false; } });
+    artworks = db.normalize(await db_.collection('artworks').find({ _id: { $in: validIds.map(id => new db.ObjectId(id)) } }).toArray());
+    // Preserve most-recently-wished-first order rather than whatever order Mongo returns
+    const orderIndex = artworkIds.reduce((acc, id, i) => { acc[id] = i; return acc; }, {});
+    artworks.sort((a, b) => (orderIndex[a.id] ?? 999) - (orderIndex[b.id] ?? 999));
+  }
+  res.render('account/wishlist', { customer, artworks });
+}));
+
+// ---------- Invoice ----------
+app.get('/account/invoice/:id', requireCustomer, ah(async (req, res) => {
+  const order = db.normalize(await db.findById('orders', req.params.id));
+  if (!order || order.customer_id !== req.session.customerId) {
+    return res.status(404).send('Invoice not found.');
+  }
+  res.render('account/invoice', { order });
 }));
 
 app.post('/testimonials', ah(async (req, res) => {
