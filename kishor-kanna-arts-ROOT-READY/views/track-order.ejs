@@ -2,87 +2,104 @@
 <%- include('partials/header') %>
 
 <section class="section">
-  <h2>Track Your Order</h2>
-  <p class="sub">Enter your Order ID and the phone number used when ordering</p>
+  <div class="container" style="max-width: 720px; margin: 0 auto;">
+    <h2 class="reveal">Track Your Order</h2>
+    <p class="sub reveal">Enter your Order ID and the phone number used when ordering</p>
 
-  <div class="form-box">
-    <form action="/track-order" method="POST">
-      <div class="form-group"><label>Order ID</label><input type="text" name="order_code" value="<%= typeof presetOrderCode !== 'undefined' ? presetOrderCode : '' %>" required placeholder="e.g. KKA-123456-AB3DE"></div>
-      <div class="form-group"><label>Phone Number</label><input type="text" name="phone" required></div>
-      <button class="btn" type="submit">Track Order</button>
-    </form>
+    <div class="card track-card reveal">
+      <div class="card-body">
+        <form action="/track-order" method="POST" class="track-form">
+          <div class="form-group"><label>Order ID</label><input type="text" name="order_code" value="<%= typeof presetOrderCode !== 'undefined' ? presetOrderCode : '' %>" required placeholder="e.g. KKA-123456-AB3DE"></div>
+          <div class="form-group"><label>Phone Number</label><input type="text" name="phone" required></div>
+          <button class="btn btn-gold" type="submit" style="width:100%;">Track Order</button>
+        </form>
+      </div>
+    </div>
 
     <% if (searched) { %>
       <% if (order) { %>
-        <hr style="margin:26px 0; border-color:var(--border);">
-        <h3>Order <%= order.order_code %></h3>
-
         <%
           const pipeline = ['Received','Confirmed','In Progress','Completed','Artwork Sent - Awaiting Confirmation','Customer Confirmed','Delivered'];
           const stepLabels = ['Order Received','Confirmed','In Progress','Artwork Completed','Sent for Your Approval','You Approved It','Delivered'];
           const currentIndex = pipeline.indexOf(order.status);
+          const percentComplete = order.status === 'Cancelled' ? 0 : Math.round(((currentIndex + 1) / pipeline.length) * 100);
         %>
-        <% if (order.status === 'Cancelled') { %>
-          <div class="tracker-cancelled">This order was cancelled. If you think this is a mistake, please contact us.</div>
-        <% } else { %>
-          <div class="tracker-wrap">
-            <div class="tracker">
-              <% pipeline.forEach((step, i) => { %>
-                <div class="tracker-step <%= i < currentIndex ? 'completed' : (i === currentIndex ? 'current' : '') %>">
-                  <div class="tracker-dot"><%= i < currentIndex ? '✓' : (i + 1) %></div>
-                  <div class="tracker-label"><%= stepLabels[i] %></div>
-                </div>
-              <% }) %>
+
+        <div class="card track-card reveal" style="margin-top:20px;">
+          <div class="card-body">
+            <div class="track-header">
+              <h3 style="margin:0;">Order <%= order.order_code %></h3>
+              <% if (order.status !== 'Cancelled') { %><span class="track-percent"><%= percentComplete %>% Complete</span><% } %>
             </div>
-          </div>
-        <% } %>
 
-        <p><strong>Art Type:</strong> <%= order.art_type %> &nbsp; | &nbsp; <strong>Size:</strong> <%= order.size %></p>
-        <p><strong>Placed on:</strong> <%= order.created_at %></p>
-   <% if (order.estimated_price) { %><p><strong>Estimated Price:</strong> ₹<%= order.estimated_price %><% if (order.discount_percent_applied > 0) { %> (<%= order.discount_percent_applied %>% off applied)<% } %></p><% } %>
-        <% if (order.delivery_date) { %><p><strong>Preferred Delivery:</strong> <%= order.delivery_date %></p><% } %>
-        <% if (order.address_line || order.city) { %><p><strong>Delivery Address:</strong> <%= [order.address_line, order.city, order.state, order.pincode].filter(Boolean).join(', ') %></p><% } %>
-        <% if (order.notes) { %><p><strong>Notes:</strong> <%= order.notes %></p><% } %>
-
-        <% if (order.advance_amount) { %>
-          <div style="margin-top:16px; padding:16px; border-radius:10px; background:<%= order.advance_paid ? '#e6f4ea' : '#fff2cc' %>; border:1px solid <%= order.advance_paid ? '#b7e0c4' : '#e6cf87' %>;">
-            <strong><%= order.advance_paid ? '✓ Advance Payment Received' : 'Advance Payment Pending' %></strong> — <%= order.advance_amount %>
-            <% if (!order.advance_paid && order.advance_payment_link) { %>
-              <br><a class="btn" style="margin-top:10px;" href="<%= order.advance_payment_link %>" target="_blank">Pay Advance Now</a>
-            <% } %>
-          </div>
-        <% } %>
-       <% if (order.estimated_price && order.advance_amount && !order.balance_amount) { %>
-          <div style="margin-top:12px; padding:16px; border-radius:10px; background:#eef2f7; border:1px solid #d5dee8;">
-            <strong>Remaining Balance (due after work is complete):</strong> ₹<%= (parseFloat(order.estimated_price) - parseFloat(order.advance_amount)).toFixed(0) %>
-          </div>
-        <% } %>
-        <% if (order.balance_amount) { %>
-          <div style="margin-top:12px; padding:16px; border-radius:10px; background:<%= order.balance_paid ? '#e6f4ea' : '#fff2cc' %>; border:1px solid <%= order.balance_paid ? '#b7e0c4' : '#e6cf87' %>;">
-            <strong><%= order.balance_paid ? '✓ Final Payment Received' : 'Final Payment Pending' %></strong> — <%= order.balance_amount %>
-            <% if (!order.balance_paid && order.balance_payment_link) { %>
-              <br><a class="btn" style="margin-top:10px;" href="<%= order.balance_payment_link %>" target="_blank">Pay Balance Now</a>
-            <% } %>
-          </div>
-        <% } %>
-
-        <% if (order.final_artwork_image) { %>
-          <div style="margin-top:20px; padding:18px; border-radius:10px; background:#f4efe8; border:1px solid var(--border);">
-            <h3 style="margin-top:0;">Your Finished Artwork</h3>
-            <img src="<%= order.final_artwork_image %>" alt="Your finished artwork" loading="lazy" decoding="async" style="max-width:100%; border-radius:10px; display:block; margin-bottom:12px;">
-            <% if (order.final_artwork_note) { %><p style="margin-bottom:14px;"><%= order.final_artwork_note %></p><% } %>
-            <% if (order.customer_confirmed) { %>
-              <div class="alert" style="background:#e6f4ea; border:1px solid #b7e0c4; padding:12px 14px; border-radius:8px;">✓ You confirmed this artwork on <%= new Date(order.customer_confirmed_at).toLocaleDateString() %>. We'll proceed with packing &amp; delivery!</div>
+            <% if (order.status === 'Cancelled') { %>
+              <div class="tracker-cancelled">This order was cancelled. If you think this is a mistake, please contact us.</div>
             <% } else { %>
-              <p style="color:var(--muted); font-size:0.9rem; margin-bottom:10px;">Please review the photo above. If it looks good, tap the button below to confirm — we'll then proceed with packing &amp; delivery.</p>
-              <form action="/track-order/confirm" method="POST">
-                <input type="hidden" name="order_code" value="<%= order.order_code %>">
-                <input type="hidden" name="phone" value="<%= order.phone %>">
-                <button class="btn" type="submit">✓ Confirm Artwork</button>
-              </form>
+              <div class="progress-line-outer">
+                <div class="progress-line-inner" style="width: <%= percentComplete %>%;"></div>
+              </div>
+              <div class="tracker-wrap">
+                <div class="tracker">
+                  <% pipeline.forEach((step, i) => { %>
+                    <div class="tracker-step <%= i < currentIndex ? 'completed' : (i === currentIndex ? 'current' : '') %>">
+                      <div class="tracker-dot"><%= i < currentIndex ? '✓' : (i + 1) %></div>
+                      <div class="tracker-label"><%= stepLabels[i] %></div>
+                    </div>
+                  <% }) %>
+                </div>
+              </div>
+            <% } %>
+
+            <div class="track-details">
+              <p><strong>Art Type:</strong> <%= order.art_type %> &nbsp; | &nbsp; <strong>Size:</strong> <%= order.size %></p>
+              <p><strong>Placed on:</strong> <%= order.created_at %></p>
+              <% if (order.estimated_price) { %><p><strong>Estimated Price:</strong> ₹<%= order.estimated_price %><% if (order.discount_percent_applied > 0) { %> (<%= order.discount_percent_applied %>% off applied)<% } %></p><% } %>
+              <% if (order.delivery_date) { %><p><strong>Preferred Delivery:</strong> <%= order.delivery_date %></p><% } %>
+              <% if (order.address_line || order.city) { %><p><strong>Delivery Address:</strong> <%= [order.address_line, order.city, order.state, order.pincode].filter(Boolean).join(', ') %></p><% } %>
+              <% if (order.notes) { %><p><strong>Notes:</strong> <%= order.notes %></p><% } %>
+            </div>
+
+            <% if (order.advance_amount) { %>
+              <div class="track-payment-box <%= order.advance_paid ? 'paid' : 'pending' %>">
+                <strong><%= order.advance_paid ? '✓ Advance Payment Received' : 'Advance Payment Pending' %></strong> — <%= order.advance_amount %>
+                <% if (!order.advance_paid && order.advance_payment_link) { %>
+                  <br><a class="btn btn-gold" style="margin-top:10px;" href="<%= order.advance_payment_link %>" target="_blank">Pay Advance Now</a>
+                <% } %>
+              </div>
+            <% } %>
+            <% if (order.estimated_price && order.advance_amount && !order.balance_amount) { %>
+              <div class="track-payment-box neutral">
+                <strong>Remaining Balance (due after work is complete):</strong> ₹<%= (parseFloat(order.estimated_price) - parseFloat(order.advance_amount)).toFixed(0) %>
+              </div>
+            <% } %>
+            <% if (order.balance_amount) { %>
+              <div class="track-payment-box <%= order.balance_paid ? 'paid' : 'pending' %>">
+                <strong><%= order.balance_paid ? '✓ Final Payment Received' : 'Final Payment Pending' %></strong> — <%= order.balance_amount %>
+                <% if (!order.balance_paid && order.balance_payment_link) { %>
+                  <br><a class="btn btn-gold" style="margin-top:10px;" href="<%= order.balance_payment_link %>" target="_blank">Pay Balance Now</a>
+                <% } %>
+              </div>
+            <% } %>
+
+            <% if (order.final_artwork_image) { %>
+              <div class="track-artwork-box">
+                <h3 style="margin-top:0;">Your Finished Artwork</h3>
+                <img src="<%= order.final_artwork_image %>" alt="Your finished artwork" loading="lazy" decoding="async" style="max-width:100%; border-radius:var(--radius-md,10px); display:block; margin-bottom:12px;">
+                <% if (order.final_artwork_note) { %><p style="margin-bottom:14px;"><%= order.final_artwork_note %></p><% } %>
+                <% if (order.customer_confirmed) { %>
+                  <div class="track-payment-box paid">✓ You confirmed this artwork on <%= new Date(order.customer_confirmed_at).toLocaleDateString() %>. We'll proceed with packing &amp; delivery!</div>
+                <% } else { %>
+                  <p style="color:var(--text-secondary,#777); font-size:0.9rem; margin-bottom:10px;">Please review the photo above. If it looks good, tap the button below to confirm — we'll then proceed with packing &amp; delivery.</p>
+                  <form action="/track-order/confirm" method="POST">
+                    <input type="hidden" name="order_code" value="<%= order.order_code %>">
+                    <input type="hidden" name="phone" value="<%= order.phone %>">
+                    <button class="btn btn-gold" type="submit">✓ Confirm Artwork</button>
+                  </form>
+                <% } %>
+              </div>
             <% } %>
           </div>
-        <% } %>
+        </div>
 
       <% } else { %>
         <div class="alert alert-error" style="margin-top:20px;">No order found with that Order ID and phone number. Please check and try again.</div>
