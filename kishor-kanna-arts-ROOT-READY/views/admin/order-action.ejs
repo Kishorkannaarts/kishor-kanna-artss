@@ -12,6 +12,9 @@
     <% if (!order.email) { %>
       <div class="error-box">This customer didn't provide an email address, so no email can be sent — but you can still update the order status below.</div>
     <% } %>
+    <% if (typeof error !== 'undefined' && error) { %>
+      <div class="error-box"><%= error %></div>
+    <% } %>
 
     <form class="admin-form" action="<%= actionUrl %>" method="POST">
       <% if (actionType === 'advance' || actionType === 'balance') { %>
@@ -23,9 +26,9 @@
           <% } %>
         </div>
         <div class="form-group">
-          <label>Payment Link</label>
-          <input type="text" name="payment_link" value="<%= defaultLink %>" placeholder="e.g. https://razorpay.me/@yourname or upi://pay?..." required>
-          <small style="color:var(--muted);">Paste the full link (starting with https:// or upi://). If you forget the https://, we'll add it automatically.</small>
+          <label>Payment Link (optional)</label>
+          <input type="text" name="payment_link" value="<%= defaultLink %>" placeholder="Leave blank to auto-generate a Razorpay link">
+          <small style="color:var(--muted);">Leave blank and we'll create a Razorpay payment link automatically (if Razorpay is set up — see README). Or paste your own link (https:// or upi://) to override.</small>
         </div>
       <% } %>
       <% if (actionType === 'reject') { %>
