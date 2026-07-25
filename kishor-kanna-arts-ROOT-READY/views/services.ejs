@@ -7,8 +7,31 @@
     <h2>Services</h2>
     <p class="sub">Choose a service and size to get started</p>
     <div class="grid grid-2 grid-services">
-      <% services.forEach(s => { %>
-        <div class="card">
+      <%
+        // Matches each service card to one of the mega-menu's anchor links
+        // in the header (Pencil/Color/Canvas/Couple/Pet) by keyword, so
+        // "/services#pencil" etc. actually lands on the right card instead
+        // of just the top of the page. First matching keyword wins; a
+        // service whose title doesn't match any of these just gets no id,
+        // which is harmless.
+        const usedAnchors = new Set();
+        function anchorId(title) {
+          const t = (title || '').toLowerCase();
+          const rules = [
+            ['pencil', 'pencil'],
+            ['colour', 'color'], ['color', 'color'],
+            ['canvas', 'canvas'],
+            ['couple', 'couple'], ['wedding', 'couple'],
+            ['pet', 'pet']
+          ];
+          for (const [keyword, id] of rules) {
+            if (t.includes(keyword) && !usedAnchors.has(id)) { usedAnchors.add(id); return id; }
+          }
+          return null;
+        }
+      %>
+      <% services.forEach(s => { const aid = anchorId(s.title); %>
+        <div class="card"<% if (aid) { %> id="<%= aid %>" style="scroll-margin-top: calc(var(--header-h, 76px) + 16px);"<% } %>>
           <img src="<%= s.image || 'https://placehold.co/400x300?text=Service' %>" alt="<%= s.title %>" loading="lazy" decoding="async">
           <div class="card-body">
             <h3><%= s.title %></h3>
