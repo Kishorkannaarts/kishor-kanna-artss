@@ -7,6 +7,21 @@
   <%- include('partials/sidebar') %>
   <div class="admin-main">
     <div class="admin-topbar"><h1>Orders</h1></div>
+    <form method="GET" action="/admin/orders" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:18px; background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:14px;">
+      <input type="text" name="q" value="<%= q %>" placeholder="Search order ID, name, phone, email" style="flex:1; min-width:200px; padding:9px 12px; border-radius:6px; background:var(--panel-2); color:var(--text); border:1px solid var(--border);">
+      <select name="status" style="padding:9px 12px; border-radius:6px; background:var(--panel-2); color:var(--text); border:1px solid var(--border);">
+        <option value="">All Statuses</option>
+        <% ['Received','Confirmed','In Progress','Completed','Artwork Sent - Awaiting Confirmation','Customer Confirmed','Delivered','Cancelled'].forEach(s => { %>
+          <option value="<%= s %>" <%= status === s ? 'selected' : '' %>><%= s %></option>
+        <% }) %>
+      </select>
+      <select name="sort" style="padding:9px 12px; border-radius:6px; background:var(--panel-2); color:var(--text); border:1px solid var(--border);">
+        <option value="newest" <%= sort === 'newest' ? 'selected' : '' %>>Newest First</option>
+        <option value="oldest" <%= sort === 'oldest' ? 'selected' : '' %>>Oldest First</option>
+      </select>
+      <button class="btn btn-primary btn-sm" type="submit">Filter</button>
+      <% if (q || status || sort !== 'newest') { %><a class="btn btn-ghost btn-sm" href="/admin/orders">Clear</a><% } %>
+    </form>
     <table>
       <tr><th>Order ID</th><th>Customer</th><th>Type / Size</th><th>Reference</th><th>Status</th><th>Payments</th><th>Expenses</th><th>Actions</th></tr>
       <% orders.forEach(o => { %>
@@ -77,7 +92,7 @@
           </td>
         </tr>
       <% }) %>
-      <% if (orders.length === 0) { %><tr><td colspan="8">No orders yet.</td></tr><% } %>
+      <% if (orders.length === 0) { %><tr><td colspan="8"><%= (q || status) ? 'No orders match your search/filter.' : 'No orders yet.' %></td></tr><% } %>
     </table>
   </div>
 </div>
