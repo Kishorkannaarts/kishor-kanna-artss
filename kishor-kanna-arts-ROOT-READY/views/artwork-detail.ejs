@@ -2,6 +2,10 @@
 <% pageDescription = (artwork.description || `${artwork.title} — a hand-made ${artwork.category || 'custom'} portrait${artwork.size ? ' in ' + artwork.size : ''}.`).slice(0, 160) %>
 <% pageImage = artwork.image %>
 <%- include('partials/header') %>
+<div class="container">
+  <% crumbs = [{ name: 'Home', url: '/' }, { name: 'Portfolio', url: '/portfolio' }, { name: artwork.title }] %>
+  <%- include('partials/breadcrumbs') %>
+</div>
 
 <section class="section">
   <div class="container" style="max-width:900px;">
