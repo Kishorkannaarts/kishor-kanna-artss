@@ -11,6 +11,8 @@ const compression = require('compression');
 const helmet = require('helmet');
 const db = require('./db');
 const mailer = require('./mailer');
+const notify = require('./notify');
+const razorpay = require('./razorpay');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -47,7 +49,11 @@ cloudinary.config({
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+// The `verify` hook stashes the exact raw bytes of every JSON request body
+// on req.rawBody. Razorpay's webhook signature is computed over those exact
+// raw bytes, not the re-serialized object — capturing it here (once,
+// globally) is simpler than giving the webhook route its own body parser.
+app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
 app.use('/public', express.static(path.join(__dirname, 'public')));
 
 const sessionsDir = path.join(__dirname, 'data', 'sessions');
@@ -388,6 +394,7 @@ app.get('/order', ah(async (req, res) => {
   if (email) {
     mailer.sendMail({ to: email, subject: renderTemplate(s.tmpl_order_received_subject, data), html: renderTemplate(s.tmpl_order_received_body, data).replace(/\n/g, '<br>') });
   }
+  notify.notifyOrder('order_received', { phone }, data);
 
   res.render('order', { success: order_code, error: null, blockedDates, old: {}, services, offerDiscount, presetPrice: '' });
 }));
@@ -417,6 +424,55 @@ app.post('/track-order/confirm', ah(async (req, res) => {
   }
   const refreshed = db.normalize(await db.findOne('orders', { order_code, phone }));
   res.render('track-order', { order: refreshed || undefined, searched: true, presetOrderCode: order_code || '' });
+}));
+
+// =========================================================
+// Payment Webhooks
+// =========================================================
+// Razorpay calls this the instant a payment link is paid, so an order flips
+// to "paid" automatically instead of waiting for the admin to notice and
+// click the manual "Mark Paid" button. Configure this URL
+// (https://yourdomain.com/webhooks/razorpay) under Razorpay Dashboard >
+// Settings > Webhooks, subscribed to the "payment_link.paid" event, and put
+// that webhook's secret in RAZORPAY_WEBHOOK_SECRET. See README "Payments Setup".
+app.post('/webhooks/razorpay', ah(async (req, res) => {
+  const signature = req.get('x-razorpay-signature');
+  if (!razorpay.verifyWebhookSignature(req.rawBody, signature)) {
+    console.warn('[webhooks/razorpay] Invalid or missing signature - ignoring');
+    return res.status(400).send('Invalid signature');
+  }
+
+  if (req.body.event !== 'payment_link.paid') return res.json({ ok: true }); // not an event we act on
+
+  const link = req.body.payload && req.body.payload.payment_link && req.body.payload.payment_link.entity;
+  if (!link) return res.json({ ok: true });
+
+  // We stored Razorpay's payment_link id on the order when we created it, so
+  // we can match this webhook back to the right order and the right stage
+  // (advance vs balance) without guessing from the amount alone.
+  let order = db.normalize(await db.findOne('orders', { advance_payment_link_id: link.id }));
+  let stage = 'advance';
+  if (!order) {
+    order = db.normalize(await db.findOne('orders', { balance_payment_link_id: link.id }));
+    stage = 'balance';
+  }
+  if (!order) return res.json({ ok: true }); // not one of ours
+
+  const s = res.locals.settings;
+  const trackUrl = `${res.locals.siteUrl}/track-order`;
+
+  if (stage === 'advance' && !order.advance_paid) {
+    await db.updateById('orders', order.id, { advance_paid: true, status: 'In Progress' });
+    const data = { name: order.name, order_code: order.order_code, status: 'In Progress', amount: order.advance_amount, track_url: trackUrl, site_name: s.site_name };
+    if (order.email) await mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_status_update_subject, data), html: renderTemplate(s.tmpl_status_update_body, data).replace(/\n/g, '<br>') });
+    notify.notifyOrder('advance_paid', order, data);
+  } else if (stage === 'balance' && !order.balance_paid) {
+    await db.updateById('orders', order.id, { balance_paid: true });
+    const data = { name: order.name, order_code: order.order_code, amount: order.balance_amount, site_name: s.site_name };
+    notify.notifyOrder('balance_paid', order, data);
+  }
+
+  res.json({ ok: true });
 }));
 
 // =========================================================
@@ -669,26 +725,47 @@ app.post('/admin/orders/:id/status', requireAdmin, ah(async (req, res) => {
     const data = { name: order.name, order_code: order.order_code, status: order.status, track_url: trackUrl, site_name: s.site_name };
     mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_status_update_subject, data), html: renderTemplate(s.tmpl_status_update_body, data).replace(/\n/g, '<br>') });
   }
+  notify.notifyOrder('status_update', order, data);
   res.redirect('/admin/orders');
 }));
 
 app.get('/admin/orders/:id/advance', requireAdmin, ah(async (req, res) => {
   const order = db.normalize(await db.findById('orders', req.params.id));
   if (!order) return res.redirect('/admin/orders');
-  res.render('admin/order-action', { order, actionType: 'advance', title: 'Request Advance Payment', actionUrl: `/admin/orders/${order.id}/advance`, defaultLink: res.locals.settings.default_payment_link, suggestedAmount: null });
+  res.render('admin/order-action', { order, actionType: 'advance', title: 'Request Advance Payment', actionUrl: `/admin/orders/${order.id}/advance`, defaultLink: res.locals.settings.default_payment_link, suggestedAmount: null, error: null });
 }));
 
 app.post('/admin/orders/:id/advance', requireAdmin, ah(async (req, res) => {
-  const { amount, payment_link } = req.body;
+  const { amount } = req.body;
+  let payment_link = (req.body.payment_link || '').trim();
   const order = db.normalize(await db.findById('orders', req.params.id));
   if (!order) return res.redirect('/admin/orders');
-  await db.updateById('orders', req.params.id, { status: 'Confirmed', advance_amount: amount, advance_payment_link: payment_link, advance_paid: false });
+
+  // If the admin left the link blank, auto-generate one via Razorpay instead
+  // of requiring a manual paste every time.
+  let advance_payment_link_id = null;
+  if (!payment_link && razorpay.isConfigured()) {
+    const link = await razorpay.createPaymentLink({
+      amount,
+      description: `Advance payment - ${order.order_code}`,
+      name: order.name, phone: order.phone, email: order.email,
+      referenceId: `${order.order_code}-advance-${Date.now()}`,
+      callbackUrl: `${res.locals.siteUrl}/track-order?order_code=${encodeURIComponent(order.order_code)}`
+    });
+    if (link) { payment_link = link.short_url; advance_payment_link_id = link.id; }
+  }
+  if (!payment_link) {
+    return res.render('admin/order-action', { order, actionType: 'advance', title: 'Request Advance Payment', actionUrl: `/admin/orders/${order.id}/advance`, defaultLink: res.locals.settings.default_payment_link, suggestedAmount: null, error: 'Enter a payment link, or configure Razorpay (see README) so one is generated automatically.' });
+  }
+
+  await db.updateById('orders', req.params.id, { status: 'Confirmed', advance_amount: amount, advance_payment_link: payment_link, advance_payment_link_id, advance_paid: false });
+  const s = res.locals.settings;
+  const trackUrl = `${req.protocol}://${req.get('host')}/track-order`;
+  const data = { name: order.name, order_code: order.order_code, art_type: order.art_type, amount, payment_link, track_url: trackUrl, site_name: s.site_name };
   if (order.email) {
-    const s = res.locals.settings;
-    const trackUrl = `${req.protocol}://${req.get('host')}/track-order`;
-    const data = { name: order.name, order_code: order.order_code, art_type: order.art_type, amount, payment_link, track_url: trackUrl, site_name: s.site_name };
     await mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_advance_subject, data), html: renderTemplate(s.tmpl_advance_body, data).replace(/\n/g, '<br>') });
   }
+  notify.notifyOrder('advance_requested', order, data);
   res.redirect('/admin/orders');
 }));
 
@@ -696,19 +773,20 @@ app.post('/admin/orders/:id/advance-paid', requireAdmin, ah(async (req, res) => 
   const order = db.normalize(await db.findById('orders', req.params.id));
   if (!order) return res.redirect('/admin/orders');
   await db.updateById('orders', req.params.id, { advance_paid: true, status: 'In Progress' });
+  const s = res.locals.settings;
+  const trackUrl = `${req.protocol}://${req.get('host')}/track-order`;
+  const data = { name: order.name, order_code: order.order_code, status: 'In Progress', amount: order.advance_amount, track_url: trackUrl, site_name: s.site_name };
   if (order.email) {
-    const s = res.locals.settings;
-    const trackUrl = `${req.protocol}://${req.get('host')}/track-order`;
-    const data = { name: order.name, order_code: order.order_code, status: 'In Progress', track_url: trackUrl, site_name: s.site_name };
     await mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_status_update_subject, data), html: renderTemplate(s.tmpl_status_update_body, data).replace(/\n/g, '<br>') });
   }
+  notify.notifyOrder('advance_paid', order, data);
   res.redirect('/admin/orders');
 }));
 
 app.get('/admin/orders/:id/reject', requireAdmin, ah(async (req, res) => {
   const order = db.normalize(await db.findById('orders', req.params.id));
   if (!order) return res.redirect('/admin/orders');
-  res.render('admin/order-action', { order, actionType: 'reject', title: 'Reject & Ask For a New Date', actionUrl: `/admin/orders/${order.id}/reject`, defaultLink: '', suggestedAmount: null });
+  res.render('admin/order-action', { order, actionType: 'reject', title: 'Reject & Ask For a New Date', actionUrl: `/admin/orders/${order.id}/reject`, defaultLink: '', suggestedAmount: null, error: null });
 }));
 
 app.post('/admin/orders/:id/reject', requireAdmin, ah(async (req, res) => {
@@ -716,12 +794,13 @@ app.post('/admin/orders/:id/reject', requireAdmin, ah(async (req, res) => {
   const order = db.normalize(await db.findById('orders', req.params.id));
   if (!order) return res.redirect('/admin/orders');
   await db.updateById('orders', req.params.id, { status: 'Date Rejected - Awaiting Reply' });
+  const s = res.locals.settings;
+  const trackUrl = `${req.protocol}://${req.get('host')}/track-order`;
+  const data = { name: order.name, order_code: order.order_code, reason: reason || 'Requested date unavailable', track_url: trackUrl, site_name: s.site_name };
   if (order.email) {
-    const s = res.locals.settings;
-    const trackUrl = `${req.protocol}://${req.get('host')}/track-order`;
-    const data = { name: order.name, order_code: order.order_code, reason: reason || 'Requested date unavailable', track_url: trackUrl, site_name: s.site_name };
     await mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_reject_subject, data), html: renderTemplate(s.tmpl_reject_body, data).replace(/\n/g, '<br>') });
   }
+  notify.notifyOrder('rejected', order, data);
   res.redirect('/admin/orders');
 }));
 
@@ -732,25 +811,52 @@ app.get('/admin/orders/:id/balance', requireAdmin, ah(async (req, res) => {
   const est = parseFloat(order.estimated_price);
   const adv = parseFloat(order.advance_amount);
   if (est && adv) suggestedAmount = (est - adv).toFixed(0);
-  res.render('admin/order-action', { order, actionType: 'balance', title: 'Request Balance (Final) Payment', actionUrl: `/admin/orders/${order.id}/balance`, defaultLink: res.locals.settings.default_payment_link, suggestedAmount });
+  res.render('admin/order-action', { order, actionType: 'balance', title: 'Request Balance (Final) Payment', actionUrl: `/admin/orders/${order.id}/balance`, defaultLink: res.locals.settings.default_payment_link, suggestedAmount, error: null });
 }));
 
 app.post('/admin/orders/:id/balance', requireAdmin, ah(async (req, res) => {
-  const { amount, payment_link } = req.body;
+  const { amount } = req.body;
+  let payment_link = (req.body.payment_link || '').trim();
   const order = db.normalize(await db.findById('orders', req.params.id));
   if (!order) return res.redirect('/admin/orders');
-  await db.updateById('orders', req.params.id, { status: 'Completed', balance_amount: amount, balance_payment_link: payment_link, balance_paid: false });
+
+  let balance_payment_link_id = null;
+  if (!payment_link && razorpay.isConfigured()) {
+    const link = await razorpay.createPaymentLink({
+      amount,
+      description: `Balance payment - ${order.order_code}`,
+      name: order.name, phone: order.phone, email: order.email,
+      referenceId: `${order.order_code}-balance-${Date.now()}`,
+      callbackUrl: `${res.locals.siteUrl}/track-order?order_code=${encodeURIComponent(order.order_code)}`
+    });
+    if (link) { payment_link = link.short_url; balance_payment_link_id = link.id; }
+  }
+  if (!payment_link) {
+    const est = parseFloat(order.estimated_price);
+    const adv = parseFloat(order.advance_amount);
+    const suggestedAmount = (est && adv) ? (est - adv).toFixed(0) : null;
+    return res.render('admin/order-action', { order, actionType: 'balance', title: 'Request Balance (Final) Payment', actionUrl: `/admin/orders/${order.id}/balance`, defaultLink: res.locals.settings.default_payment_link, suggestedAmount, error: 'Enter a payment link, or configure Razorpay (see README) so one is generated automatically.' });
+  }
+
+  await db.updateById('orders', req.params.id, { status: 'Completed', balance_amount: amount, balance_payment_link: payment_link, balance_payment_link_id, balance_paid: false });
+  const s = res.locals.settings;
+  const trackUrl = `${req.protocol}://${req.get('host')}/track-order`;
+  const data = { name: order.name, order_code: order.order_code, amount, payment_link, track_url: trackUrl, site_name: s.site_name };
   if (order.email) {
-    const s = res.locals.settings;
-    const trackUrl = `${req.protocol}://${req.get('host')}/track-order`;
-    const data = { name: order.name, order_code: order.order_code, amount, payment_link, track_url: trackUrl, site_name: s.site_name };
     await mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_balance_subject, data), html: renderTemplate(s.tmpl_balance_body, data).replace(/\n/g, '<br>') });
   }
+  notify.notifyOrder('balance_requested', order, data);
   res.redirect('/admin/orders');
 }));
 
 app.post('/admin/orders/:id/balance-paid', requireAdmin, ah(async (req, res) => {
+  const order = db.normalize(await db.findById('orders', req.params.id));
   await db.updateById('orders', req.params.id, { balance_paid: true });
+  if (order) {
+    const s = res.locals.settings;
+    const data = { name: order.name, order_code: order.order_code, amount: order.balance_amount, site_name: s.site_name };
+    notify.notifyOrder('balance_paid', order, data);
+  }
   res.redirect('/admin/orders');
 }));
 
@@ -769,6 +875,7 @@ app.post('/admin/orders/:id/shipped', requireAdmin, ah(async (req, res) => {
     const data = { name: order.name, order_code: order.order_code, track_url: trackUrl, site_name: s.site_name };
     await mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_shipped_subject, data), html: renderTemplate(s.tmpl_shipped_body, data).replace(/\n/g, '<br>') });
   }
+  notify.notifyOrder('shipped', order, data);
   res.redirect('/admin/orders');
 }));
 
@@ -799,6 +906,7 @@ app.post('/admin/orders/:id/send-artwork', requireAdmin, memoryUpload.single('ar
     const data = { name: order.name, order_code: order.order_code, art_type: order.art_type, artwork_image: final_artwork_image, artwork_note: req.body.note || '', track_url: trackUrl, site_name: s.site_name };
     await mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_artwork_ready_subject, data), html: renderTemplate(s.tmpl_artwork_ready_body, data).replace(/\n/g, '<br>') });
   }
+  notify.notifyOrder('artwork_ready', order, data);
   res.redirect('/admin/orders');
 }));
 
