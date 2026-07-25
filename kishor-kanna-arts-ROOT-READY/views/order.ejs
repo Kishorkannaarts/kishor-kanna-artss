@@ -26,6 +26,8 @@
           <div class="wizard-step-dot" data-step="4"><span>4</span><label>Review</label></div>
         </div>
 
+        <div class="wizard-eta" id="wizardEta">⏱ About 60 seconds — you're on step <span id="wizardEtaStep">1</span> of 4</div>
+
         <form action="/order" method="POST" enctype="multipart/form-data" id="orderForm">
           <div id="orderFields">
 
@@ -33,7 +35,7 @@
             <div class="wizard-panel active" data-panel="1">
               <div class="form-row">
                 <div class="form-group"><label>Full Name</label><input type="text" name="name" value="<%= old.name || '' %>" required></div>
-                <div class="form-group"><label>Phone Number</label><input type="text" name="phone" value="<%= old.phone || '' %>" required></div>
+                <div class="form-group"><label>Phone Number</label><input type="tel" name="phone" id="phoneInput" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" placeholder="10-digit mobile number" value="<%= old.phone || '' %>" required></div>
               </div>
               <div class="form-group"><label>Email</label><input type="email" name="email" value="<%= old.email || '' %>"></div>
               <div class="form-row">
@@ -86,8 +88,26 @@
             <div class="wizard-panel" data-panel="2">
               <div class="form-group">
                 <label>Upload Reference Photo</label>
-                <input type="file" name="reference_image" accept="image/*" id="refImageInput">
-                <div class="upload-preview" id="uploadPreview"></div>
+                <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Upload a reference photo">
+                  <div class="dropzone-empty" id="dropzoneEmpty">
+                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4M12 4l-4 4M12 4l4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+                    <p><strong>Tap to choose a photo</strong><br>or drag one here</p>
+                    <span>JPG or PNG, up to 15MB — we'll optimize it automatically</span>
+                  </div>
+                  <div class="dropzone-filled" id="dropzoneFilled" style="display:none;">
+                    <img id="previewImg" alt="Your uploaded photo">
+                    <div class="dropzone-file-info">
+                      <span id="fileNameLabel"></span>
+                      <button type="button" class="btn btn-outline btn-sm" id="changePhotoBtn">Change Photo</button>
+                    </div>
+                  </div>
+                  <div class="dropzone-loading" id="dropzoneLoading" style="display:none;">
+                    <span class="spinner-small"></span> Optimizing photo for a fast upload…
+                  </div>
+                </div>
+                <input type="file" name="reference_image" accept="image/*" id="refImageInput" style="display:none;">
+                <small class="quality-msg" id="qualityMsg" style="display:none;"></small>
+                <small class="upload-error" id="uploadError" style="display:none; color:#a2231d;"></small>
               </div>
               <div class="form-group"><label>Notes / Special Instructions</label><textarea name="notes"><%= old.notes || '' %></textarea></div>
               <div class="wizard-nav">
@@ -145,12 +165,28 @@
             </div>
           </div>
         </form>
+
+        <div class="mobile-order-bar" id="mobileOrderBar">
+          <div class="mobile-order-price" id="mobileOrderPrice">Choose your art &amp; size to see the price</div>
+          <button type="button" class="btn btn-gold" id="mobileOrderBtn">Next</button>
+        </div>
       <% } %>
     </div>
   </div>
 </section>
 
+<div class="submit-overlay" id="submitOverlay">
+  <div class="submit-overlay-box">
+    <span class="spinner-ring"></span>
+    <p>Uploading your photo and placing your order…</p>
+    <small>Please don't close this page</small>
+  </div>
+</div>
+
 <script>
+  <% if (success) { %>
+  try { sessionStorage.removeItem('kka_order_draft'); } catch (e) {}
+  <% } %>
   const servicesData = <%- JSON.stringify(services || []) %>;
   const offerDiscount = <%- offerDiscount || 0 %>;
   const artTypeSelect = document.getElementById('artTypeSelect');
@@ -217,10 +253,16 @@
     discountAppliedInput.value = bestDiscount;
   }
   if (artTypeSelect) {
-    artTypeSelect.addEventListener('change', updatePrice);
-    sizeSelect.addEventListener('change', updatePrice);
+    artTypeSelect.addEventListener('change', function () { updatePrice(); syncMobileBar(); });
+    sizeSelect.addEventListener('change', function () { updatePrice(); syncMobileBar(); });
     updatePrice();
   }
+
+  // ---- Phone number: digits only, max 10 ----
+  const phoneInput = document.getElementById('phoneInput');
+  if (phoneInput) phoneInput.addEventListener('input', function () {
+    phoneInput.value = phoneInput.value.replace(/\D/g, '').slice(0, 10);
+  });
 
   if (applyCouponBtn) applyCouponBtn.addEventListener('click', async function () {
     const code = couponInput.value.trim();
@@ -271,6 +313,22 @@
   // ---- Wizard step navigation ----
   const panels = document.querySelectorAll('.wizard-panel');
   const dots = document.querySelectorAll('.wizard-step-dot');
+  const mobileOrderBar = document.getElementById('mobileOrderBar');
+  const mobileOrderBtn = document.getElementById('mobileOrderBtn');
+  const mobileOrderPrice = document.getElementById('mobileOrderPrice');
+  const wizardEtaStep = document.getElementById('wizardEtaStep');
+
+  function syncMobileBar(step) {
+    if (!mobileOrderBar) return;
+    const currentStep = step || parseInt(document.querySelector('.wizard-panel.active')?.dataset.panel || '1', 10);
+    if (currentStep === 4) mobileOrderBtn.textContent = 'Confirm & Place Order';
+    else if (currentStep === 3) mobileOrderBtn.textContent = 'Review Order →';
+    else mobileOrderBtn.textContent = 'Next →';
+    mobileOrderPrice.textContent = (priceDisplay && priceDisplay.textContent)
+      ? 'Est. ' + priceDisplay.textContent
+      : 'Choose your art & size to see the price';
+  }
+
   function goToStep(n) {
     panels.forEach(p => p.classList.toggle('active', p.dataset.panel === String(n)));
     dots.forEach(d => {
@@ -278,8 +336,19 @@
       d.classList.toggle('active', step === n);
       d.classList.toggle('done', step < n);
     });
+    if (wizardEtaStep) wizardEtaStep.textContent = n;
+    syncMobileBar(n);
     document.querySelector('.wizard-box').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
+  if (mobileOrderBtn) mobileOrderBtn.addEventListener('click', function () {
+    const activePanel = document.querySelector('.wizard-panel.active');
+    if (!activePanel) return;
+    if (activePanel.dataset.panel === '4') { document.getElementById('confirmOrderBtn').click(); return; }
+    if (activePanel.dataset.panel === '3') { reviewOrderBtn.click(); return; }
+    const nextBtn = activePanel.querySelector('.wizard-next');
+    if (nextBtn) nextBtn.click();
+  });
+  syncMobileBar(1);
   document.querySelectorAll('.wizard-next').forEach(btn => {
     btn.addEventListener('click', function () {
       const panel = btn.closest('.wizard-panel');
@@ -292,21 +361,134 @@
     btn.addEventListener('click', function () { goToStep(parseInt(btn.dataset.back, 10)); });
   });
 
-  // Live photo preview on step 2
+  // ---- Step 2: Photo upload — drag & drop, compression, quality check ----
   const refImageInput = document.getElementById('refImageInput');
-  const uploadPreview = document.getElementById('uploadPreview');
-  if (refImageInput) refImageInput.addEventListener('change', function () {
-    uploadPreview.innerHTML = '';
-    if (refImageInput.files && refImageInput.files[0]) {
-      const reader = new FileReader();
-      reader.onload = e => {
-        const img = document.createElement('img');
-        img.src = e.target.result;
-        img.style.cssText = 'max-width:200px; border-radius:8px; margin-top:10px;';
-        uploadPreview.appendChild(img);
-      };
-      reader.readAsDataURL(refImageInput.files[0]);
+  const dropzone = document.getElementById('dropzone');
+  const dropzoneEmpty = document.getElementById('dropzoneEmpty');
+  const dropzoneFilled = document.getElementById('dropzoneFilled');
+  const dropzoneLoading = document.getElementById('dropzoneLoading');
+  const previewImg = document.getElementById('previewImg');
+  const fileNameLabel = document.getElementById('fileNameLabel');
+  const changePhotoBtn = document.getElementById('changePhotoBtn');
+  const qualityMsg = document.getElementById('qualityMsg');
+  const uploadError = document.getElementById('uploadError');
+
+  function showUploadError(msg) {
+    uploadError.textContent = msg;
+    uploadError.style.display = 'block';
+  }
+  function clearUploadError() { uploadError.style.display = 'none'; }
+
+  // Resize/re-compress large phone photos in the browser before upload —
+  // most camera photos are 4-12MB; this gets them down to a fraction of that
+  // with no visible quality loss, which matters a lot on slower mobile data.
+  function loadImageEl(file) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => resolve({ img, url });
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('load-failed')); };
+      img.src = url;
+    });
+  }
+
+  async function compressImage(file, maxDim, quality) {
+    try {
+      const { img, url } = await loadImageEl(file);
+      const w = img.naturalWidth, h = img.naturalHeight;
+      // Skip re-encoding if it's already small — no point spending CPU.
+      if (file.size < 600 * 1024 && Math.max(w, h) <= maxDim) {
+        URL.revokeObjectURL(url);
+        return { file, width: w, height: h };
+      }
+      let targetW = w, targetH = h;
+      if (Math.max(w, h) > maxDim) {
+        const scale = maxDim / Math.max(w, h);
+        targetW = Math.round(w * scale);
+        targetH = Math.round(h * scale);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = targetW; canvas.height = targetH;
+      canvas.getContext('2d').drawImage(img, 0, 0, targetW, targetH);
+      URL.revokeObjectURL(url);
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', quality));
+      if (!blob || blob.size >= file.size) return { file, width: w, height: h };
+      const newName = file.name.replace(/\.[^.]+$/, '') + '.jpg';
+      return { file: new File([blob], newName, { type: 'image/jpeg' }), width: w, height: h };
+    } catch (e) {
+      return { file, width: null, height: null };
     }
+  }
+
+  function setInputFile(file) {
+    try {
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      refImageInput.files = dt.files;
+      return true;
+    } catch (e) {
+      return false; // very old browser — original selection (if any) stays as-is
+    }
+  }
+
+  function checkQuality(w, h) {
+    if (!w || !h) { qualityMsg.style.display = 'none'; return; }
+    const shortSide = Math.min(w, h);
+    if (shortSide < 700) {
+      qualityMsg.textContent = "This photo's resolution is a bit low — for the sharpest large portrait, a clearer photo works best. You can still continue.";
+      qualityMsg.style.color = '#a2691d';
+    } else {
+      qualityMsg.textContent = 'This photo looks sharp — great for a detailed portrait.';
+      qualityMsg.style.color = '#1a7a3f';
+    }
+    qualityMsg.style.display = 'block';
+  }
+
+  async function handleFile(rawFile) {
+    clearUploadError();
+    if (!rawFile) return;
+    if (!rawFile.type.startsWith('image/')) {
+      showUploadError('Please choose an image file (JPG or PNG).');
+      return;
+    }
+    if (rawFile.size > 15 * 1024 * 1024) {
+      showUploadError('That photo is larger than 15MB. Please choose a smaller one.');
+      return;
+    }
+    dropzoneEmpty.style.display = 'none';
+    dropzoneFilled.style.display = 'none';
+    dropzoneLoading.style.display = 'flex';
+
+    const { file, width, height } = await compressImage(rawFile, 1900, 0.82);
+    setInputFile(file);
+
+    dropzoneLoading.style.display = 'none';
+    dropzoneFilled.style.display = 'flex';
+    previewImg.src = URL.createObjectURL(file);
+    fileNameLabel.textContent = rawFile.name + (file.size < rawFile.size ? ' · optimized for upload' : '');
+    checkQuality(width, height);
+  }
+
+  if (dropzone) {
+    dropzone.addEventListener('click', () => refImageInput.click());
+    dropzone.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); refImageInput.click(); } });
+    ['dragover', 'dragenter'].forEach(evt => dropzone.addEventListener(evt, (e) => { e.preventDefault(); dropzone.classList.add('dragover'); }));
+    ['dragleave', 'dragend'].forEach(evt => dropzone.addEventListener(evt, () => dropzone.classList.remove('dragover')));
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+    });
+  }
+  if (refImageInput) refImageInput.addEventListener('change', function () {
+    if (refImageInput.files && refImageInput.files[0]) handleFile(refImageInput.files[0]);
+  });
+  if (changePhotoBtn) changePhotoBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    refImageInput.value = '';
+    dropzoneFilled.style.display = 'none';
+    qualityMsg.style.display = 'none';
+    dropzoneEmpty.style.display = 'flex';
   });
 
   // ---- Review Order step ----
@@ -365,6 +547,48 @@
     orderFields.style.display = 'block';
     goToStep(3);
   });
+
+  // ---- Submit: show a "please wait" overlay and stop double-submits ----
+  const submitOverlay = document.getElementById('submitOverlay');
+  const confirmOrderBtn = document.getElementById('confirmOrderBtn');
+  if (orderForm) orderForm.addEventListener('submit', function () {
+    if (confirmOrderBtn) { confirmOrderBtn.disabled = true; confirmOrderBtn.textContent = 'Placing your order…'; }
+    if (submitOverlay) submitOverlay.classList.add('active');
+    try { sessionStorage.removeItem('kka_order_draft'); } catch (e) {}
+  });
+
+  // ---- Autosave text fields to sessionStorage so an accidental refresh or
+  // back/forward navigation doesn't lose what the customer already typed.
+  // The uploaded photo itself is never persisted this way (can't be, and
+  // shouldn't be — it stays only in the live file input).
+  if (orderForm) {
+    const AUTOSAVE_KEY = 'kka_order_draft';
+    const autosaveFields = orderForm.querySelectorAll('input[type="text"], input[type="tel"], input[type="email"], input[type="date"], select, textarea');
+    function saveDraft() {
+      const data = {};
+      autosaveFields.forEach(f => { if (f.name) data[f.name] = f.value; });
+      try { sessionStorage.setItem(AUTOSAVE_KEY, JSON.stringify(data)); } catch (e) {}
+    }
+    autosaveFields.forEach(f => {
+      f.addEventListener('input', saveDraft);
+      f.addEventListener('change', saveDraft);
+    });
+
+    const hadOldValues = <%- JSON.stringify(!!(old && Object.keys(old).length)) %>;
+    if (!hadOldValues) {
+      try {
+        const raw = sessionStorage.getItem(AUTOSAVE_KEY);
+        if (raw) {
+          const data = JSON.parse(raw);
+          Object.keys(data).forEach(k => {
+            const f = orderForm.elements[k];
+            if (f && !f.value && data[k]) f.value = data[k];
+          });
+          updatePrice();
+        }
+      } catch (e) {}
+    }
+  }
 </script>
 
 <%- include('partials/footer') %>
