@@ -268,7 +268,29 @@ app.get('/portfolio', ah(async (req, res) => {
 app.get('/portfolio/:id', ah(async (req, res) => {
   const artwork = db.normalize(await db.findById('artworks', req.params.id));
   if (!artwork) return res.status(404).send('Artwork not found');
-  res.render('artwork-detail', { artwork });
+
+  // "You Might Also Like" — other pieces in the same category first (most
+  // relevant to someone already looking at this style), topped up with the
+  // most recent artworks overall if the category doesn't have enough on its
+  // own, so the section never looks sparse on a small catalog.
+  let related = db.normalize(await db.find(
+    'artworks',
+    { category: artwork.category, _id: { $ne: new db.ObjectId(artwork.id) } },
+    { created_at: -1 },
+    4
+  ));
+  if (related.length < 4) {
+    const excludeIds = [artwork.id, ...related.map(a => a.id)].map(id => new db.ObjectId(id));
+    const fillers = db.normalize(await db.find(
+      'artworks',
+      { _id: { $nin: excludeIds } },
+      { created_at: -1 },
+      4 - related.length
+    ));
+    related = related.concat(fillers);
+  }
+
+  res.render('artwork-detail', { artwork, related });
 }));
 
 app.get('/services', ah(async (req, res) => {
