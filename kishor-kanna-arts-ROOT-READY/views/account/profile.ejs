@@ -1,0 +1,46 @@
+<% pageTitle = 'My Profile' %>
+<%- include('../partials/header') %>
+
+<section class="section">
+  <div class="account-header">
+    <div>
+      <h2>Hi, <%= customer.name %></h2>
+      <p class="sub"><%= customer.email %></p>
+    </div>
+    <form action="/account/logout" method="POST">
+      <button class="btn btn-outline" type="submit">Log Out</button>
+    </form>
+  </div>
+
+  <% activeTab = 'profile' %>
+  <%- include('../partials/account-nav') %>
+
+  <div class="account-panels">
+    <div class="form-box">
+      <h3>Your Details</h3>
+      <p class="sub">Your email is used to log in and can't be changed here — contact us if it needs updating.</p>
+      <% if (profileSuccess) { %><div class="alert alert-success">Profile updated.</div><% } %>
+      <% if (profileError) { %><div class="alert alert-error"><%= profileError %></div><% } %>
+      <form action="/account/profile" method="POST">
+        <div class="form-group"><label>Full Name</label><input type="text" name="name" value="<%= customer.name %>" required></div>
+        <div class="form-group"><label>Email</label><input type="email" value="<%= customer.email %>" disabled></div>
+        <div class="form-group"><label>Phone</label><input type="text" name="phone" value="<%= customer.phone || '' %>"></div>
+        <button class="btn btn-primary" type="submit">Save Changes</button>
+      </form>
+    </div>
+
+    <div class="form-box">
+      <h3>Change Password</h3>
+      <% if (passwordSuccess) { %><div class="alert alert-success">Password updated.</div><% } %>
+      <% if (passwordError) { %><div class="alert alert-error"><%= passwordError %></div><% } %>
+      <form action="/account/password" method="POST">
+        <div class="form-group"><label>Current Password</label><input type="password" name="current_password" required></div>
+        <div class="form-group"><label>New Password</label><input type="password" name="new_password" minlength="6" required></div>
+        <div class="form-group"><label>Confirm New Password</label><input type="password" name="confirm_password" minlength="6" required></div>
+        <button class="btn btn-primary" type="submit">Update Password</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>
