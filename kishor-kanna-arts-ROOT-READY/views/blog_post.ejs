@@ -1,8 +1,13 @@
 <% pageTitle = post.title %>
+<% pageDescription = (post.excerpt || (post.content || '').replace(/\s+/g,' ').trim()).slice(0, 160) %>
+<% pageImage = post.cover_image %>
 <%- include('partials/header') %>
 
 <section class="section">
   <div class="container" style="max-width:760px;">
+    <% crumbs = [{ name: 'Home', url: '/' }, { name: 'Blog', url: '/blog' }, { name: post.title }] %>
+    <%- include('partials/breadcrumbs') %>
+
     <% if (post.cover_image) { %>
       <img src="<%= post.cover_image %>" alt="<%= post.title %>" fetchpriority="high" decoding="async" style="width:100%; max-height:420px; object-fit:cover; border-radius:12px; margin-bottom:24px;">
     <% } %>
@@ -21,5 +26,20 @@
     </div>
   </div>
 </section>
+
+<script type="application/ld+json">
+<%- JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": post.title,
+  "description": pageDescription,
+  "image": post.cover_image || undefined,
+  "datePublished": post.created_at || undefined,
+  "dateModified": post.updated_at || post.created_at || undefined,
+  "author": { "@type": "Organization", "name": settings.site_name },
+  "publisher": { "@type": "Organization", "name": settings.site_name, "logo": settings.logo_url ? { "@type": "ImageObject", "url": settings.logo_url } : undefined },
+  "mainEntityOfPage": siteUrl + currentPath
+}) %>
+</script>
 
 <%- include('partials/footer') %>
