@@ -46,6 +46,12 @@
         <% if (artwork && artwork.image) { %><img class="thumb" src="<%= artwork.image %>" style="margin-bottom:10px;"><% } %>
         <input type="file" name="image" accept="image/*">
       </div>
+      <div class="form-group">
+        <label>Before Photo (optional — the reference photo, for a Before &amp; After showcase on the homepage)</label>
+        <% if (artwork && artwork.before_image) { %><img class="thumb" src="<%= artwork.before_image %>" style="margin-bottom:10px;"><% } %>
+        <input type="file" name="before_image" accept="image/*">
+        <small style="color:var(--muted); display:block; margin-top:4px;">Only artworks with both a Before Photo and Image appear in the Before &amp; After section.</small>
+      </div>
 
       <% if (artwork && artwork.image) { %>
       <div class="form-group">
