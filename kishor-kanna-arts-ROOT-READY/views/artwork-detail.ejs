@@ -18,7 +18,17 @@
         <% if (artwork.story) { %><p style="color:var(--text-secondary); font-style:italic;"><%= artwork.story %></p><% } %>
         <p><strong>Size:</strong> <%= artwork.size || '—' %></p>
         <% if (artwork.price) { %><p><strong>Price:</strong> <%= artwork.price %></p><% } %>
-        <a class="btn btn-gold" href="/order?art_type=<%= encodeURIComponent(artwork.category) %>&size=<%= encodeURIComponent(artwork.size || '') %>&price=<%= encodeURIComponent(artwork.price || '') %>">Order Similar Artwork</a>
+        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+          <a class="btn btn-gold" href="/order?art_type=<%= encodeURIComponent(artwork.category) %>&size=<%= encodeURIComponent(artwork.size || '') %>&price=<%= encodeURIComponent(artwork.price || '') %>">Order Similar Artwork</a>
+          <% if (isCustomer) { %>
+            <form action="/wishlist/<%= artwork.id %>/toggle" method="POST">
+              <input type="hidden" name="redirect_to" value="/portfolio/<%= artwork.id %>">
+              <button type="submit" class="btn btn-outline <%= isWishlisted ? 'is-wished' : '' %>">&#10084; <%= isWishlisted ? 'Saved to Wishlist' : 'Save to Wishlist' %></button>
+            </form>
+          <% } else { %>
+            <a class="btn btn-outline" href="/account/login?next=<%= encodeURIComponent('/portfolio/' + artwork.id) %>">&#10084; Save to Wishlist</a>
+          <% } %>
+        </div>
       </div>
     </div>
   </div>
