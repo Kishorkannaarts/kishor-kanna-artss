@@ -429,15 +429,18 @@ app.get('/order', ah(async (req, res) => {
       appliedCouponCode = couponResult.coupon.code;
     }
   }
-  const basePrice = parseFloat(String(estimated_price || '0').replace(/[^0-9.]/g, '')) || null;
-  const finalPrice = basePrice && discount_percent_applied
-    ? (basePrice / (1 - (parseFloat(req.body.discount_percent_applied || 0) || 0) / 100) * (1 - discount_percent_applied / 100))
-    : basePrice;
+  // Recompute the true base price server-side from the services list — never
+  // trust the client-submitted estimated_price/discount_percent_applied,
+  // since those are just hidden form fields anyone can edit before submitting.
+  const matchedService = services.find(sv => sv.title === art_type);
+  const verifiedBasePrice = parseFloat(String(priceForSize(matchedService, size) || '').replace(/[^0-9.]/g, '')) || null;
+  const finalPrice = verifiedBasePrice
+    ? (verifiedBasePrice - (verifiedBasePrice * discount_percent_applied / 100))
+    : null; // Custom size (or unrecognised art type) — price to be confirmed manually, same as before
 
   const order_code = genOrderCode();
   const refImage = await uploadImage(req.file, 'orders');
-  await db.insertOne('orders', { order_code, name, phone, email, art_type, size, reference_image: refImage, delivery_date, notes, estimated_price: finalPrice ? finalPrice.toFixed(0) : (estimated_price || null), discount_percent_applied, coupon_code: appliedCouponCode, address_line, city, state, pincode, status: 'Received', advance_amount: null, advance_payment_link: null, advance_paid: false, balance_amount: null, balance_payment_link: null, balance_paid: false, customer_id: (req.session && req.session.customerId) || null });
-
+  await db.insertOne('orders', { order_code, name, phone, email, art_type, size, reference_image: refImage, delivery_date, notes, estimated_price: finalPrice ? finalPrice.toFixed(0) : null, discount_percent_applied, coupon_code: appliedCouponCode, address_line, city, state, pincode, status: 'Received', advance_amount: null, advance_payment_link: null, advance_paid: false, balance_amount: null, balance_payment_link: null, balance_paid: false, customer_id: (req.session && req.session.customerId) || null });
   if (appliedCouponCode) {
     const mdb = await db.getDB();
     await mdb.collection('coupons').updateOne({ code: appliedCouponCode }, { $inc: { used_count: 1 } });
