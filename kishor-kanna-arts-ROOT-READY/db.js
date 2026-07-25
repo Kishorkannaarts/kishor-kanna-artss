@@ -221,6 +221,10 @@ Please review it and confirm so we can proceed with packing & delivery:
   await db.collection('blocked_dates').createIndex({ date: 1 }, { unique: true, background: true });
   await db.collection('settings').createIndex({ key: 1 }, { unique: true, background: true });
   await db.collection('customers').createIndex({ email: 1 }, { unique: true, background: true });
+  await db.collection('addresses').createIndex({ customer_id: 1 }, { background: true });
+  // One wishlist row per customer+artwork — toggling relies on this being unique
+  // so we can't ever end up with duplicate hearts on the same piece.
+  await db.collection('wishlist').createIndex({ customer_id: 1, artwork_id: 1 }, { unique: true, background: true });
 
   console.log('[db] MongoDB connected and schema ready');
 }
