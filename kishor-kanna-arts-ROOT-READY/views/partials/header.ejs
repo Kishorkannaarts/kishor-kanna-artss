@@ -48,7 +48,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,500;0,600;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/public/css/style.css?v=3">
+<link rel="stylesheet" href="/public/css/style.css?v=4">
 
 <% if (!_isAdminPath && settings.ga_measurement_id) { %>
 <script async src="https://www.googletagmanager.com/gtag/js?id=<%= settings.ga_measurement_id %>"></script>
@@ -142,8 +142,34 @@
   document.addEventListener('DOMContentLoaded', function () {
     var btn = document.getElementById('menuToggle');
     var nav = document.querySelector('.nav');
+    function setNavOpen(isOpen) {
+      if (!nav) return;
+      nav.classList.toggle('open', isOpen);
+      // Belt-and-braces: set inline styles directly too, so this can never be
+      // silently neutralized by an unrelated rule elsewhere in the stylesheet.
+      if (isOpen) {
+        nav.style.transform = 'translateX(0)';
+        nav.style.visibility = 'visible';
+        nav.style.opacity = '1';
+      } else {
+        nav.style.transform = '';
+        nav.style.visibility = '';
+        nav.style.opacity = '';
+      }
+    }
     if (btn && nav) {
-      btn.addEventListener('click', function () { nav.classList.toggle('open'); });
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        setNavOpen(!nav.classList.contains('open'));
+      });
+      nav.querySelectorAll('a').forEach(function (link) {
+        link.addEventListener('click', function () { setNavOpen(false); });
+      });
+      document.addEventListener('click', function (e) {
+        if (nav.classList.contains('open') && !nav.contains(e.target) && e.target !== btn) {
+          setNavOpen(false);
+        }
+      });
     }
 
     var header = document.getElementById('siteHeader');
