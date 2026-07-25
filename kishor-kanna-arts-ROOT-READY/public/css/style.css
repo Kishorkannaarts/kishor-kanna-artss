@@ -695,3 +695,31 @@ a:hover { color: var(--color-gold); }
 .breadcrumbs a:hover { color: var(--color-gold); }
 .crumb-sep { margin: 0 4px; opacity: 0.5; }
 .crumb-current { color: var(--text-primary); font-weight: 500; }
+/* ---------- Before & After slider (homepage) ---------- */
+.grid-ba { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.ba-slider {
+  position: relative; width: 100%; aspect-ratio: 4 / 3; border-radius: var(--radius-md);
+  overflow: hidden; box-shadow: var(--shadow-soft); user-select: none; touch-action: pan-y;
+}
+.ba-after, .ba-before { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.ba-before { clip-path: inset(0 50% 0 0); }
+.ba-handle {
+  position: absolute; top: 0; bottom: 0; left: 50%; width: 3px; background: #fff;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.15); transform: translateX(-50%); pointer-events: none; z-index: 2;
+}
+.ba-handle::after {
+  content: '⟷'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 34px; height: 34px; border-radius: 50%; background: #fff; color: var(--ink, #221a16);
+  display: flex; align-items: center; justify-content: center; font-size: 1rem; box-shadow: var(--shadow-soft);
+}
+.ba-label {
+  position: absolute; top: 12px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase;
+  background: rgba(0,0,0,0.55); color: #fff; padding: 4px 10px; border-radius: 20px; z-index: 3; pointer-events: none;
+}
+.ba-label-before { left: 12px; }
+.ba-label-after { right: 12px; }
+.ba-range {
+  position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: ew-resize; z-index: 4;
+  -webkit-appearance: none; appearance: none;
+}
+.ba-range::-webkit-slider-thumb { -webkit-appearance: none; width: 100%; height: 100%; }
