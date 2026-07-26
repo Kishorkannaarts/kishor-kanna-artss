@@ -99,7 +99,7 @@
       <a href="tel:<%= settings.contact_phone %>"><%= settings.contact_phone %></a>
       <a href="mailto:<%= settings.contact_email %>"><%= settings.contact_email %></a>
       <a href="https://www.google.com/maps/dir/?api=1&destination=<%= encodeURIComponent(settings.contact_address) %>" target="_blank" rel="noopener" style="color:#cfc3b5; font-size:0.9rem; text-decoration:none; display:block; margin:4px 0;"><%= settings.contact_address %></a>
-    </div>
+      <% if (settings.business_hours) { %><span style="display:block; color:#cfc3b5; font-size:0.9rem; margin:4px 0;"><%= settings.business_hours %></span><% } %>
   </div>
   <div class="container" style="padding-bottom: var(--space-lg);">
     <div style="max-width:340px;">
