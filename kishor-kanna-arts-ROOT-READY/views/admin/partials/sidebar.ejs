@@ -53,11 +53,16 @@
 </script>
 <script>
   // Adds the CSRF token to every POST form in the admin panel automatically.
-  document.querySelectorAll('form[method="POST"], form[method="post"]').forEach(function (f) {
-    var i = document.createElement('input');
-    i.type = 'hidden';
-    i.name = '_csrf';
-    i.value = "<%= csrfToken %>";
-    f.appendChild(i);
+  // This partial is included at the TOP of every admin page, before the
+  // page's own forms (in admin-main) exist in the DOM yet — so this has to
+  // wait for the whole page to finish loading before it can find them.
+  window.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('form[method="POST"], form[method="post"]').forEach(function (f) {
+      var i = document.createElement('input');
+      i.type = 'hidden';
+      i.name = '_csrf';
+      i.value = "<%= csrfToken %>";
+      f.appendChild(i);
+    });
   });
 </script>
