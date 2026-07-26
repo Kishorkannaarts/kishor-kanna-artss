@@ -113,6 +113,20 @@ async function count(col, filter = {}) {
 
 // ---------- Schema init: seed default settings if not already there ----------
 async function initSchema() {
+  // Abandoned order recovery (see order_progress collection + scheduler in server.js)
+    abandoned_recovery_enabled: '1',
+    abandoned_recovery_delay_hours: '2',
+    tmpl_abandoned_recovery_subject: 'Complete Your Order - {{site_name}}',
+    tmpl_abandoned_recovery_body: `Hi {{name}},
+
+We noticed you started designing a {{art_type}} with us but didn't finish placing your order.
+
+Your details are saved — just pick up where you left off:
+{{continue_url}}
+
+If you have any questions, just reply to this email or reach us on WhatsApp.
+
+— {{site_name}}`
   const defaults = {
     site_name: 'Kishor Kanna Arts',
     hero_title: 'Handcrafted Art That Tells Your Story',
@@ -232,6 +246,8 @@ Please review it and confirm so we can proceed with packing & delivery:
   await db.collection('addresses').createIndex({ customer_id: 1 }, { background: true });
   // One wishlist row per customer+artwork — toggling relies on this being unique
   // so we can't ever end up with duplicate hearts on the same piece.
+  await db.collection('order_progress').createIndex({ email: 1 }, { unique: true, background: true });
+  await db.collection('order_progress').createIndex({ converted: 1, reminder_sent: 1, updated_at: 1 }, { background: true });
   await db.collection('wishlist').createIndex({ customer_id: 1, artwork_id: 1 }, { unique: true, background: true });
 
   console.log('[db] MongoDB connected and schema ready');
