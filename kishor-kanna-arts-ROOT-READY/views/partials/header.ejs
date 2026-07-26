@@ -104,17 +104,25 @@
       </div>
     </details>
 
-    <% if (settings.courses_enabled) { %><a href="/courses">Courses</a><% } %>
     <a href="/about">About</a>
-    <a href="/contact">Contact</a>
 
     <details class="nav-more">
       <summary>More</summary>
       <div class="nav-more-menu">
+        <a href="/#reviewsTrack">Reviews</a>
+        <a href="/#videosTrack">Process Videos</a>
+        <a href="/#how-it-works">How It Works</a>
+        <a href="/about#faq">FAQ</a>
+        <a href="/contact">Contact</a>
         <a href="/track-order">Track Order</a>
-        <a href="/blog">Blog</a>
         <a href="/gallery">Customer Gallery</a>
-        <% if (!settings.courses_enabled) { %><a href="/courses">Courses</a><% } %>
+        <a href="/blog">Blog</a>
+        <% if (settings.courses_enabled) { %><a href="/courses">Courses</a><% } %>
+        <a href="/privacy-policy">Privacy Policy</a>
+        <a href="/shipping-policy">Shipping Policy</a>
+        <a href="/refund-policy">Refund Policy</a>
+        <a href="/cancellation-policy">Cancellation Policy</a>
+        <a href="/terms">Terms &amp; Conditions</a>
       </div>
     </details>
 
