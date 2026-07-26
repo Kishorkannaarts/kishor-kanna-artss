@@ -1,57 +1,147 @@
-<% pageTitle = 'Portfolio' %>
-<% pageDescription = `Browse hand-made portraits by ${settings.site_name} — pencil, colour, pen and canvas art. See real work before you order.` %>
 <%- include('partials/header') %>
 
-<section class="section">
+<div class="container" style="padding-top:18px;">
+  <% crumbs = [{ name: 'Home', url: '/' }, { name: 'Shop' }]; %>
+  <%- include('partials/breadcrumbs') %>
+</div>
+
+<section class="section" style="padding-top:0;">
   <div class="container">
-    <h2>Portfolio</h2>
-    <p class="sub">Browse artworks by category</p>
+    <h2>Shop Portraits</h2>
 
     <% if (typeof searchQuery !== 'undefined' && searchQuery) { %>
-      <p class="sub" style="margin-top:-14px;">Showing results for "<strong><%= searchQuery %></strong>" — <a href="/portfolio">clear search</a></p>
+      <p class="sub" style="margin-top:-10px;">Showing results for "<strong><%= searchQuery %></strong>" — <a href="/portfolio">clear search</a></p>
     <% } %>
 
-    <div class="pills">
-      <a class="pill <%= !activeCategory ? 'active' : '' %>" href="/portfolio">All</a>
-      <% categories.forEach(c => { %>
-        <a class="pill <%= activeCategory === c ? 'active' : '' %>" href="/portfolio?category=<%= encodeURIComponent(c) %>"><%= c %></a>
-      <% }) %>
-    </div>
-
-    <div class="grid grid-2 grid-arts">
-      <% artworks.forEach(a => { %>
-        <div class="card" style="position:relative;">
-          <a href="/portfolio/<%= a.id %>">
-            <img src="<%= a.image || 'https://placehold.co/400x300?text=Artwork' %>" alt="<%= a.title %>" loading="lazy" decoding="async">
-          </a>
-          <% if (isCustomer) { %>
-            <% const wished = typeof wishlistIds !== 'undefined' && wishlistIds.includes(a.id); %>
-            <form action="/wishlist/<%= a.id %>/toggle" method="POST" class="wishlist-heart-form">
-              <input type="hidden" name="redirect_to" value="/portfolio<%= activeCategory ? '?category=' + encodeURIComponent(activeCategory) : '' %>">
-              <button type="submit" class="wishlist-heart <%= wished ? 'is-wished' : '' %>" aria-label="<%= wished ? 'Remove from wishlist' : 'Save to wishlist' %>" title="<%= wished ? 'Saved to wishlist' : 'Save to wishlist' %>">&#10084;</button>
-            </form>
-          <% } else { %>
-            <a href="/account/login?next=<%= encodeURIComponent('/portfolio') %>" class="wishlist-heart" aria-label="Log in to save to wishlist" title="Log in to save to wishlist">&#10084;</a>
-          <% } %>
-          <div class="card-body">
-            <span class="tag"><%= a.category %></span>
-            <h3><a href="/portfolio/<%= a.id %>" style="color:inherit; text-decoration:none;"><%= a.title %></a></h3>
-            <p><%= a.description %></p>
-            <div class="card-footer">
-              <div class="meta">
-                <% if (a.size) { %><span>Size: <strong><%= a.size %></strong></span><% } %>
-                <% if (a.price) { %><span style="margin-left:10px;">₹<strong><%= a.price %></strong></span><% } %>
-              </div>
-              <a class="btn btn-sm btn-primary" href="/order?art_type=<%= encodeURIComponent(a.category) %>&size=<%= encodeURIComponent(a.size || '') %>&price=<%= encodeURIComponent(a.price || '') %>">Order This</a>
-            </div>
-          </div>
+    <div class="shop-layout">
+      <!-- Sidebar -->
+      <aside class="shop-sidebar">
+        <div class="filter-group">
+          <h4>Categories</h4>
+          <a class="filter-link <%= !activeCategory ? 'active' : '' %>" href="/portfolio">All</a>
+          <% categories.forEach(c => { %>
+            <a class="filter-link <%= activeCategory === c ? 'active' : '' %>" href="/portfolio?category=<%= encodeURIComponent(c) %>"><%= c %></a>
+          <% }) %>
         </div>
-      <% }) %>
-      <% if (artworks.length === 0) { %>
-        <p class="sub">No artworks in this category yet.</p>
-      <% } %>
+
+        <div class="filter-group">
+          <h4>Size</h4>
+          <% (sizes || []).forEach(function(s){ %>
+            <label class="filter-checkbox"><input type="checkbox" class="size-filter" value="<%= s %>"> <%= s %></label>
+          <% }) %>
+        </div>
+
+        <div class="filter-group">
+          <h4>Price</h4>
+          <label class="filter-checkbox"><input type="checkbox" class="price-filter" data-min="0" data-max="999"> ₹0 – ₹999</label>
+          <label class="filter-checkbox"><input type="checkbox" class="price-filter" data-min="999" data-max="1499"> ₹999 – ₹1499</label>
+          <label class="filter-checkbox"><input type="checkbox" class="price-filter" data-min="1499" data-max="2499"> ₹1499 – ₹2499</label>
+          <label class="filter-checkbox"><input type="checkbox" class="price-filter" data-min="2499" data-max="999999"> ₹2499+</label>
+        </div>
+
+        <button type="button" class="btn btn-outline" id="clearFilters" style="width:100%;">Clear Filters</button>
+      </aside>
+
+      <!-- Main grid -->
+      <div class="shop-main">
+        <div class="shop-toolbar">
+          <span id="resultCount" class="sub" style="margin:0;"><%= artworks.length %> results</span>
+          <select id="sortSelect">
+            <option value="default">Sort: Popular</option>
+            <option value="price-asc">Price: Low to High</option>
+            <option value="price-desc">Price: High to Low</option>
+            <option value="newest">Newest First</option>
+          </select>
+        </div>
+
+        <div class="grid grid-2 grid-arts" id="shopGrid">
+          <% artworks.forEach((a, i) => { %>
+            <div class="card" style="position:relative;" data-category="<%= a.category %>" data-size="<%= a.size || '' %>" data-price="<%= a.price || 0 %>" data-order="<%= i %>">
+              <a href="/portfolio/<%= a.id %>">
+                <img src="<%= a.image || 'https://placehold.co/400x300?text=Artwork' %>" alt="<%= a.title %>" loading="lazy" decoding="async">
+              </a>
+              <% if (isCustomer) { %>
+                <% const wished = typeof wishlistIds !== 'undefined' && wishlistIds.includes(a.id); %>
+                <form action="/wishlist/<%= a.id %>/toggle" method="POST" class="wishlist-heart-form">
+                  <input type="hidden" name="redirect_to" value="/portfolio<%= activeCategory ? '?category=' + encodeURIComponent(activeCategory) : '' %>">
+                  <button type="submit" class="wishlist-heart <%= wished ? 'is-wished' : '' %>" aria-label="<%= wished ? 'Remove from wishlist' : 'Save to wishlist' %>"><%- '&#10084;' %></button>
+                </form>
+              <% } else { %>
+                <a href="/account/login?next=<%= encodeURIComponent('/portfolio') %>" class="wishlist-heart" aria-label="Log in to save to wishlist"><%- '&#10084;' %></a>
+              <% } %>
+              <div class="card-body">
+                <span class="tag"><%= a.category %></span>
+                <h3><a href="/portfolio/<%= a.id %>" style="color:inherit; text-decoration:none;"><%= a.title %></a></h3>
+                <p><%= a.description %></p>
+                <div class="card-footer">
+                  <div class="meta">
+                    <% if (a.size) { %><span>Size: <strong><%= a.size %></strong></span><% } %>
+                    <% if (a.price) { %><span style="margin-left:10px;">From ₹<strong><%= a.price %></strong></span><% } %>
+                  </div>
+                  <a class="btn btn-sm btn-primary" href="/order?art_type=<%= encodeURIComponent(a.category) %>&size=<%= encodeURIComponent(a.size || '') %>&price=<%= encodeURIComponent(a.price || '') %>">Order This</a>
+                </div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+        <p class="sub" id="noResultsMsg" style="display:none;">No portraits match those filters — try clearing some.</p>
+        <% if (artworks.length === 0) { %>
+          <p class="sub">No artworks in this category yet.</p>
+        <% } %>
+      </div>
     </div>
   </div>
 </section>
+
+<script>
+  (function () {
+    var grid = document.getElementById('shopGrid');
+    var cards = Array.prototype.slice.call(grid.querySelectorAll('.card'));
+    var sizeBoxes = document.querySelectorAll('.size-filter');
+    var priceBoxes = document.querySelectorAll('.price-filter');
+    var sortSelect = document.getElementById('sortSelect');
+    var resultCount = document.getElementById('resultCount');
+    var noResultsMsg = document.getElementById('noResultsMsg');
+
+    function applyFilters() {
+      var checkedSizes = Array.prototype.slice.call(sizeBoxes).filter(b => b.checked).map(b => b.value);
+      var checkedPrices = Array.prototype.slice.call(priceBoxes).filter(b => b.checked);
+      var visibleCount = 0;
+
+      cards.forEach(function (card) {
+        var size = card.getAttribute('data-size');
+        var price = parseFloat(card.getAttribute('data-price')) || 0;
+        var sizeOk = checkedSizes.length === 0 || checkedSizes.indexOf(size) !== -1;
+        var priceOk = checkedPrices.length === 0 || checkedPrices.some(b => price >= +b.dataset.min && price <= +b.dataset.max);
+        var show = sizeOk && priceOk;
+        card.style.display = show ? '' : 'none';
+        if (show) visibleCount++;
+      });
+
+      resultCount.textContent = visibleCount + ' results';
+      noResultsMsg.style.display = visibleCount === 0 ? 'block' : 'none';
+    }
+
+    function applySort() {
+      var sorted = cards.slice().sort(function (a, b) {
+        var val = sortSelect.value;
+        if (val === 'price-asc') return (+a.dataset.price) - (+b.dataset.price);
+        if (val === 'price-desc') return (+b.dataset.price) - (+a.dataset.price);
+        if (val === 'newest') return (+a.dataset.order) - (+b.dataset.order);
+        return 0;
+      });
+      sorted.forEach(function (card) { grid.appendChild(card); });
+    }
+
+    sizeBoxes.forEach(b => b.addEventListener('change', applyFilters));
+    priceBoxes.forEach(b => b.addEventListener('change', applyFilters));
+    sortSelect.addEventListener('change', applySort);
+    document.getElementById('clearFilters').addEventListener('click', function () {
+      sizeBoxes.forEach(b => b.checked = false);
+      priceBoxes.forEach(b => b.checked = false);
+      applyFilters();
+    });
+  })();
+</script>
 
 <%- include('partials/footer') %>
