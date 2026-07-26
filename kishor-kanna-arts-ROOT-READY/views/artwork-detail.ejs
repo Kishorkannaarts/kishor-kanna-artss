@@ -50,10 +50,19 @@
           <p><strong>Size:</strong> <%= artwork.size || '—' %></p>
         <% } %>
 
-        <p class="sub" style="margin-top:-4px;">You'll choose your photo and add any notes on the next step.</p>
+        <div class="pd-size-picker">
+          <h4>Frame</h4>
+          <div class="pd-size-options" id="pdFrameOptions">
+            <button type="button" class="pd-size-btn active" data-frame="No Frame">No Frame</button>
+            <button type="button" class="pd-size-btn" data-frame="Wooden Frame">Wooden Frame</button>
+            <button type="button" class="pd-size-btn" data-frame="Premium Frame">Premium Frame</button>
+          </div>
+        </div>
+
+        <p class="sub" style="margin:10px 0 -4px;">🚚 Delivery in 5–7 working days · you'll choose your photo on the next step.</p>
 
         <div class="pd-actions">
-          <a class="btn btn-gold" id="pdOrderBtn" href="/order?art_type=<%= encodeURIComponent(artwork.category) %>&size=<%= encodeURIComponent(artwork.size || '') %>&price=<%= encodeURIComponent(artwork.price || '') %>">Order This</a>
+          <a class="btn btn-gold" id="pdOrderBtn" href="/order?art_type=<%= encodeURIComponent(artwork.category) %>&size=<%= encodeURIComponent(artwork.size || '') %>&price=<%= encodeURIComponent(artwork.price || '') %>&frame=<%= encodeURIComponent('No Frame') %>">Order This</a>
           <% if (isCustomer) { %>
             <form action="/wishlist/<%= artwork.id %>/toggle" method="POST">
               <input type="hidden" name="redirect_to" value="/portfolio/<%= artwork.id %>">
@@ -70,6 +79,16 @@
           <span>↺ Easy Returns</span>
         </div>
       </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="padding-top:0; padding-bottom:0;">
+  <div class="container" style="max-width:1000px;">
+    <div class="pd-trust-row" style="justify-content:flex-start; gap:24px;">
+      <span>⭐ 4.9/5 average rating</span>
+      <span>💬 500+ reviews</span>
+      <a href="/#reviewsTrack" style="text-decoration:underline;">Read all reviews</a>
     </div>
   </div>
 </section>
@@ -123,21 +142,35 @@
       });
     });
 
-    var sizeBtns = document.querySelectorAll('.pd-size-btn');
-    var priceEl = document.getElementById('pdPrice');
     var orderBtn = document.getElementById('pdOrderBtn');
-    if (!sizeBtns.length || !orderBtn) return;
-    var baseUrl = orderBtn.href.split('&size=')[0].split('?')[0];
-    var artType = new URLSearchParams(orderBtn.href.split('?')[1]).get('art_type');
+    if (!orderBtn) return;
+    var baseUrl = orderBtn.href.split('?')[0];
+    var params = new URLSearchParams(orderBtn.href.split('?')[1] || '');
+    var priceEl = document.getElementById('pdPrice');
 
-    sizeBtns.forEach(function (btn) {
+    function syncOrderLink() {
+      orderBtn.href = baseUrl + '?' + params.toString();
+    }
+
+    document.querySelectorAll('#pdSizeOptions .pd-size-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        sizeBtns.forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('#pdSizeOptions .pd-size-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         var price = btn.dataset.price;
         var size = btn.dataset.size;
         if (priceEl) priceEl.textContent = '₹' + price;
-        orderBtn.href = baseUrl + '?art_type=' + encodeURIComponent(artType) + '&size=' + encodeURIComponent(size) + '&price=' + encodeURIComponent(price);
+        params.set('size', size);
+        params.set('price', price);
+        syncOrderLink();
+      });
+    });
+
+    document.querySelectorAll('#pdFrameOptions .pd-size-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        document.querySelectorAll('#pdFrameOptions .pd-size-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        params.set('frame', btn.dataset.frame);
+        syncOrderLink();
       });
     });
   })();
