@@ -12,6 +12,7 @@
 
 const whatsapp = require('./whatsapp');
 const sms = require('./sms');
+const db = require('./db');
 
 // Converts a customer-entered phone number into E.164 format, defaulting to
 // India (+91) since that's this business's customer base. Numbers already
@@ -33,47 +34,56 @@ const EVENTS = {
   order_received: {
     template: 'kka_order_received',
     params: d => [d.name, d.order_code],
-    sms: d => `Hi ${d.name}, your order ${d.order_code} at ${d.site_name} has been received. Track it: ${d.track_url}`
+    sms: d => `Hi ${d.name}, your order ${d.order_code} at ${d.site_name} has been received. Track it: ${d.track_url}`,
+    inapp: d => `Your order ${d.order_code} has been received.`
   },
   advance_requested: {
     template: 'kka_advance_requested',
     params: d => [d.name, d.order_code, d.amount, d.payment_link],
-    sms: d => `Hi ${d.name}, order ${d.order_code} is confirmed! Please pay the advance of ${d.amount} here: ${d.payment_link}`
+    sms: d => `Hi ${d.name}, order ${d.order_code} is confirmed! Please pay the advance of ${d.amount} here: ${d.payment_link}`,
+    inapp: d => `Order ${d.order_code} confirmed — advance payment of ₹${d.amount} requested.`
   },
   advance_paid: {
     template: 'kka_payment_confirmed',
     params: d => [d.name, d.order_code, d.amount],
-    sms: d => `Hi ${d.name}, we received your advance payment of ${d.amount} for order ${d.order_code}. Work has started!`
+    sms: d => `Hi ${d.name}, we received your advance payment of ${d.amount} for order ${d.order_code}. Work has started!`,
+    inapp: d => `Advance payment received for order ${d.order_code} — work has started!`
   },
   balance_requested: {
     template: 'kka_balance_requested',
     params: d => [d.name, d.order_code, d.amount, d.payment_link],
-    sms: d => `Hi ${d.name}, your artwork for order ${d.order_code} is ready! Please pay the balance of ${d.amount} here: ${d.payment_link}`
+    sms: d => `Hi ${d.name}, your artwork for order ${d.order_code} is ready! Please pay the balance of ${d.amount} here: ${d.payment_link}`,
+    inapp: d => `Your artwork for order ${d.order_code} is ready — balance payment of ₹${d.amount} requested.`
   },
   balance_paid: {
     template: 'kka_payment_confirmed',
     params: d => [d.name, d.order_code, d.amount],
-    sms: d => `Hi ${d.name}, we received your final payment for order ${d.order_code}. Thank you!`
+    sms: d => `Hi ${d.name}, we received your final payment for order ${d.order_code}. Thank you!`,
+    inapp: d => `Final payment received for order ${d.order_code}. Thank you!`
   },
   status_update: {
     template: 'kka_status_update',
     params: d => [d.name, d.order_code, d.status],
-    sms: d => `Hi ${d.name}, order ${d.order_code} status: ${d.status}. Track: ${d.track_url}`
+    sms: d => `Hi ${d.name}, order ${d.order_code} status: ${d.status}. Track: ${d.track_url}`,
+    inapp: d => `Order ${d.order_code} status updated: ${d.status}.`
   },
   rejected: {
     template: 'kka_date_rejected',
     params: d => [d.name, d.order_code, d.reason],
-    sms: d => `Hi ${d.name}, order ${d.order_code}: ${d.reason}. Please reply with a new preferred date.`
+    sms: d => `Hi ${d.name}, order ${d.order_code}: ${d.reason}. Please reply with a new preferred date.`,
+    inapp: d => `Order ${d.order_code}: ${d.reason}. Please get in touch with a new preferred date.`
   },
   artwork_ready: {
     template: 'kka_artwork_ready',
     params: d => [d.name, d.order_code],
-    sms: d => `Hi ${d.name}, your artwork for order ${d.order_code} is ready! Please review and confirm: ${d.track_url}`
+    sms: d => `Hi ${d.name}, your artwork for order ${d.order_code} is ready! Please review and confirm: ${d.track_url}`,
+    inapp: d => `Your artwork for order ${d.order_code} is ready for your review!`
   },
   shipped: {
     template: 'kka_shipped',
     params: d => [d.name, d.order_code],
-    sms: d => `Hi ${d.name}, order ${d.order_code} has been shipped! We hope you love it.`
+    sms: d => `Hi ${d.name}, order ${d.order_code} has been shipped! We hope you love it.`,
+    inapp: d => `Order ${d.order_code} has been shipped! We hope you love it.`
   }
 };
 
@@ -82,7 +92,20 @@ const EVENTS = {
 // email is still the reliable channel of record.
 function notifyOrder(event, order, data) {
   const def = EVENTS[event];
-  if (!def || !order || !order.phone) return;
+  if (!def || !order) return;
+
+  // In-app notification for the customer dashboard bell — independent of
+  // phone/WhatsApp/SMS, only needs the order to be linked to an account.
+  if (order.customer_id && def.inapp) {
+    db.insertOne('notifications', {
+      customer_id: order.customer_id,
+      message: def.inapp(data),
+      link: `/track-order?order_code=${encodeURIComponent(order.order_code)}`,
+      read: false
+    }).catch(err => console.error(`[notify] in-app notification failed (${event}):`, err.message));
+  }
+
+  if (!order.phone) return;
   const to = toE164(order.phone);
   if (!to) return;
 
