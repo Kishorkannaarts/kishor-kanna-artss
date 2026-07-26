@@ -502,6 +502,7 @@ app.get('/', ah(async (req, res) => {
   const beforeAfter = db.normalize(await db.find('artworks', { before_image: { $exists: true, $ne: null } }, { created_at: -1 }, 6))
     .filter(a => a.image && a.before_image);
   const galleryPhotos = db.normalize(await db.find('gallery_photos', { approved: true }, { created_at: -1 }, 8));
+  const instagramPhotos = db.normalize(await db.find('instagram_gallery', {}, { created_at: -1 }, 8));
 
   // "Shop by Art Style" tiles — one representative artwork image per
   // category so the homepage doesn't need separate admin-managed images.
@@ -516,7 +517,7 @@ app.get('/', ah(async (req, res) => {
   // so there's one place to edit them, but only show the first few here.
   const faqs = db.normalize(await db.find('faqs', {}, { created_at: 1 }, 6));
 
-  res.render('index', { featured, testimonials, videos, services, offers, blocks, recentPosts, beforeAfter, galleryPhotos, categoryPreviews, faqs });
+  res.render('index', { featured, testimonials, videos, services, offers, blocks, recentPosts, beforeAfter, galleryPhotos, instagramPhotos, categoryPreviews, faqs });
 }));
 
 app.get('/portfolio', ah(async (req, res) => {
@@ -1928,6 +1929,24 @@ app.post('/admin/customer-gallery/:id/unapprove', requireAdmin, ah(async (req, r
 app.post('/admin/customer-gallery/:id/delete', requireAdmin, ah(async (req, res) => {
   await db.deleteById('gallery_photos', req.params.id);
   res.redirect('/admin/customer-gallery');
+}));
+
+// ---- Instagram Gallery (admin-managed — no Instagram API/login required) ----
+app.get('/admin/instagram-gallery', requireAdmin, ah(async (req, res) => {
+  const photos = db.normalize(await db.find('instagram_gallery', {}, { created_at: -1 }));
+  res.render('admin/instagram-gallery', { photos });
+}));
+
+app.post('/admin/instagram-gallery/save', requireAdmin, memoryUpload.single('image'), csrfCheck, ah(async (req, res) => {
+  const uploadedUrl = await uploadImage(req.file, 'instagram-gallery');
+  if (!uploadedUrl) return res.redirect('/admin/instagram-gallery');
+  await db.insertOne('instagram_gallery', { image_url: uploadedUrl, caption: req.body.caption || '', link_url: req.body.link_url || '' });
+  res.redirect('/admin/instagram-gallery');
+}));
+
+app.post('/admin/instagram-gallery/:id/delete', requireAdmin, ah(async (req, res) => {
+  await db.deleteById('instagram_gallery', req.params.id);
+  res.redirect('/admin/instagram-gallery');
 }));
 
 // ---- Messages ----
