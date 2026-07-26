@@ -1,0 +1,70 @@
+<% pageTitle = 'Referrals & Wallet' %>
+<%- include('../partials/header') %>
+
+<section class="section">
+  <div class="account-header">
+    <div>
+      <h2>Hi, <%= customer.name %></h2>
+      <p class="sub">Invite friends, earn wallet credit, and use it on your next order.</p>
+    </div>
+    <form action="/account/logout" method="POST">
+      <button class="btn btn-outline" type="submit">Log Out</button>
+    </form>
+  </div>
+
+  <% activeTab = 'referrals' %>
+  <%- include('../partials/account-nav') %>
+
+  <div class="grid grid-2" style="margin-top:28px; gap:20px;">
+    <div class="form-box">
+      <h3 style="margin-top:0;">Your Wallet</h3>
+      <p style="font-size:2rem; font-weight:600; margin:6px 0;">₹<%= customer.wallet_balance || 0 %></p>
+      <p class="sub">Tick "Use my wallet balance" at checkout on the <a href="/order">Order page</a> to redeem it.</p>
+    </div>
+
+    <div class="form-box">
+      <h3 style="margin-top:0;">Invite a Friend</h3>
+      <p class="sub">Share your code — your friend gets <%= discountPercent %>% off their first order, and
+        you get ₹<%= rewardAmount %> wallet credit once their order is delivered.</p>
+      <div class="form-group">
+        <label>Your Referral Code</label>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="refCodeBox" value="<%= customer.referral_code %>" readonly style="flex:1; font-weight:600; letter-spacing:1px;">
+          <button type="button" class="btn btn-outline" onclick="copyRefLink()">Copy Link</button>
+        </div>
+        <small id="refCopyMsg" style="display:block; margin-top:6px; color:#1a7a3f;"></small>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="margin-top:32px;">Your Referrals</h3>
+  <% if (!referrals.length) { %>
+    <p class="sub">You haven't referred anyone yet. Share your link above to get started.</p>
+  <% } else { %>
+    <div class="account-table-wrap">
+      <table>
+        <tr><th>Friend</th><th>Status</th><th>Invited On</th></tr>
+        <% referrals.forEach(r => { %>
+          <tr>
+            <td><%= r.referred_name %></td>
+            <td><span class="badge <%= r.status === 'rewarded' ? 'badge-ok' : 'badge-new' %>"><%= r.status === 'rewarded' ? 'Reward Credited' : 'Waiting for First Order' %></span></td>
+            <td><small style="color:var(--text-secondary);"><%= new Date(r.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) %></small></td>
+          </tr>
+        <% }) %>
+      </table>
+    </div>
+  <% } %>
+</section>
+
+<script>
+  function copyRefLink() {
+    var link = window.location.origin + '/account/signup?ref=' + document.getElementById('refCodeBox').value;
+    navigator.clipboard.writeText(link).then(function () {
+      var msg = document.getElementById('refCopyMsg');
+      msg.textContent = 'Link copied! Paste it in WhatsApp, Instagram, or anywhere you like.';
+      setTimeout(function () { msg.textContent = ''; }, 4000);
+    });
+  }
+</script>
+
+<%- include('../partials/footer') %>
