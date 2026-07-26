@@ -21,7 +21,13 @@
       <div class="form-group"><label>Site Name</label><input type="text" name="site_name" value="<%= settings.site_name %>"></div>
       <div class="form-group"><label>Home Banner Title</label><input type="text" name="hero_title" value="<%= settings.hero_title %>"></div>
       <div class="form-group"><label>Home Banner Subtitle</label><input type="text" name="hero_subtitle" value="<%= settings.hero_subtitle %>"></div>
-      <div class="form-group"><label>About Us Text</label><textarea name="about_text"><%= settings.about_text %></textarea></div>
+      <div class="form-group">
+  <label>About Us Photo</label>
+  <% if (settings.about_image_url) { %><img src="<%= settings.about_image_url %>" style="max-width:260px; margin-bottom:10px; display:block; border-radius:8px;"><% } %>
+  <input type="file" name="about_image" accept="image/*">
+</div>
+<div class="form-group"><label>About Us Text</label><textarea name="about_text"><%= settings.about_text %></textarea></div>
+<div class="form-group"><label>Years of Experience (leave blank to hide this stat)</label><input type="text" name="about_years_experience" value="<%= settings.about_years_experience %>" placeholder="e.g. 5"></div>
       <div class="form-group">
         <label>SEO Meta Description (shows in Google search results)</label>
         <small style="color:var(--muted); display:block; margin-bottom:6px;">Keep it under 160 characters. Mention your art types, sizes and location/city.</small>
