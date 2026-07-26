@@ -142,6 +142,18 @@ async function uploadImageDataUri(dataUri, folder) {
 }
 
 // ---------- Helpers ----------
+// Turns a pasted YouTube or Google Drive link into an embeddable iframe URL.
+// Used for both the homepage "Video Showcase" section and video reviews —
+// factored out so both stay consistent instead of duplicating the same regex.
+function videoEmbedUrl(url) {
+  if (!url) return null;
+  let m = url.match(/youtu\.be\/([A-Za-z0-9_-]+)/) || url.match(/[?&]v=([A-Za-z0-9_-]+)/) || url.match(/youtube\.com\/shorts\/([A-Za-z0-9_-]+)/);
+  if (m) return `https://www.youtube.com/embed/${m[1]}?loop=1&playlist=${m[1]}`;
+  m = url.match(/drive\.google\.com\/file\/d\/([A-Za-z0-9_-]+)/);
+  if (m) return `https://drive.google.com/file/d/${m[1]}/preview`;
+  return null;
+}
+
 function genOrderCode() {
   const rand = Math.random().toString(36).slice(2, 7).toUpperCase();
   return 'KKA-' + Date.now().toString().slice(-6) + '-' + rand;
@@ -257,14 +269,9 @@ app.get('/sitemap.xml', ah(async (req, res) => {
 
 app.get('/', ah(async (req, res) => {
   const featured  = db.normalize(await db.find('artworks', { featured: true }, { created_at: -1 }, 8));
-  const testimonials = db.normalize(await db.find('testimonials', { approved: true }, { created_at: -1 }, 6));
-  const videos    = db.normalize(await db.find('videos', {}, { created_at: -1 }, 12)).map(v => {
-  let embed = null;
-  let m = v.video_url.match(/youtu\.be\/([A-Za-z0-9_-]+)/) || v.video_url.match(/[?&]v=([A-Za-z0-9_-]+)/) || v.video_url.match(/youtube\.com\/shorts\/([A-Za-z0-9_-]+)/);
-  if (m) embed = `https://www.youtube.com/embed/${m[1]}?loop=1&playlist=${m[1]}`;
-  else { m = v.video_url.match(/drive\.google\.com\/file\/d\/([A-Za-z0-9_-]+)/); if (m) embed = `https://drive.google.com/file/d/${m[1]}/preview`; }
-  return { ...v, embed_url: embed };
-});
+  const testimonials = db.normalize(await db.find('testimonials', { approved: true }, { created_at: -1 }, 6))
+    .map(t => ({ ...t, embed_url: videoEmbedUrl(t.video_url) }));
+  const videos    = db.normalize(await db.find('videos', {}, { created_at: -1 }, 12)).map(v => ({ ...v, embed_url: videoEmbedUrl(v.video_url) }));
   const services  = db.normalize(await db.find('services', {}, { created_at: -1 }));
   const offers    = db.normalize(await db.find('offers', { active: true }, { created_at: -1 }));
   const blocks    = db.normalize(await db.find('blocks', {}, { created_at: 1 }));
@@ -339,9 +346,16 @@ app.get('/services', ah(async (req, res) => {
 }));
 
 app.get('/about', ah(async (req, res) => {
-  const testimonials = db.normalize(await db.find('testimonials', { approved: true }, { created_at: -1 }));
+  let testimonials = db.normalize(await db.find('testimonials', { approved: true }, { created_at: -1 }))
+    .map(t => ({ ...t, embed_url: videoEmbedUrl(t.video_url) }));
+
+  const reviewFilter = req.query.type || null; // 'video' | 'photo' | 'text'
+  if (reviewFilter === 'video') testimonials = testimonials.filter(t => t.embed_url);
+  else if (reviewFilter === 'photo') testimonials = testimonials.filter(t => t.photo_url && !t.embed_url);
+  else if (reviewFilter === 'text') testimonials = testimonials.filter(t => !t.embed_url && !t.photo_url);
+
   const faqs = db.normalize(await db.find('faqs', {}, { created_at: 1 }));
-  res.render('about', { testimonials, faqs });
+  res.render('about', { testimonials, faqs, reviewFilter });
 }));
 
 // Reserved for the future course platform (live classes, recorded courses,
@@ -383,7 +397,7 @@ app.post('/api/chat', ah(async (req, res) => {
   req.session.chatHistory.push({ role: 'user', content: userMessage });
   req.session.chatHistory = req.session.chatHistory.slice(-12);
 
-  if (!chatbot.isConfigured()) {
+if (!chatbot.isConfigured()) {
     return res.json({ reply: "Chat isn't set up on this site yet — please reach out via the Contact page or WhatsApp instead." });
   }
 
@@ -781,9 +795,23 @@ app.get('/account/invoice/:id', requireCustomer, ah(async (req, res) => {
   res.render('account/invoice', { order });
 }));
 
-app.post('/testimonials', ah(async (req, res) => {
-  const { name, message, rating } = req.body;
-  await db.insertOne('testimonials', { name, message, rating: parseInt(rating) || 5, approved: false });
+app.post('/testimonials', memoryUpload.single('photo'), ah(async (req, res) => {
+  const { name, message, rating, video_url } = req.body;
+  const photoUrl = await uploadImage(req.file, 'reviews');
+  // Only accept a video link if we can actually turn it into an embeddable
+  // player — a broken/unsupported link is worse than no video at all.
+  const validVideoUrl = videoEmbedUrl(video_url) ? video_url.trim() : null;
+  // A review submitted while logged in is tied to a real customer account,
+  // so it's fair to mark it verified automatically. Anonymous submissions
+  // still need a human to confirm before they earn the badge.
+  const isVerifiedCustomer = !!(req.session && req.session.customerId);
+  await db.insertOne('testimonials', {
+    name, message, rating: parseInt(rating) || 5, approved: false,
+    photo_url: photoUrl || null,
+    video_url: validVideoUrl,
+    verified: isVerifiedCustomer,
+    customer_id: (req.session && req.session.customerId) || null
+  });
   res.redirect('/about?thanks=1');
 }));
 
@@ -1169,7 +1197,6 @@ app.post('/admin/orders/:id/expenses', requireAdmin, ah(async (req, res) => {
   await db.updateById('orders', req.params.id, { expenses: req.body.expenses || 0 });
   res.redirect('/admin/orders');
 }));
-
 app.post('/admin/orders/:id/shipped', requireAdmin, ah(async (req, res) => {
   const order = db.normalize(await db.findById('orders', req.params.id));
   if (!order) return res.redirect('/admin/orders');
@@ -1217,17 +1244,43 @@ app.post('/admin/orders/:id/send-artwork', requireAdmin, memoryUpload.single('ar
 
 // ---- Testimonials ----
 app.get('/admin/testimonials', requireAdmin, ah(async (req, res) => {
-  res.render('admin/testimonials', { testimonials: db.normalize(await db.find('testimonials', {}, { created_at: -1 })) });
+  const testimonials = db.normalize(await db.find('testimonials', {}, { created_at: -1 }))
+    .map(t => ({ ...t, embed_url: videoEmbedUrl(t.video_url) }));
+  res.render('admin/testimonials', { testimonials });
 }));
 
-app.post('/admin/testimonials/add', requireAdmin, ah(async (req, res) => {
-  const { name, message, rating } = req.body;
-  await db.insertOne('testimonials', { name, message, rating: parseInt(rating) || 5, approved: true });
+app.post('/admin/testimonials/add', requireAdmin, memoryUpload.single('photo'), ah(async (req, res) => {
+  const { name, message, rating, video_url } = req.body;
+  const photoUrl = await uploadImage(req.file, 'reviews');
+  const validVideoUrl = videoEmbedUrl(video_url) ? video_url.trim() : null;
+  // Reviews the admin adds directly (e.g. copied from Google/WhatsApp) are
+  // auto-verified — the admin is vouching for them personally.
+  await db.insertOne('testimonials', {
+    name, message, rating: parseInt(rating) || 5, approved: true,
+    photo_url: photoUrl || null, video_url: validVideoUrl, verified: true
+  });
   res.redirect('/admin/testimonials');
 }));
 
 app.post('/admin/testimonials/:id/approve', requireAdmin, ah(async (req, res) => {
   await db.updateById('testimonials', req.params.id, { approved: true });
+  res.redirect('/admin/testimonials');
+}));
+
+app.post('/admin/testimonials/:id/unapprove', requireAdmin, ah(async (req, res) => {
+  await db.updateById('testimonials', req.params.id, { approved: false });
+  res.redirect('/admin/testimonials');
+}));
+
+app.post('/admin/testimonials/:id/verify', requireAdmin, ah(async (req, res) => {
+  const t = await db.findById('testimonials', req.params.id);
+  await db.updateById('testimonials', req.params.id, { verified: !(t && t.verified) });
+  res.redirect('/admin/testimonials');
+}));
+
+app.post('/admin/testimonials/:id/update', requireAdmin, ah(async (req, res) => {
+  const { name, message, rating } = req.body;
+  await db.updateById('testimonials', req.params.id, { name, message, rating: parseInt(rating) || 5 });
   res.redirect('/admin/testimonials');
 }));
 
@@ -1533,7 +1586,6 @@ app.post('/admin/faqs/:id/delete', requireAdmin, ah(async (req, res) => {
   await db.deleteById('faqs', req.params.id);
   res.redirect('/admin/faqs');
 }));
-
 // ---------- 404 + Error handler ----------
 app.use((req, res) => res.status(404).send('Page not found'));
 app.use((err, req, res, next) => {
@@ -1544,7 +1596,4 @@ app.use((err, req, res, next) => {
 // ---------- Start ----------
 db.initSchema().then(() => {
   app.listen(PORT, () => console.log(`Kishor Kanna Arts running at http://localhost:${PORT}`));
-}).catch(err => {
-  console.error('Database connection failed:', err.message);
-  process.exit(1);
 });
