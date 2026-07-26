@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Instagram Gallery | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
+<body class="admin">
+<div class="admin-shell">
+  <% active = 'instagram-gallery' %>
+  <%- include('partials/sidebar') %>
+  <div class="admin-main">
+    <div class="admin-topbar"><h1>Instagram Gallery</h1></div>
+    <p style="color:var(--muted); font-size:0.9rem; margin-top:-16px; margin-bottom:20px;">
+      Shows on the homepage as an "Instagram Gallery" section. Add photos here manually — this doesn't pull automatically from Instagram, so add your latest posts whenever you post something new. Each tile links to the URL you set below, or your Instagram profile link (from Site Settings) if left blank.
+    </p>
+
+    <table>
+      <tr><th>Photo</th><th>Caption</th><th>Links To</th><th>Actions</th></tr>
+      <% photos.forEach(p => { %>
+        <tr>
+          <td><img class="thumb" src="<%= p.image_url %>" alt=""></td>
+          <td style="max-width:300px;"><%= p.caption || '—' %></td>
+          <td><%= p.link_url || 'Instagram profile (default)' %></td>
+          <td class="actions-row">
+            <form action="/admin/instagram-gallery/<%= p.id %>/delete" method="POST" onsubmit="return confirm('Delete this photo?');">
+              <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+      <% if (photos.length === 0) { %><tr><td colspan="4">No photos yet.</td></tr><% } %>
+    </table>
+
+    <h2 style="font-size:1.1rem;">Add a Photo</h2>
+    <form class="admin-form" action="/admin/instagram-gallery/save" method="POST" enctype="multipart/form-data">
+      <div class="form-group"><label>Photo</label><input type="file" name="image" accept="image/*" required></div>
+      <div class="form-group"><label>Caption (optional)</label><input type="text" name="caption" placeholder="e.g. Custom pencil portrait for a birthday gift"></div>
+      <div class="form-group">
+        <label>Link URL (optional)</label>
+        <small style="color:var(--muted); display:block; margin-bottom:6px;">Leave blank to link to your Instagram profile (set in Site Settings). Paste the direct post URL here if you want this tile to open that specific Instagram post instead.</small>
+        <input type="text" name="link_url" placeholder="https://instagram.com/p/...">
+      </div>
+      <button class="btn btn-primary" type="submit">Add Photo</button>
+    </form>
+  </div>
+</div>
+</body></html>
