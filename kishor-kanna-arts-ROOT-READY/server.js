@@ -502,7 +502,8 @@ app.get('/', ah(async (req, res) => {
   const recentPosts = db.normalize(await db.find('posts', { published: true }, { created_at: -1 }, 3));
   const beforeAfter = db.normalize(await db.find('artworks', { before_image: { $exists: true, $ne: null } }, { created_at: -1 }, 6))
     .filter(a => a.image && a.before_image);
-  res.render('index', { featured, testimonials, videos, services, offers, blocks, recentPosts, beforeAfter });
+  const galleryPhotos = db.normalize(await db.find('gallery_photos', { approved: true }, { created_at: -1 }, 8));
+  res.render('index', { featured, testimonials, videos, services, offers, blocks, recentPosts, beforeAfter, galleryPhotos });
 }));
 
 app.get('/portfolio', ah(async (req, res) => {
@@ -1132,6 +1133,34 @@ app.post('/testimonials', memoryUpload.single('photo'), csrfCheck, ah(async (req
   res.redirect('/about?thanks=1');
 }));
 
+// ---------- Customer Gallery ----------
+// Distinct from Reviews above: this is a pure photo wall of buyers' framed
+// portraits in their homes — no rating or review text required, just proof
+// the finished piece looks great in real life. Same moderation pattern
+// (submit unapproved, admin approves before it goes public).
+app.get('/gallery', ah(async (req, res) => {
+  const photos = db.normalize(await db.find('gallery_photos', { approved: true }, { created_at: -1 }));
+  res.render('gallery', { photos, submitted: req.query.thanks === '1' });
+}));
+
+app.post('/gallery/submit', memoryUpload.single('photo'), csrfCheck, ah(async (req, res) => {
+  if (isSpamBot(req)) return res.redirect('/gallery'); // silently drop, no tell for bots
+  if (!req.file) {
+    const photos = db.normalize(await db.find('gallery_photos', { approved: true }, { created_at: -1 }));
+    return res.render('gallery', { photos, submitted: false, submitError: 'Please choose a photo to upload.' });
+  }
+  const { name, caption } = req.body;
+  const photoUrl = await uploadImage(req.file, 'customer-gallery');
+  await db.insertOne('gallery_photos', {
+    name: (name || '').trim() || 'A Happy Customer',
+    caption: (caption || '').trim(),
+    photo_url: photoUrl,
+    approved: false,
+    customer_id: (req.session && req.session.customerId) || null
+  });
+  res.redirect('/gallery?thanks=1');
+}));
+
 app.get('/blog', ah(async (req, res) => {
   const posts = db.normalize(await db.find('posts', { published: true }, { created_at: -1 }));
   res.render('blog_list', { posts });
@@ -1614,6 +1643,27 @@ app.post('/admin/testimonials/:id/delete', requireAdmin, ah(async (req, res) => 
   res.redirect('/admin/testimonials');
 }));
 
+// ---- Customer Gallery ----
+app.get('/admin/customer-gallery', requireAdmin, ah(async (req, res) => {
+  const photos = db.normalize(await db.find('gallery_photos', {}, { created_at: -1 }));
+  res.render('admin/customer-gallery', { photos });
+}));
+
+app.post('/admin/customer-gallery/:id/approve', requireAdmin, ah(async (req, res) => {
+  await db.updateById('gallery_photos', req.params.id, { approved: true });
+  res.redirect('/admin/customer-gallery');
+}));
+
+app.post('/admin/customer-gallery/:id/unapprove', requireAdmin, ah(async (req, res) => {
+  await db.updateById('gallery_photos', req.params.id, { approved: false });
+  res.redirect('/admin/customer-gallery');
+}));
+
+app.post('/admin/customer-gallery/:id/delete', requireAdmin, ah(async (req, res) => {
+  await db.deleteById('gallery_photos', req.params.id);
+  res.redirect('/admin/customer-gallery');
+}));
+
 // ---- Messages ----
 app.get('/admin/messages', requireAdmin, ah(async (req, res) => {
   const mdb = await db.getDB();
@@ -1983,44 +2033,4 @@ app.post('/admin/gift-reminders/:id/delete', requireAdmin, ah(async (req, res) =
   res.redirect('/admin/gift-reminders');
 }));
 
-// ---- FAQs ----
-app.get('/admin/faqs', requireAdmin, ah(async (req, res) => {
-  const faqs = db.normalize(await db.find('faqs', {}, { created_at: 1 }));
-  res.render('admin/faqs', { faqs });
-}));
-
-app.post('/admin/faqs/add', requireAdmin, ah(async (req, res) => {
-  const { question, answer } = req.body;
-  await db.insertOne('faqs', { question, answer });
-  res.redirect('/admin/faqs');
-}));
-
-app.post('/admin/faqs/:id/update', requireAdmin, ah(async (req, res) => {
-  const { question, answer } = req.body;
-  await db.updateById('faqs', req.params.id, { question, answer });
-  res.redirect('/admin/faqs');
-}));
-
-app.post('/admin/faqs/:id/delete', requireAdmin, ah(async (req, res) => {
-  await db.deleteById('faqs', req.params.id);
-  res.redirect('/admin/faqs');
-}));
-// ---------- 404 + Error handler ----------
-app.use((req, res) => res.status(404).send('Page not found'));
-app.use((err, req, res, next) => {
-  console.error('[error]', err.message);
-  res.status(500).send('Something went wrong. Please try again.');
-});
-
-// ---------- Start ----------
-db.initSchema().then(() => {
-  app.listen(PORT, () => console.log(`Kishor Kanna Arts running at http://localhost:${PORT}`));
-  // Abandoned order recovery: check every 30 minutes, plus once shortly
-  // after boot so a restart doesn't leave reminders waiting a full cycle.
-  setInterval(runAbandonedRecoveryJob, 30 * 60 * 1000);
-  setTimeout(runAbandonedRecoveryJob, 60 * 1000);
-  // Gift reminders only need to be checked a few times a day, not every 30 min.
-  setInterval(runGiftReminderJob, 6 * 60 * 60 * 1000);
-  setTimeout(runGiftReminderJob, 90 * 1000);
-});
-
+//
