@@ -1,3 +1,4 @@
+[README.md](https://github.com/user-attachments/files/30390857/README.md)
 # Kishor Kanna Arts — Website + Admin Panel
 
 This is a complete, working website with:
@@ -214,9 +215,9 @@ Go to `/admin/testimonials` → scroll to **"Add a Review Directly"** → copy t
 
 ## 8. Adding things later
 
-Everything editable — artworks, services, videos, banner text, contact details — is done through the admin panel, no coding needed. Online payments, customer accounts, and SMS/WhatsApp notifications are already built in — see section 9 to switch them on. A booking calendar is a natural next addition on top of this same codebase.
+Everything editable — artworks, services, videos, banner text, contact details — is done through the admin panel, no coding needed. Online payments, customer accounts, and WhatsApp notifications are already built in — see section 9 to switch them on. A booking calendar is a natural next addition on top of this same codebase.
 
-## 9. Payments, WhatsApp & SMS Setup
+## 9. Payments & WhatsApp Setup
 
 Out of the box the site works fully on email alone (as described above). The three integrations below are **optional** — nothing breaks if you skip any of them, they just stay switched off until their environment variables are set. All variables go in your `.env` file (or your host's environment variables panel if not running locally).
 
@@ -259,18 +260,7 @@ You can still paste a manual link (a UPI link, another gateway, etc.) into the P
    Approval is usually a few minutes, occasionally a day or two. Until a template is approved, that specific notification is silently skipped (logged, not shown to the customer or admin) — everything else keeps working.
 5. Customer phone numbers are assumed to be Indian 10-digit numbers unless they already include a country code; change this with `DEFAULT_COUNTRY_CODE` in `.env` if most of your customers are elsewhere.
 
-### 9c. SMS order updates (Twilio)
-
-**What this does:** sends a short plain-text SMS for the same order events as WhatsApp above — useful as a backup for customers without WhatsApp, or if you'd rather not go through WhatsApp template approval yet.
-
-**Setup:**
-1. Create a Twilio account at [twilio.com](https://twilio.com).
-2. Buy (or use the free trial) a phone number capable of sending SMS.
-3. From the Twilio Console dashboard, copy your **Account SID** and **Auth Token** into `.env` as `TWILIO_ACCOUNT_SID` and `TWILIO_AUTH_TOKEN`.
-4. Put your Twilio number (in `+E.164` format, e.g. `+14155551234`) in `.env` as `TWILIO_FROM_NUMBER`.
-5. On a trial account, Twilio only delivers to phone numbers you've manually verified in the console — upgrade to a paid account to message any customer.
-
 ### Notes
 
-- WhatsApp and SMS are both **best-effort**: if a send fails (bad number, template not approved yet, account issue), it's logged to the server console and silently skipped — it never blocks the order flow or shows an error to the customer/admin. Email remains the reliable channel of record for every event.
-- You can turn on any combination of these three (all three, just payments, just SMS, none) — each is independently gated on its own environment variables being present.
+- WhatsApp is **best-effort**: if a send fails (bad number, template not approved yet, account issue), it's logged to the server console and silently skipped — it never blocks the order flow or shows an error to the customer/admin. Email remains the reliable channel of record for every event.
+- You can turn on either or both of these (payments, WhatsApp) — each is independently gated on its own environment variables being present.
