@@ -1304,6 +1304,72 @@ app.get('/admin/dashboard', requireAdmin, ah(async (req, res) => {
   res.render('admin/dashboard', { counts, recentOrders, finance, statusCounts, maxStatusCount, days, maxDayCount, needsAttention });
 }));
 
+// ---- Analytics ----
+// Deeper trends than the Dashboard's snapshot: revenue and customer growth
+// over time, and top-performing art types. All computed from existing
+// collections — no new schema. Google Analytics traffic itself can't be
+// embedded here without Google API/OAuth credentials, so this just surfaces
+// whether GA is connected (via the Measurement ID already in Site Settings)
+// and links out to the real GA dashboard.
+app.get('/admin/analytics', requireAdmin, ah(async (req, res) => {
+  const allOrders = db.normalize(await db.find('orders', {}, { created_at: -1 }));
+  const allCustomers = db.normalize(await db.find('customers', {}, { created_at: -1 }));
+
+  // Last 6 months, oldest to newest
+  const monthKeys = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() - i);
+    monthKeys.push({ key: d.toISOString().slice(0, 7), label: d.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' }) });
+  }
+
+  const revenueByMonth = monthKeys.map(m => {
+    let total = 0;
+    allOrders.forEach(o => {
+      const monthKey = String(o.created_at || '').slice(0, 7);
+      if (monthKey !== m.key) return;
+      if (o.advance_amount && o.advance_paid) total += parseFloat(o.advance_amount) || 0;
+      if (o.balance_amount && o.balance_paid) total += parseFloat(o.balance_amount) || 0;
+    });
+    return { label: m.label, total };
+  });
+  const maxMonthRevenue = Math.max(1, ...revenueByMonth.map(m => m.total));
+
+  const customersByMonth = monthKeys.map(m => ({
+    label: m.label,
+    count: allCustomers.filter(c => String(c.created_at || '').slice(0, 7) === m.key).length
+  }));
+  const maxMonthCustomers = Math.max(1, ...customersByMonth.map(m => m.count));
+
+  // Top art types by order count
+  const typeCounts = {};
+  allOrders.forEach(o => {
+    if (!o.art_type) return;
+    typeCounts[o.art_type] = (typeCounts[o.art_type] || 0) + 1;
+  });
+  const topArtTypes = Object.entries(typeCounts)
+    .map(([type, count]) => ({ type, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 8);
+  const maxTypeCount = Math.max(1, ...topArtTypes.map(t => t.count));
+
+  const nonCancelled = allOrders.filter(o => o.status !== 'Cancelled');
+  const pricedOrders = nonCancelled.filter(o => o.estimated_price);
+  const avgOrderValue = pricedOrders.length
+    ? pricedOrders.reduce((sum, o) => sum + (parseFloat(o.estimated_price) || 0), 0) / pricedOrders.length
+    : 0;
+
+  res.render('admin/analytics', {
+    revenueByMonth, maxMonthRevenue,
+    customersByMonth, maxMonthCustomers,
+    topArtTypes, maxTypeCount,
+    avgOrderValue,
+    totalOrders: nonCancelled.length,
+    totalCustomers: allCustomers.length
+  });
+}));
+
 // ---- Artworks ----
 app.get('/admin/artworks', requireAdmin, ah(async (req, res) => {
   res.render('admin/artworks', { artworks: db.normalize(await db.find('artworks', {}, { created_at: -1 })) });
