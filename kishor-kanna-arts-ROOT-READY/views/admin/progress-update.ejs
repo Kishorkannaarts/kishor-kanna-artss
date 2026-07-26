@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Progress Update | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
+<body class="admin">
+<div class="admin-shell">
+  <% active = 'orders' %>
+  <%- include('partials/sidebar') %>
+  <div class="admin-main">
+    <div class="admin-topbar"><h1>Send Progress Update</h1></div>
+    <p style="color:var(--muted); margin-top:-10px;">Order <%= order.order_code %> — <%= order.name %> (<%= order.email || 'no email on file' %>)</p>
+
+    <% if (!order.email) { %>
+      <div class="error-box">This customer didn't provide an email address — WhatsApp will still be attempted if configured.</div>
+    <% } %>
+
+    <% if (order.progress_image) { %>
+      <div style="margin:16px 0;">
+        <p style="color:var(--muted); font-size:0.9rem;">Last progress photo sent:</p>
+        <img src="<%= order.progress_image %>" alt="Progress photo" style="max-width:260px; border-radius:10px; border:1px solid var(--border);">
+      </div>
+    <% } %>
+
+    <form class="admin-form" action="/admin/orders/<%= order.id %>/progress" method="POST" enctype="multipart/form-data">
+      <div class="form-group">
+        <label>Work-in-Progress Photo</label>
+        <input type="file" name="progress_image" accept="image/*" <%= order.progress_image ? '' : 'required' %>>
+        <small style="color:var(--muted);"><% if (order.progress_image) { %>Leave empty to keep the last photo and just resend the update.<% } %></small>
+      </div>
+      <div class="form-group">
+        <label>Note to Customer (optional)</label>
+        <textarea name="note" placeholder="e.g. Shading the background now — should be ready in 2 more days!"><%= order.progress_note || '' %></textarea>
+      </div>
+      <button class="btn btn-primary" type="submit">Send Progress Update</button>
+      <a class="btn btn-ghost" href="/admin/orders">Cancel</a>
+    </form>
+  </div>
+</div>
+</body></html>
