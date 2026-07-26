@@ -7,7 +7,7 @@
   <%- include('partials/sidebar') %>
   <div class="admin-main">
     <div class="admin-topbar"><h1>Abandoned Orders</h1></div>
-    <p style="color:var(--muted); font-size:0.9rem; margin-top:-10px;">Customers who started the order form and gave an email but never finished. They're saved automatically as they type, and get one reminder email (and SMS, if Twilio is configured) once they've gone quiet past the delay below.</p>
+    <p style="color:var(--muted); font-size:0.9rem; margin-top:-10px;">Customers who started the order form and gave an email but never finished. They're saved automatically as they type, and get one reminder email once they've gone quiet past the delay below.</p>
 
     <form class="admin-form" action="/admin/abandoned-orders/settings" method="POST" style="display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap; margin-bottom:24px;">
       <div class="form-group" style="margin-bottom:0;">
