@@ -3,31 +3,71 @@
 <% pageImage = artwork.image %>
 <%- include('partials/header') %>
 <div class="container">
-  <% crumbs = [{ name: 'Home', url: '/' }, { name: 'Portfolio', url: '/portfolio' }, { name: artwork.title }] %>
+  <% crumbs = [{ name: 'Home', url: '/' }, { name: 'Shop', url: '/portfolio' }, { name: artwork.category, url: '/portfolio?category=' + encodeURIComponent(artwork.category) }, { name: artwork.title }] %>
   <%- include('partials/breadcrumbs') %>
 </div>
 
-<section class="section">
-  <div class="container" style="max-width:900px;">
-    <div class="grid artwork-detail-grid">
-      <img src="<%= artwork.image || 'https://placehold.co/500x500?text=Artwork' %>" alt="<%= artwork.title %>" loading="lazy" decoding="async" style="border-radius:14px; width:100%;">
-      <div>
+<section class="section" style="padding-top:0;">
+  <div class="container" style="max-width:1000px;">
+    <div class="pd-layout">
+
+      <!-- Gallery -->
+      <div class="pd-gallery">
+        <img class="pd-main-img" id="pdMainImg" src="<%= artwork.image || 'https://placehold.co/600x600?text=Artwork' %>" alt="<%= artwork.title %>" decoding="async">
+        <% if (artwork.before_image) { %>
+          <div class="pd-thumbs">
+            <img class="pd-thumb active" data-full="<%= artwork.image %>" src="<%= artwork.image %>" alt="Finished artwork">
+            <img class="pd-thumb" data-full="<%= artwork.before_image %>" src="<%= artwork.before_image %>" alt="Original reference photo">
+          </div>
+        <% } %>
+      </div>
+
+      <!-- Info / buy box -->
+      <div class="pd-info">
         <span class="tag"><%= artwork.category %></span>
-        <h1><%= artwork.title %></h1>
+        <h1 style="margin-top:8px;"><%= artwork.title %></h1>
         <p><%= artwork.description %></p>
         <% if (artwork.story) { %><p style="color:var(--text-secondary); font-style:italic;"><%= artwork.story %></p><% } %>
-        <p><strong>Size:</strong> <%= artwork.size || '—' %></p>
-        <% if (artwork.price) { %><p><strong>Price:</strong> <%= artwork.price %></p><% } %>
-        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
-          <a class="btn btn-gold" href="/order?art_type=<%= encodeURIComponent(artwork.category) %>&size=<%= encodeURIComponent(artwork.size || '') %>&price=<%= encodeURIComponent(artwork.price || '') %>">Order Similar Artwork</a>
+
+        <% if (matchedService) { %>
+          <!-- Real size/price table from Services -->
+          <div class="pd-size-picker">
+            <h4>Size</h4>
+            <div class="pd-size-options" id="pdSizeOptions">
+              <% (sizes || []).forEach(function(sz){
+                   var p = priceForSize(matchedService, sz);
+                   if (!p) return;
+              %>
+                <button type="button" class="pd-size-btn <%= sz === artwork.size ? 'active' : '' %>" data-size="<%= sz %>" data-price="<%= String(p).replace(/[^0-9.]/g,'') %>"><%= sz %></button>
+              <% }) %>
+            </div>
+          </div>
+          <div class="pd-price-box">
+            <span class="pd-price" id="pdPrice">₹<%= String(priceForSize(matchedService, artwork.size) || artwork.price || '').replace(/[^0-9.]/g,'') %></span>
+          </div>
+        <% } else if (artwork.price) { %>
+          <div class="pd-price-box"><span class="pd-price">₹<%= artwork.price %></span></div>
+          <p><strong>Size:</strong> <%= artwork.size || '—' %></p>
+        <% } %>
+
+        <p class="sub" style="margin-top:-4px;">You'll choose your photo and add any notes on the next step.</p>
+
+        <div class="pd-actions">
+          <a class="btn btn-gold" id="pdOrderBtn" href="/order?art_type=<%= encodeURIComponent(artwork.category) %>&size=<%= encodeURIComponent(artwork.size || '') %>&price=<%= encodeURIComponent(artwork.price || '') %>">Order This</a>
           <% if (isCustomer) { %>
             <form action="/wishlist/<%= artwork.id %>/toggle" method="POST">
               <input type="hidden" name="redirect_to" value="/portfolio/<%= artwork.id %>">
-              <button type="submit" class="btn btn-outline <%= isWishlisted ? 'is-wished' : '' %>">&#10084; <%= isWishlisted ? 'Saved to Wishlist' : 'Save to Wishlist' %></button>
+              <button type="submit" class="btn btn-outline <%= isWishlisted ? 'is-wished' : '' %>">&#10084; <%= isWishlisted ? 'Saved' : 'Save' %></button>
             </form>
           <% } else { %>
-            <a class="btn btn-outline" href="/account/login?next=<%= encodeURIComponent('/portfolio/' + artwork.id) %>">&#10084; Save to Wishlist</a>
+            <a class="btn btn-outline" href="/account/login?next=<%= encodeURIComponent('/portfolio/' + artwork.id) %>">&#10084; Save</a>
           <% } %>
+        </div>
+
+        <div class="pd-trust-row">
+          <span>🚚 Free Shipping Across India</span>
+          <span>🔒 Secure Payment</span>
+          <span>↺ Easy Returns</span>
         </div>
       </div>
     </div>
@@ -71,6 +111,36 @@
     "url": siteUrl + currentPath
   } : undefined
 }) %>
+</script>
+
+<script>
+  (function () {
+    document.querySelectorAll('.pd-thumb').forEach(function (t) {
+      t.addEventListener('click', function () {
+        document.getElementById('pdMainImg').src = t.getAttribute('data-full');
+        document.querySelectorAll('.pd-thumb').forEach(x => x.classList.remove('active'));
+        t.classList.add('active');
+      });
+    });
+
+    var sizeBtns = document.querySelectorAll('.pd-size-btn');
+    var priceEl = document.getElementById('pdPrice');
+    var orderBtn = document.getElementById('pdOrderBtn');
+    if (!sizeBtns.length || !orderBtn) return;
+    var baseUrl = orderBtn.href.split('&size=')[0].split('?')[0];
+    var artType = new URLSearchParams(orderBtn.href.split('?')[1]).get('art_type');
+
+    sizeBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        sizeBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        var price = btn.dataset.price;
+        var size = btn.dataset.size;
+        if (priceEl) priceEl.textContent = '₹' + price;
+        orderBtn.href = baseUrl + '?art_type=' + encodeURIComponent(artType) + '&size=' + encodeURIComponent(size) + '&price=' + encodeURIComponent(price);
+      });
+    });
+  })();
 </script>
 
 <%- include('partials/footer') %>
