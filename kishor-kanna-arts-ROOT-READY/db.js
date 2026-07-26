@@ -224,6 +224,15 @@ Your details are saved — just pick up where you left off:
 
 If you have any questions, just reply to this email or reach us on WhatsApp.
 
+— {{site_name}}`,
+    tmpl_gift_reminder_subject: '{{occasion}} for {{recipient_name}} is coming up! - {{site_name}}',
+    tmpl_gift_reminder_body: `Hi {{name}},
+
+Just a friendly reminder — {{recipient_name}}'s {{occasion}} is coming up on {{event_date}}!
+
+Give a gift they'll treasure forever — a custom hand-made portrait from {{site_name}}. Order now so it's ready in time:
+{{order_url}}
+
 — {{site_name}}`
   };
 
@@ -252,6 +261,10 @@ If you have any questions, just reply to this email or reach us on WhatsApp.
   // creating duplicates; the scheduler query filters on these same fields.
   await db.collection('order_progress').createIndex({ email: 1 }, { unique: true, background: true });
   await db.collection('order_progress').createIndex({ converted: 1, reminder_sent: 1, updated_at: 1 }, { background: true });
+  // Gift reminders: fast lookup of a customer's own reminders, and of
+  // everything the scheduler still needs to check on its next run.
+  await db.collection('gift_reminders').createIndex({ customer_id: 1 }, { background: true });
+  await db.collection('gift_reminders').createIndex({ reminder_sent: 1, event_date: 1 }, { background: true });
 
   console.log('[db] MongoDB connected and schema ready');
 }
