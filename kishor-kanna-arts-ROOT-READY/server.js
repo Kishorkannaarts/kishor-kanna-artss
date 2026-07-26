@@ -264,6 +264,13 @@ function priceForSize(service, size) {
   return '';
 }
 
+// Shared fetch for the full services/art-types list, used across the
+// homepage, portfolio, order form, chatbot, and admin services page —
+// previously duplicated inline as db.find('services', ...) 7 times.
+async function getAllServices() {
+  return db.normalize(await db.find('services', {}, { created_at: -1 }));
+}
+
 // Multipart form bodies (parsed by multer) don't auto-nest bracket-style
 // field names the way express.urlencoded (qs) does, so pull `prices[X]`
 // fields out of req.body manually.
@@ -488,7 +495,7 @@ app.get('/', ah(async (req, res) => {
   const testimonials = db.normalize(await db.find('testimonials', { approved: true }, { created_at: -1 }, 6))
     .map(t => ({ ...t, embed_url: videoEmbedUrl(t.video_url) }));
   const videos    = db.normalize(await db.find('videos', {}, { created_at: -1 }, 12)).map(v => ({ ...v, embed_url: videoEmbedUrl(v.video_url) }));
-  const services  = db.normalize(await db.find('services', {}, { created_at: -1 }));
+  const services  = await getAllServices();
   const offers    = db.normalize(await db.find('offers', { active: true }, { created_at: -1 }));
   const blocks    = db.normalize(await db.find('blocks', {}, { created_at: 1 }));
   const recentPosts = db.normalize(await db.find('posts', { published: true }, { created_at: -1 }, 3));
@@ -543,7 +550,7 @@ app.get('/portfolio/:id', ah(async (req, res) => {
   if (!artwork) return res.status(404).send('Artwork not found');
 // Best-effort match: a Service titled the same as this artwork's category
   // (e.g. "Pencil Art") carries the real per-size price table.
-  const allServices = db.normalize(await db.find('services', {}, { created_at: -1 }));
+  const allServices = await getAllServices();
   const matchedService = allServices.find(s => (s.title || '').toLowerCase() === (artwork.category || '').toLowerCase()) || null;
   // "You Might Also Like" — other pieces in the same category first (most
   // relevant to someone already looking at this style), topped up with the
@@ -648,7 +655,7 @@ if (!chatbot.isConfigured()) {
     const [artTypes, sizes, services] = await Promise.all([
       db.getArtTypes(),
       db.getSizes(),
-      db.find('services', {}, { created_at: -1 })
+      getAllServices()
     ]);
     const reply = await chatbot.chat(req.session.chatHistory, { artTypes, sizes, services, siteUrl: res.locals.siteUrl });
     req.session.chatHistory.push({ role: 'assistant', content: reply });
@@ -667,7 +674,7 @@ app.post('/newsletter', ah(async (req, res) => {
 
 app.get('/order', ah(async (req, res) => {
   const blocked = await db.find('blocked_dates', {}, { date: 1 });
-  const services = db.normalize(await db.find('services', {}, { created_at: -1 }));
+  const services = await getAllServices();
   const activeOffer = await db.findOne('offers', { active: true });
   const offerDiscount = activeOffer ? (activeOffer.discount_percent || 0) : 0;
   const old = {};
@@ -703,7 +710,7 @@ app.get('/order', ah(async (req, res) => {
     // the customer is mid-checkout and shouldn't lose their progress.
     (async () => {
       const blocked = await db.find('blocked_dates', {}, { date: 1 });
-      const services = db.normalize(await db.find('services', {}, { created_at: -1 }));
+      const services = await getAllServices();
       const activeOffer = await db.findOne('offers', { active: true });
       const offerDiscount = activeOffer ? (activeOffer.discount_percent || 0) : 0;
       const message = err.message === 'INVALID_FILE_TYPE'
@@ -723,7 +730,7 @@ app.get('/order', ah(async (req, res) => {
   const notes = [extraNoteParts.join(' · '), req.body.notes].filter(Boolean).join(' — ');
   const blocked = await db.find('blocked_dates', {}, { date: 1 });
   const blockedDates = blocked.map(r => r.date);
-  const services = db.normalize(await db.find('services', {}, { created_at: -1 }));
+  const services = await getAllServices();
   const activeOffer = await db.findOne('offers', { active: true });
   const offerDiscount = activeOffer ? (activeOffer.discount_percent || 0) : 0;
 
@@ -1378,7 +1385,7 @@ app.post('/admin/artworks/:id/delete', requireAdmin, ah(async (req, res) => {
 
 // ---- Services ----
 app.get('/admin/services', requireAdmin, ah(async (req, res) => {
-  res.render('admin/services', { services: db.normalize(await db.find('services', {}, { created_at: -1 })) });
+  res.render('admin/services', { services: await getAllServices() });
 }));
 
 app.post('/admin/services/save', requireAdmin, memoryUpload.single('image'), csrfCheck, ah(async (req, res) => {
