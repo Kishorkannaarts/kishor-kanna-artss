@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gift Reminders | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
+<body class="admin">
+<div class="admin-shell">
+  <% active = 'gift-reminders' %>
+  <%- include('partials/sidebar') %>
+  <div class="admin-main">
+    <div class="admin-topbar"><h1>Gift Reminders</h1></div>
+    <p style="color:var(--muted); font-size:0.9rem; margin-top:-10px;">Customers set these up from their account to be reminded before a birthday, anniversary or wedding. Recurring ones automatically roll to next year after sending.</p>
+
+    <table>
+      <tr><th>Customer</th><th>Email / Phone</th><th>Occasion / Recipient</th><th>Date</th><th>Reminder</th><th>Actions</th></tr>
+      <% rows.forEach(r => { %>
+        <tr>
+          <td><%= r.name || '—' %></td>
+          <td><%= r.email || '—' %><br><small style="color:var(--muted);"><%= r.phone || '' %></small></td>
+          <td><%= r.occasion %> — <%= r.recipient_name %></td>
+          <td><%= r.event_date %><% if (r.recurring) { %><br><small style="color:var(--muted);">repeats yearly</small><% } %></td>
+          <td><span class="badge <%= r.reminder_sent ? 'badge-ok' : 'badge-new' %>"><%= r.reminder_sent ? 'Sent' : 'Pending' %></span></td>
+          <td class="actions-row">
+            <form action="/admin/gift-reminders/<%= r.id %>/send-now" method="POST">
+              <button class="btn btn-outline btn-sm" type="submit">Send Now</button>
+            </form>
+            <form action="/admin/gift-reminders/<%= r.id %>/delete" method="POST" onsubmit="return confirm('Delete this reminder?');">
+              <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+      <% if (rows.length === 0) { %><tr><td colspan="6">No gift reminders yet.</td></tr><% } %>
+    </table>
+  </div>
+</div>
+</body></html>
