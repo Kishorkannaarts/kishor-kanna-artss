@@ -277,7 +277,8 @@ a:hover { color: var(--color-gold); }
   .grid-2 .card-footer { flex-direction: column; align-items: flex-start; gap: 8px; }
   .grid-2 .card-footer .btn { width: 100%; text-align: center; }
 }
-
+.gallery-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:20px; margin-top:24px; }
+.gallery-item { position:relative; padding:0; border:none; border-radius:var(--radius-md); overflow:hidden; cursor:pointer; background:none; aspect-ratio:1; box-shadow: var(--shadow-soft); }
 .card {
   background: var(--bg-primary); border: 1px solid var(--border-color);
   border-radius: var(--radius-md); overflow: hidden; display: block;
