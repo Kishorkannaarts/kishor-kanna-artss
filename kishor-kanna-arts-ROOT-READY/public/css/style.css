@@ -243,6 +243,20 @@ a:hover { color: var(--color-gold); }
 }
 
 /* ---------- Grid & Cards ---------- */
+.style-grid { display: flex; gap: 18px; overflow-x: auto; padding: 8px 4px 20px; scroll-snap-type: x proximity; }
+.style-card {
+  flex: 0 0 140px; scroll-snap-align: start; text-align: center; text-decoration: none; color: inherit;
+}
+.style-card img {
+  width: 140px; height: 140px; border-radius: var(--radius-lg); object-fit: cover;
+  box-shadow: var(--shadow-soft); transition: var(--transition);
+}
+.style-card:hover img { box-shadow: var(--shadow-gold); transform: translateY(-3px); }
+.style-card-name { display: block; margin-top: 10px; font-weight: 600; font-size: 0.92rem; }
+.style-card-price { display: block; font-size: 0.78rem; color: var(--text-secondary); }
+@media (min-width: 700px) {
+  .style-grid { overflow: visible; flex-wrap: wrap; justify-content: center; }
+}
 .grid { display: grid; gap: var(--space-md); }
 .artwork-detail-grid { grid-template-columns: 1fr 1fr; align-items: start; }
 @media (max-width: 700px) { .artwork-detail-grid { grid-template-columns: 1fr; } }
