@@ -8,5 +8,6 @@
   <a href="/account/profile" class="<%= _tab === 'profile' ? 'active' : '' %>">Profile</a>
   <a href="/account/addresses" class="<%= _tab === 'addresses' ? 'active' : '' %>">Saved Addresses</a>
   <a href="/account/wishlist" class="<%= _tab === 'wishlist' ? 'active' : '' %>">Wishlist</a>
+  <a href="/account/referrals" class="<%= _tab === 'referrals' ? 'active' : '' %>">Referrals & Wallet<% if (typeof walletBalance !== 'undefined' && walletBalance > 0) { %> (₹<%= walletBalance %>)<% } %></a>
   <a href="/account/notifications" class="<%= _tab === 'notifications' ? 'active' : '' %>">Notifications<% if (typeof unreadNotifCount !== 'undefined' && unreadNotifCount > 0) { %> (<%= unreadNotifCount %>)<% } %></a>
 </div>
