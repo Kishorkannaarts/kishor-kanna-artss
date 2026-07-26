@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analytics | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
+<body class="admin">
+<div class="admin-shell">
+  <% active = 'analytics' %>
+  <%- include('partials/sidebar') %>
+  <div class="admin-main">
+    <div class="admin-topbar"><h1>Analytics</h1></div>
+    <p style="color:var(--muted); font-size:0.9rem; margin-top:-10px;">
+      Trends over the last 6 months. For day-to-day order status, see the <a href="/admin/dashboard">Dashboard</a>.
+    </p>
+
+    <div class="stat-grid">
+      <div class="stat-card"><div class="num"><%= totalOrders %></div><div class="label">Total Orders (excl. cancelled)</div></div>
+      <div class="stat-card"><div class="num"><%= totalCustomers %></div><div class="label">Registered Customers</div></div>
+      <div class="stat-card"><div class="num">₹<%= avgOrderValue.toFixed(0) %></div><div class="label">Average Order Value</div></div>
+    </div>
+
+    <div class="chart-row">
+      <div class="chart-card">
+        <h2 style="font-size:1.1rem;">Revenue Collected — Last 6 Months</h2>
+        <div class="chart-bars">
+          <% revenueByMonth.forEach(m => { %>
+            <div class="chart-bar" title="<%= m.label %>: ₹<%= m.total.toFixed(0) %>">
+              <div class="chart-bar-fill" style="height:<%= Math.round((m.total / maxMonthRevenue) * 100) %>%;"><% if (m.total > 0) { %><span class="chart-bar-value">₹<%= m.total.toFixed(0) %></span><% } %></div>
+              <div class="chart-bar-label"><%= m.label %></div>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h2 style="font-size:1.1rem;">New Customers — Last 6 Months</h2>
+        <div class="chart-bars">
+          <% customersByMonth.forEach(m => { %>
+            <div class="chart-bar" title="<%= m.label %>: <%= m.count %> new customers">
+              <div class="chart-bar-fill" style="height:<%= Math.round((m.count / maxMonthCustomers) * 100) %>%;"><% if (m.count > 0) { %><span class="chart-bar-value"><%= m.count %></span><% } %></div>
+              <div class="chart-bar-label"><%= m.label %></div>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-row">
+      <div class="chart-card">
+        <h2 style="font-size:1.1rem;">Top Art Types</h2>
+        <div class="chart-hbars">
+          <% topArtTypes.forEach(t => { %>
+            <div class="chart-hbar-row">
+              <div class="chart-hbar-label"><%= t.type %></div>
+              <div class="chart-hbar-track"><div class="chart-hbar-fill" style="width:<%= Math.round((t.count / maxTypeCount) * 100) %>%;"></div></div>
+              <div class="chart-hbar-value"><%= t.count %></div>
+            </div>
+          <% }) %>
+          <% if (topArtTypes.length === 0) { %><p style="color:var(--muted);">No orders yet.</p><% } %>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h2 style="font-size:1.1rem;">Google Analytics</h2>
+        <% if (settings.ga_measurement_id) { %>
+          <p><span class="badge badge-ok">Connected</span></p>
+          <p style="color:var(--muted); font-size:0.9rem;">Measurement ID: <%= settings.ga_measurement_id %></p>
+          <p style="color:var(--muted); font-size:0.85rem;">
+            Live traffic charts (visitors, sessions, page views) can't be embedded directly here — Google requires a separate API connection with its own credentials to pull that data into a page like this one. For now, view it directly in Google Analytics:
+          </p>
+          <a class="btn btn-ghost btn-sm" href="https://analytics.google.com/" target="_blank">Open Google Analytics →</a>
+        <% } else { %>
+          <p><span class="badge badge-new">Not Connected</span></p>
+          <p style="color:var(--muted); font-size:0.9rem;">Add your GA4 Measurement ID in <a href="/admin/settings">Site Settings</a> to start tracking visitors.</p>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>
