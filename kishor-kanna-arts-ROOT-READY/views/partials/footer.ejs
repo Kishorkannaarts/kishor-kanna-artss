@@ -64,33 +64,56 @@
     </div>
 
     <div>
-      <h4>Explore</h4>
-      <a href="/portfolio">Portfolio</a>
-      <a href="/services">Services</a>
+      <h4>Company</h4>
       <a href="/about">About Us</a>
-      <a href="/order">Order Now</a>
+      <a href="/portfolio">Portfolio</a>
+      <a href="/blog">Blog</a>
+      <a href="/contact">Contact</a>
+    </div>
+    <div>
+      <h4>Shop</h4>
+      <% (artTypes || []).slice(0, 6).forEach(function(cat) { %>
+        <a href="/portfolio?category=<%= encodeURIComponent(cat) %>"><%= cat %></a>
+      <% }) %>
+      <% if (!artTypes || !artTypes.length) { %>
+        <a href="/portfolio?category=Pencil%20Portraits">Pencil Portraits</a>
+        <a href="/portfolio?category=Color%20Portraits">Color Portraits</a>
+        <a href="/portfolio?category=Canvas%20Paintings">Canvas Paintings</a>
+        <a href="/portfolio?category=Digital%20Portraits">Digital Portraits</a>
+        <a href="/portfolio?category=Blood%20Portraits">Blood Portraits</a>
+      <% } %>
+    </div>
+    <div>
+      <h4>Customer Support</h4>
       <a href="/track-order">Track Order</a>
+      <a href="/about#faq">FAQ</a>
+      <a href="/#reviewsTrack">Reviews</a>
+    </div>
+    <div>
+      <h4>Legal</h4>
+      <a href="/privacy-policy">Privacy Policy</a>
+      <a href="/terms">Terms &amp; Conditions</a>
     </div>
     <div>
       <h4>Contact</h4>
       <a href="tel:<%= settings.contact_phone %>"><%= settings.contact_phone %></a>
       <a href="mailto:<%= settings.contact_email %>"><%= settings.contact_email %></a>
       <a href="https://www.google.com/maps/dir/?api=1&destination=<%= encodeURIComponent(settings.contact_address) %>" target="_blank" rel="noopener" style="color:#cfc3b5; font-size:0.9rem; text-decoration:none; display:block; margin:4px 0;"><%= settings.contact_address %></a>
-      <a href="/privacy-policy">Privacy Policy</a>
-      <a href="/terms">Terms &amp; Conditions</a>
     </div>
-    <div>
-      <h4>Newsletter</h4>
-      <p style="color:#cfc3b5; font-size:0.9rem;">Get notified about new artworks &amp; offers.</p>
+  </div>
+  <div class="container" style="padding-bottom: var(--space-lg);">
+    <div style="max-width:340px;">
+      <h4 style="color:#fff; font-size:1rem; margin-bottom:14px;">Newsletter</h4>
+      <p style="color:#cfc3b5; font-size:0.9rem;">Subscribe for exclusive offers, new artwork releases, and creative inspiration.</p>
       <form class="newsletter-form" action="/newsletter" method="POST">
         <div style="position:absolute;left:-9999px;top:-9999px;" aria-hidden="true"><input type="text" name="website" tabindex="-1" autocomplete="off"></div>
         <input type="email" name="email" placeholder="Your email" required>
-        <button type="submit">Join</button>
+        <button type="submit">Subscribe</button>
       </form>
     </div>
   </div>
   <div class="footer-bottom">
-    &copy; <%= new Date().getFullYear() %> <%= settings.site_name %>. All rights reserved.
+    &copy; <%= new Date().getFullYear() %> <%= settings.site_name %>. All Rights Reserved.
   </div>
 </footer>
 
