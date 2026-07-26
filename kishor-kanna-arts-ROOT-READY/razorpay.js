@@ -32,7 +32,7 @@ async function createPaymentLink({ amount, description, name, phone, email, refe
     currency: 'INR',
     description,
     customer: { name, contact: phone, email: email || undefined },
-    notify: { sms: true, email: !!email },
+    notify: { sms: false, email: !!email },
     reference_id: referenceId,
     callback_url: callbackUrl,
     callback_method: 'get'
