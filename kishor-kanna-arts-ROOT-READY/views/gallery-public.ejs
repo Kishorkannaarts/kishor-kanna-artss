@@ -2,9 +2,14 @@
 <% pageDescription = `Real photos from real customers — see how a ${settings.site_name} portrait looks framed and hung in their homes.` %>
 <%- include('partials/header') %>
 
-<section class="section">
+<div class="container" style="padding-top:18px;">
+  <% crumbs = [{ name: 'Home', url: '/' }, { name: 'Gallery' }]; %>
+  <%- include('partials/breadcrumbs') %>
+</div>
+
+<section class="section" style="padding-top:0;">
   <div class="container">
-    <h2>Customer Gallery</h2>
+    <h1>Gallery</h1>
     <p class="sub">Real portraits, in real homes — shared by the people who ordered them.</p>
 
     <% if (submitted) { %>
