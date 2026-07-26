@@ -17,7 +17,6 @@ const notify = require('./notify');
 const referral = require('./referral');
 const razorpay = require('./razorpay');
 const chatbot = require('./chatbot');
-const sms = require('./sms');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -307,14 +306,6 @@ async function sendAbandonedReminder(p, settings) {
       html: renderTemplate(settings.tmpl_abandoned_recovery_body, data).replace(/\n/g, '<br>')
     });
   }
-  if (p.phone) {
-    const to = notify.toE164(p.phone);
-    if (to && sms.isConfigured()) {
-      sms.sendSMS({ to, body: `Hi ${data.name}, you started an order at ${settings.site_name} but didn't finish. Complete it here: ${continueUrl}` })
-        .catch(err => console.error('[abandoned-recovery] SMS failed:', err.message));
-    }
-  }
-
   const mdb = await db.getDB();
   await mdb.collection('order_progress').updateOne(
     { _id: p._id },
@@ -379,14 +370,6 @@ async function sendGiftReminder(r, settings) {
       html: renderTemplate(settings.tmpl_gift_reminder_body, data).replace(/\n/g, '<br>')
     });
   }
-  if (r.phone) {
-    const to = notify.toE164(r.phone);
-    if (to && sms.isConfigured()) {
-      sms.sendSMS({ to, body: `Hi ${data.name}, ${r.recipient_name}'s ${r.occasion} is coming up on ${r.event_date}! Order a custom portrait gift: ${orderUrl}` })
-        .catch(err => console.error('[gift-reminder] SMS failed:', err.message));
-    }
-  }
-
   const mdb = await db.getDB();
   if (r.recurring) {
     // Roll straight to next year and re-arm — a recurring reminder should
@@ -467,6 +450,9 @@ app.get('/sitemap.xml', ah(async (req, res) => {
     { loc: '/blog', priority: '0.7', changefreq: 'weekly' },
     { loc: '/contact', priority: '0.6', changefreq: 'monthly' },
     { loc: '/privacy-policy', priority: '0.3', changefreq: 'yearly' },
+    { loc: '/shipping-policy', priority: '0.3', changefreq: 'yearly' },
+    { loc: '/refund-policy', priority: '0.3', changefreq: 'yearly' },
+    { loc: '/cancellation-policy', priority: '0.3', changefreq: 'yearly' },
     { loc: '/terms', priority: '0.3', changefreq: 'yearly' }
   ];
   if (res.locals.settings.courses_enabled) staticUrls.push({ loc: '/courses', priority: '0.6', changefreq: 'weekly' });
@@ -626,6 +612,11 @@ app.post('/contact', ah(async (req, res) => {
   if (isSpamBot(req)) return res.render('contact', { sent: true }); // silently drop, no tell for bots
   const { name, email, phone, subject, message } = req.body;
   await db.insertOne('messages', { name, email, phone, subject, message, read: false });
+  if (process.env.NOTIFY_EMAIL) {
+    const s = res.locals.settings;
+    const data = { name, email: email || '-', phone: phone || '-', subject: subject || '(no subject)', message, site_name: s.site_name };
+    mailer.sendMail({ to: process.env.NOTIFY_EMAIL, subject: renderTemplate(s.tmpl_contact_form_admin_subject, data), html: renderTemplate(s.tmpl_contact_form_admin_body, data).replace(/\n/g, '<br>') });
+  }
   res.render('contact', { sent: true });
 }));
 
@@ -878,10 +869,12 @@ app.post('/webhooks/razorpay', ah(async (req, res) => {
     await db.updateById('orders', order.id, { advance_paid: true, status: 'In Progress' });
     const data = { name: order.name, order_code: order.order_code, status: 'In Progress', amount: order.advance_amount, track_url: trackUrl, site_name: s.site_name };
     if (order.email) await mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_status_update_subject, data), html: renderTemplate(s.tmpl_status_update_body, data).replace(/\n/g, '<br>') });
+    if (process.env.NOTIFY_EMAIL) mailer.sendMail({ to: process.env.NOTIFY_EMAIL, subject: renderTemplate(s.tmpl_advance_paid_admin_subject, data), html: renderTemplate(s.tmpl_advance_paid_admin_body, data).replace(/\n/g, '<br>') });
     notify.notifyOrder('advance_paid', order, data);
   } else if (stage === 'balance' && !order.balance_paid) {
     await db.updateById('orders', order.id, { balance_paid: true });
     const data = { name: order.name, order_code: order.order_code, amount: order.balance_amount, site_name: s.site_name };
+    if (process.env.NOTIFY_EMAIL) mailer.sendMail({ to: process.env.NOTIFY_EMAIL, subject: renderTemplate(s.tmpl_balance_paid_admin_subject, data), html: renderTemplate(s.tmpl_balance_paid_admin_body, data).replace(/\n/g, '<br>') });
     notify.notifyOrder('balance_paid', order, data);
   }
 
@@ -1157,6 +1150,11 @@ app.post('/testimonials', memoryUpload.single('photo'), csrfCheck, ah(async (req
     verified: isVerifiedCustomer,
     customer_id: (req.session && req.session.customerId) || null
   });
+  if (process.env.NOTIFY_EMAIL) {
+    const s = res.locals.settings;
+    const data = { name, message, rating: parseInt(rating) || 5, site_name: s.site_name };
+    mailer.sendMail({ to: process.env.NOTIFY_EMAIL, subject: renderTemplate(s.tmpl_new_review_admin_subject, data), html: renderTemplate(s.tmpl_new_review_admin_body, data).replace(/\n/g, '<br>') });
+  }
   res.redirect('/about?thanks=1');
 }));
 
@@ -1205,6 +1203,9 @@ app.get('/blog/:slug', ah(async (req, res) => {
 }));
 
 app.get('/privacy-policy', (req, res) => res.render('privacy-policy'));
+app.get('/shipping-policy', (req, res) => res.render('shipping-policy'));
+app.get('/refund-policy', (req, res) => res.render('refund-policy'));
+app.get('/cancellation-policy', (req, res) => res.render('cancellation-policy'));
 app.get('/terms', (req, res) => res.render('terms'));
 
 // =========================================================
@@ -1495,6 +1496,9 @@ app.post('/admin/orders/:id/advance-paid', requireAdmin, ah(async (req, res) => 
   if (order.email) {
     await mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_status_update_subject, data), html: renderTemplate(s.tmpl_status_update_body, data).replace(/\n/g, '<br>') });
   }
+  if (process.env.NOTIFY_EMAIL) {
+    mailer.sendMail({ to: process.env.NOTIFY_EMAIL, subject: renderTemplate(s.tmpl_advance_paid_admin_subject, data), html: renderTemplate(s.tmpl_advance_paid_admin_body, data).replace(/\n/g, '<br>') });
+  }
   notify.notifyOrder('advance_paid', order, data);
   res.redirect('/admin/orders');
 }));
@@ -1571,6 +1575,9 @@ app.post('/admin/orders/:id/balance-paid', requireAdmin, ah(async (req, res) => 
   if (order) {
     const s = res.locals.settings;
     const data = { name: order.name, order_code: order.order_code, amount: order.balance_amount, site_name: s.site_name };
+    if (process.env.NOTIFY_EMAIL) {
+      mailer.sendMail({ to: process.env.NOTIFY_EMAIL, subject: renderTemplate(s.tmpl_balance_paid_admin_subject, data), html: renderTemplate(s.tmpl_balance_paid_admin_body, data).replace(/\n/g, '<br>') });
+    }
     notify.notifyOrder('balance_paid', order, data);
   }
   res.redirect('/admin/orders');
@@ -1580,10 +1587,26 @@ app.post('/admin/orders/:id/expenses', requireAdmin, ah(async (req, res) => {
   await db.updateById('orders', req.params.id, { expenses: req.body.expenses || 0 });
   res.redirect('/admin/orders');
 }));
+
+// ---- Packing ----
+app.post('/admin/orders/:id/packing', requireAdmin, ah(async (req, res) => {
+  const order = db.normalize(await db.findById('orders', req.params.id));
+  if (!order) return res.redirect('/admin/orders');
+  await db.updateById('orders', req.params.id, { status: 'Packing' });
+  const s = res.locals.settings;
+  const data = { name: order.name, order_code: order.order_code, site_name: s.site_name };
+  if (order.email) {
+    await mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_packing_subject, data), html: renderTemplate(s.tmpl_packing_body, data).replace(/\n/g, '<br>') });
+  }
+  notify.notifyOrder('packing', order, data);
+  res.redirect('/admin/orders');
+}));
+
+// ---- Shipped (quick, no tracking details) ----
 app.post('/admin/orders/:id/shipped', requireAdmin, ah(async (req, res) => {
   const order = db.normalize(await db.findById('orders', req.params.id));
   if (!order) return res.redirect('/admin/orders');
-  await db.updateById('orders', req.params.id, { status: 'Delivered' });
+  await db.updateById('orders', req.params.id, { status: 'Shipped' });
   const s = res.locals.settings;
   const trackUrl = `${req.protocol}://${req.get('host')}/track-order`;
   const data = { name: order.name, order_code: order.order_code, track_url: trackUrl, site_name: s.site_name };
@@ -1591,9 +1614,107 @@ app.post('/admin/orders/:id/shipped', requireAdmin, ah(async (req, res) => {
     await mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_shipped_subject, data), html: renderTemplate(s.tmpl_shipped_body, data).replace(/\n/g, '<br>') });
   }
   notify.notifyOrder('shipped', order, data);
+  res.redirect('/admin/orders');
+}));
+
+// ---- Tracking (adds courier + tracking number, use instead of/after "Mark as Sent") ----
+app.get('/admin/orders/:id/tracking', requireAdmin, ah(async (req, res) => {
+  const order = db.normalize(await db.findById('orders', req.params.id));
+  if (!order) return res.redirect('/admin/orders');
+  res.render('admin/tracking', { order, error: null });
+}));
+
+app.post('/admin/orders/:id/tracking', requireAdmin, ah(async (req, res) => {
+  const { courier_name, tracking_number, tracking_url } = req.body;
+  const order = db.normalize(await db.findById('orders', req.params.id));
+  if (!order) return res.redirect('/admin/orders');
+  if (!tracking_number && !tracking_url) {
+    return res.render('admin/tracking', { order, error: 'Enter a tracking number or a tracking link.' });
+  }
+  await db.updateById('orders', req.params.id, { status: 'Shipped', courier_name, tracking_number, tracking_url });
+  const s = res.locals.settings;
+  const data = { name: order.name, order_code: order.order_code, courier_name, tracking_number, tracking_url, site_name: s.site_name };
+  if (order.email) {
+    await mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_tracking_subject, data), html: renderTemplate(s.tmpl_tracking_body, data).replace(/\n/g, '<br>') });
+  }
+  notify.notifyOrder('tracking', order, data);
+  res.redirect('/admin/orders');
+}));
+
+// ---- Delivered (the true final step — separate from "Mark as Sent") ----
+app.post('/admin/orders/:id/delivered', requireAdmin, ah(async (req, res) => {
+  const order = db.normalize(await db.findById('orders', req.params.id));
+  if (!order) return res.redirect('/admin/orders');
+  await db.updateById('orders', req.params.id, { status: 'Delivered' });
+  const s = res.locals.settings;
+  const data = { name: order.name, order_code: order.order_code, site_name: s.site_name };
+  if (order.email) {
+    await mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_delivered_subject, data), html: renderTemplate(s.tmpl_delivered_body, data).replace(/\n/g, '<br>') });
+  }
+  notify.notifyOrder('delivered', order, data);
   if (order.customer_id) {
     referral.rewardIfEligible(order.customer_id).catch(err => console.error('[referral] reward failed:', err.message));
   }
+  res.redirect('/admin/orders');
+}));
+
+// ---- Progress Update (work-in-progress photo) ----
+app.get('/admin/orders/:id/progress', requireAdmin, ah(async (req, res) => {
+  const order = db.normalize(await db.findById('orders', req.params.id));
+  if (!order) return res.redirect('/admin/orders');
+  res.render('admin/progress-update', { order });
+}));
+
+app.post('/admin/orders/:id/progress', requireAdmin, memoryUpload.single('progress_image'), csrfCheck, ah(async (req, res) => {
+  const order = db.normalize(await db.findById('orders', req.params.id));
+  if (!order) return res.redirect('/admin/orders');
+  const uploadedUrl = await uploadImage(req.file, 'progress');
+  const progress_image = uploadedUrl || order.progress_image || null;
+  await db.updateById('orders', req.params.id, { progress_image, progress_note: req.body.note || '', progress_sent_at: new Date().toISOString() });
+  const s = res.locals.settings;
+  const data = { name: order.name, order_code: order.order_code, art_type: order.art_type, progress_image, progress_note: req.body.note || '', site_name: s.site_name };
+  if (order.email && progress_image) {
+    await mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_progress_update_subject, data), html: renderTemplate(s.tmpl_progress_update_body, data).replace(/\n/g, '<br>') });
+  }
+  notify.notifyOrder('progress_update', order, data);
+  res.redirect('/admin/orders');
+}));
+
+// ---- Making Video (link to a short process video) ----
+app.get('/admin/orders/:id/making-video', requireAdmin, ah(async (req, res) => {
+  const order = db.normalize(await db.findById('orders', req.params.id));
+  if (!order) return res.redirect('/admin/orders');
+  res.render('admin/making-video', { order, error: null });
+}));
+
+app.post('/admin/orders/:id/making-video', requireAdmin, ah(async (req, res) => {
+  const { video_url } = req.body;
+  const order = db.normalize(await db.findById('orders', req.params.id));
+  if (!order) return res.redirect('/admin/orders');
+  if (!video_url || !video_url.trim()) {
+    return res.render('admin/making-video', { order, error: 'Paste a video link (YouTube, Instagram, or Google Drive).' });
+  }
+  await db.updateById('orders', req.params.id, { making_video_url: video_url.trim() });
+  const s = res.locals.settings;
+  const data = { name: order.name, order_code: order.order_code, art_type: order.art_type, video_url: video_url.trim(), site_name: s.site_name };
+  if (order.email) {
+    await mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_making_video_subject, data), html: renderTemplate(s.tmpl_making_video_body, data).replace(/\n/g, '<br>') });
+  }
+  notify.notifyOrder('making_video', order, data);
+  res.redirect('/admin/orders');
+}));
+
+// ---- Review Request (send after delivery) ----
+app.post('/admin/orders/:id/review-request', requireAdmin, ah(async (req, res) => {
+  const order = db.normalize(await db.findById('orders', req.params.id));
+  if (!order) return res.redirect('/admin/orders');
+  const s = res.locals.settings;
+  const reviewUrl = `${res.locals.siteUrl}/about#leave-review`;
+  const data = { name: order.name, order_code: order.order_code, art_type: order.art_type, review_url: reviewUrl, site_name: s.site_name };
+  if (order.email) {
+    await mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_review_request_subject, data), html: renderTemplate(s.tmpl_review_request_body, data).replace(/\n/g, '<br>') });
+  }
+  notify.notifyOrder('review_request', order, data);
   res.redirect('/admin/orders');
 }));
 
