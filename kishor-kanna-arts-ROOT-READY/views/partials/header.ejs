@@ -97,11 +97,9 @@
     <details class="nav-more nav-mega">
       <summary>Shop</summary>
       <div class="nav-mega-menu">
-        <a href="/services#pencil"><strong>Pencil Portraits</strong><span>Classic graphite, timeless detail</span></a>
-        <a href="/services#color"><strong>Color Portraits</strong><span>Vivid, lifelike color work</span></a>
-        <a href="/services#canvas"><strong>Canvas Paintings</strong><span>Gallery-ready framed art</span></a>
-        <a href="/services#couple"><strong>Couple &amp; Wedding</strong><span>Romantic keepsake portraits</span></a>
-        <a href="/services#pet"><strong>Pet Portraits</strong><span>Your pet, hand-painted</span></a>
+        <% (artTypes || []).slice(0, 6).forEach(function(cat) { %>
+          <a href="/portfolio?category=<%= encodeURIComponent(cat) %>"><strong><%= cat %></strong></a>
+        <% }) %>
         <a href="/portfolio" class="nav-mega-viewall">View All Portraits →</a>
       </div>
     </details>
