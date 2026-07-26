@@ -193,7 +193,7 @@
 </section>
 
 <!-- 7. HOW IT WORKS -->
-<section class="section">
+<section class="section" id="how-it-works">
   <div class="container">
     <h2 class="reveal">From Your Photo to a Masterpiece</h2>
     <p class="sub reveal">Simple 5-step order process</p>
@@ -223,25 +223,6 @@
         <h3>Delivered to Your Doorstep</h3>
         <p>Safely packed and shipped straight to your door.</p>
       </div>
-    </div>
-  </div>
-</section>
-
-<section class="section section-tint">
-  <div class="container">
-    <h2 class="reveal"><%= settings.services_heading || 'Services' %></h2>
-    <p class="sub reveal"><%= settings.services_sub || 'Custom art made to order' %></p>
-    <div class="grid grid-2 grid-services">
-      <% services.forEach(s => { %>
-        <div class="card reveal">
-          <img src="<%= s.image || 'https://placehold.co/400x300?text=Service' %>" alt="<%= s.title %>" loading="lazy" decoding="async">
-          <div class="card-body">
-            <h3><%= s.title %></h3>
-            <p><%= s.description %></p>
-            <a class="btn btn-outline" href="/order">Order This</a>
-          </div>
-        </div>
-      <% }) %>
     </div>
   </div>
 </section>
