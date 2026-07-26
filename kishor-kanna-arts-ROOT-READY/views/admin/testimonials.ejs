@@ -9,16 +9,27 @@
     <div class="admin-topbar"><h1>Reviews / Comments</h1></div>
     <p style="color:var(--muted); font-size:0.9rem; margin-top:-16px; margin-bottom:20px;">
       Approved reviews show on the live site. Pending ones stay hidden until you approve them.
+      Reviews submitted by a logged-in customer are marked Verified automatically — you can toggle it manually for any review.
     </p>
 
     <table style="margin-bottom:30px;">
-      <tr><th>Rating</th><th>Name</th><th>Review</th><th>Status</th><th>Actions</th></tr>
+      <tr><th>Media</th><th>Rating</th><th>Name</th><th>Review</th><th>Status</th><th>Verified</th><th>Actions</th></tr>
       <% testimonials.forEach(t => { %>
         <tr id="view-<%= t.id %>">
+          <td>
+            <% if (t.embed_url) { %><span class="badge badge-progress">Video</span>
+            <% } else if (t.photo_url) { %><img class="thumb" src="<%= t.photo_url %>" alt="">
+            <% } else { %><span style="color:var(--muted);">Text</span><% } %>
+          </td>
           <td><%= '★'.repeat(t.rating) %><%= '☆'.repeat(5 - t.rating) %></td>
           <td><%= t.name %></td>
           <td style="max-width:340px;"><%= t.message %></td>
           <td><span class="badge <%= t.approved ? 'badge-ok' : 'badge-new' %>"><%= t.approved ? 'Approved' : 'Pending' %></span></td>
+          <td>
+            <form action="/admin/testimonials/<%= t.id %>/verify" method="POST">
+              <button class="btn btn-sm <%= t.verified ? 'btn-success' : 'btn-ghost' %>" type="submit"><%= t.verified ? 'Verified ✓' : 'Mark Verified' %></button>
+            </form>
+          </td>
           <td class="actions-row">
             <% if (!t.approved) { %>
               <form action="/admin/testimonials/<%= t.id %>/approve" method="POST">
@@ -36,7 +47,7 @@
           </td>
         </tr>
         <tr id="edit-<%= t.id %>" style="display:none;">
-          <td colspan="5">
+          <td colspan="7">
             <form action="/admin/testimonials/<%= t.id %>/update" method="POST" style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
               <div class="form-group" style="min-width:140px; margin-bottom:0;">
                 <label>Name</label>
@@ -57,15 +68,16 @@
               <button class="btn btn-primary btn-sm" type="submit">Save</button>
               <button class="btn btn-ghost btn-sm" type="button" onclick="document.getElementById('edit-<%= t.id %>').style.display='none'; document.getElementById('view-<%= t.id %>').style.display='table-row';">Cancel</button>
             </form>
+            <p style="color:var(--muted); font-size:0.8rem; margin:8px 0 0;">Photo and video links can't be changed here — delete and re-add the review if those need fixing.</p>
           </td>
         </tr>
       <% }) %>
-      <% if (testimonials.length === 0) { %><tr><td colspan="5">No reviews yet.</td></tr><% } %>
+      <% if (testimonials.length === 0) { %><tr><td colspan="7">No reviews yet.</td></tr><% } %>
     </table>
 
     <h2 style="font-size:1.1rem;">Add a Review</h2>
-    <p style="color:var(--muted); font-size:0.85rem; margin-top:-10px;">For adding reviews yourself (e.g. from Google/WhatsApp) — these are auto-approved.</p>
-    <form class="admin-form" action="/admin/testimonials/add" method="POST">
+    <p style="color:var(--muted); font-size:0.85rem; margin-top:-10px;">For adding reviews yourself (e.g. from Google/WhatsApp) — these are auto-approved and auto-verified.</p>
+    <form class="admin-form" action="/admin/testimonials/add" method="POST" enctype="multipart/form-data">
       <div class="form-group"><label>Customer Name</label><input type="text" name="name" required></div>
       <div class="form-group">
         <label>Rating</label>
@@ -78,6 +90,8 @@
         </select>
       </div>
       <div class="form-group"><label>Review Message</label><textarea name="message" required></textarea></div>
+      <div class="form-group"><label>Photo (optional)</label><input type="file" name="photo" accept="image/*"></div>
+      <div class="form-group"><label>Video Link (optional)</label><input type="url" name="video_url" placeholder="YouTube or Google Drive link"></div>
       <button class="btn btn-primary" type="submit">Add Review</button>
     </form>
   </div>
