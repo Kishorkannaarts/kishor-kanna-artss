@@ -4,14 +4,24 @@
 
 <section class="section">
   <div class="container">
-    <h2>Blog</h2>
-    <p class="sub">Stories, tips, and behind-the-scenes from our art studio</p>
+    <h2>Latest Articles</h2>
+    <p class="sub">Gift ideas, art tips, and drawing tutorials from our studio</p>
+
+    <% if (typeof categories !== 'undefined' && categories.length) { %>
+      <div class="filter-tabs" style="display:flex; flex-wrap:wrap; gap:10px; margin:18px 0 28px;">
+        <a href="/blog" class="btn btn-sm <%= !activeCategory ? 'btn-primary' : 'btn-outline' %>">All</a>
+        <% categories.forEach(function(c){ %>
+          <a href="/blog?category=<%= encodeURIComponent(c) %>" class="btn btn-sm <%= activeCategory === c ? 'btn-primary' : 'btn-outline' %>"><%= c %></a>
+        <% }) %>
+      </div>
+    <% } %>
 
     <div class="grid grid-3">
       <% posts.forEach(p => { %>
         <a class="card" href="/blog/<%= p.slug %>" style="text-decoration:none; color:inherit;">
           <img src="<%= p.cover_image || 'https://placehold.co/400x300?text=Blog' %>" alt="<%= p.title %>" loading="lazy" decoding="async">
           <div class="card-body">
+            <% if (p.category) { %><span class="tag"><%= p.category %></span><% } %>
             <h3><%= p.title %></h3>
             <p><%= p.excerpt %></p>
             <span class="btn btn-outline btn-sm" style="display:inline-block; margin-top:6px;">Read More</span>
@@ -19,7 +29,7 @@
         </a>
       <% }) %>
       <% if (posts.length === 0) { %>
-        <p class="sub">No blog posts yet — check back soon.</p>
+        <p class="sub"><%= activeCategory ? 'No posts in this category yet.' : 'No blog posts yet — check back soon.' %></p>
       <% } %>
     </div>
   </div>
