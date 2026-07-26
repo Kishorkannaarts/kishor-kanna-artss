@@ -182,6 +182,17 @@
   </a>
 </div>
 <% } %>
+<script>
+  // Adds the CSRF token to every POST form on the page automatically, so
+  // individual templates never need to remember to include it by hand.
+  document.querySelectorAll('form[method="POST"], form[method="post"]').forEach(function (f) {
+    var i = document.createElement('input');
+    i.type = 'hidden';
+    i.name = '_csrf';
+    i.value = "<%= csrfToken %>";
+    f.appendChild(i);
+  });
+</script>
 <script src="/public/js/main.js?v=8" defer></script>
 </body>
 </html>
