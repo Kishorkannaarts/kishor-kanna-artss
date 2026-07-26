@@ -47,3 +47,13 @@
     sidebar.querySelectorAll('a').forEach(function (a) { a.addEventListener('click', closeMenu); });
   })();
 </script>
+<script>
+  // Adds the CSRF token to every POST form in the admin panel automatically.
+  document.querySelectorAll('form[method="POST"], form[method="post"]').forEach(function (f) {
+    var i = document.createElement('input');
+    i.type = 'hidden';
+    i.name = '_csrf';
+    i.value = "<%= csrfToken %>";
+    f.appendChild(i);
+  });
+</script>
