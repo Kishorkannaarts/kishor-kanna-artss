@@ -1438,6 +1438,39 @@ app.get('/admin/orders', requireAdmin, ah(async (req, res) => {
   res.render('admin/orders', { orders, q, status, sort });
 }));
 
+// ---- Customers (registered accounts, not guest checkouts) ----
+app.get('/admin/customers', requireAdmin, ah(async (req, res) => {
+  const q = (req.query.q || '').trim();
+  const filter = {};
+  if (q) {
+    const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    filter.$or = [{ name: re }, { email: re }, { phone: re }];
+  }
+  const customers = db.normalize(await db.find('customers', filter, { created_at: -1 }));
+
+  // Pull every order placed by any of these customers in one query, then
+  // group counts/totals in JS — same lightweight approach used elsewhere in
+  // this app rather than a Mongo aggregation pipeline.
+  const emails = customers.map(c => (c.email || '').toLowerCase()).filter(Boolean);
+  const orders = emails.length ? await db.find('orders', { email: { $in: emails } }, { created_at: -1 }) : [];
+  const statsByEmail = {};
+  orders.forEach(o => {
+    const key = (o.email || '').toLowerCase();
+    if (!key) return;
+    if (!statsByEmail[key]) statsByEmail[key] = { count: 0, total: 0, lastOrderAt: o.created_at };
+    statsByEmail[key].count += 1;
+    statsByEmail[key].total += parseFloat(o.estimated_price) || 0;
+    // orders were fetched newest-first, so the first one seen per email is the latest
+  });
+
+  const customersWithStats = customers.map(c => {
+    const stats = statsByEmail[(c.email || '').toLowerCase()] || { count: 0, total: 0, lastOrderAt: null };
+    return { ...c, order_count: stats.count, total_spent: stats.total, last_order_at: stats.lastOrderAt };
+  });
+
+  res.render('admin/customers', { customers: customersWithStats, q });
+}));
+
 app.post('/admin/orders/:id/status', requireAdmin, ah(async (req, res) => {
   await db.updateById('orders', req.params.id, { status: req.body.status });
   const order = db.normalize(await db.findById('orders', req.params.id));
