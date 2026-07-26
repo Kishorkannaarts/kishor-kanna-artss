@@ -432,12 +432,15 @@ a:hover { color: var(--color-gold); }
 }
 
 /* ---------- Trust bar ---------- */
-.trust-bar { padding: var(--space-md) 0; border-bottom: 1px solid var(--border-color); background: var(--bg-primary); }
+.trust-bar { padding: var(--space-lg) 0; border-bottom: 1px solid var(--border-color); background: var(--bg-primary); }
 .trust-bar-inner { display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--space-md); }
-.trust-stat { display: flex; flex-direction: column; text-align: center; flex: 1; min-width: 120px; }
-.trust-stat strong { font-family: var(--font-display); font-size: 1.7rem; color: var(--color-gold); font-variant-numeric: tabular-nums; }
-.trust-stat span { font-size: 0.85rem; color: var(--text-secondary); }
-
+.trust-stat {
+  display: flex; align-items: center; gap: 10px; flex: 1; min-width: 150px;
+  padding: 12px 16px; border: 1px solid var(--border-color); border-radius: var(--radius-md);
+}
+.trust-icon { color: var(--color-gold); flex-shrink: 0; }
+.trust-stat strong { font-family: var(--font-display); font-size: 1.3rem; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.trust-stat span { display: block; font-size: 0.78rem; color: var(--text-secondary); }
 .offer-banner {
   background: linear-gradient(135deg, #FFF7E5, #FDF0CE);
   border: 1px solid var(--color-gold-light);
