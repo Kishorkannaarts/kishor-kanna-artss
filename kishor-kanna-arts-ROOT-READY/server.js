@@ -1029,7 +1029,7 @@ app.post('/account/addresses/:id/delete', requireCustomer, ah(async (req, res) =
 app.get('/account/gift-reminders', requireCustomer, ah(async (req, res) => {
   const customer = db.normalize(await db.findById('customers', req.session.customerId));
   const reminders = db.normalize(await db.find('gift_reminders', { customer_id: req.session.customerId }, { event_date: 1 }));
-  res.render('account/gift-reminders', { customer, reminders, reminderError: null });
+  res.render('account/gift-reminders-account', { customer, reminders, reminderError: null });
 }));
 
 app.post('/account/gift-reminders', requireCustomer, ah(async (req, res) => {
@@ -1038,7 +1038,7 @@ app.post('/account/gift-reminders', requireCustomer, ah(async (req, res) => {
   if (!recipient_name || !occasion || !event_date) {
     const customer = db.normalize(await db.findById('customers', req.session.customerId));
     const reminders = db.normalize(await db.find('gift_reminders', { customer_id: req.session.customerId }, { event_date: 1 }));
-    return res.render('account/gift-reminders', { customer, reminders, reminderError: 'Please fill in the recipient, occasion and date.' });
+    return res.render('account/gift-reminders-account', { customer, reminders, reminderError: 'Please fill in the recipient, occasion and date.' });
   }
   const customer = await db.findById('customers', req.session.customerId);
   await db.insertOne('gift_reminders', {
@@ -1140,14 +1140,14 @@ app.post('/testimonials', memoryUpload.single('photo'), csrfCheck, ah(async (req
 // (submit unapproved, admin approves before it goes public).
 app.get('/gallery', ah(async (req, res) => {
   const photos = db.normalize(await db.find('gallery_photos', { approved: true }, { created_at: -1 }));
-  res.render('gallery', { photos, submitted: req.query.thanks === '1' });
+  res.render('gallery-public', { photos, submitted: req.query.thanks === '1' });
 }));
 
 app.post('/gallery/submit', memoryUpload.single('photo'), csrfCheck, ah(async (req, res) => {
   if (isSpamBot(req)) return res.redirect('/gallery'); // silently drop, no tell for bots
   if (!req.file) {
     const photos = db.normalize(await db.find('gallery_photos', { approved: true }, { created_at: -1 }));
-    return res.render('gallery', { photos, submitted: false, submitError: 'Please choose a photo to upload.' });
+    return res.render('gallery-public', { photos, submitted: false, submitError: 'Please choose a photo to upload.' });
   }
   const { name, caption } = req.body;
   const photoUrl = await uploadImage(req.file, 'customer-gallery');
@@ -1646,7 +1646,7 @@ app.post('/admin/testimonials/:id/delete', requireAdmin, ah(async (req, res) => 
 // ---- Customer Gallery ----
 app.get('/admin/customer-gallery', requireAdmin, ah(async (req, res) => {
   const photos = db.normalize(await db.find('gallery_photos', {}, { created_at: -1 }));
-  res.render('admin/customer-gallery', { photos });
+  res.render('admin/gallery-admin', { photos });
 }));
 
 app.post('/admin/customer-gallery/:id/approve', requireAdmin, ah(async (req, res) => {
@@ -2016,7 +2016,7 @@ app.post('/admin/abandoned-orders/:id/send-now', requireAdmin, ah(async (req, re
 // ---- Gift Reminders ----
 app.get('/admin/gift-reminders', requireAdmin, ah(async (req, res) => {
   const rows = db.normalize(await db.find('gift_reminders', {}, { event_date: 1 }));
-  res.render('admin/gift-reminders', { rows });
+  res.render('admin/gift-reminders-admin', { rows });
 }));
 
 app.post('/admin/gift-reminders/:id/send-now', requireAdmin, ah(async (req, res) => {
@@ -2030,7 +2030,4 @@ app.post('/admin/gift-reminders/:id/send-now', requireAdmin, ah(async (req, res)
 
 app.post('/admin/gift-reminders/:id/delete', requireAdmin, ah(async (req, res) => {
   await db.deleteById('gift_reminders', req.params.id);
-  res.redirect('/admin/gift-reminders');
-}));
-
-//
+  res.redirect('
