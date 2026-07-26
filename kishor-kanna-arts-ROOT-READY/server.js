@@ -17,6 +17,7 @@ const notify = require('./notify');
 const referral = require('./referral');
 const razorpay = require('./razorpay');
 const chatbot = require('./chatbot');
+const sms = require('./sms');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -142,7 +143,7 @@ const loginLimiter = rateLimit({
 // multer hasn't parsed req.body yet at this point in the middleware chain —
 // those specific routes call csrfCheck() themselves, right after their
 // multer middleware runs (see the routes below that accept file uploads).
-const CSRF_EXEMPT_PATHS = ['/webhooks/razorpay', '/api/chat', '/coupon/validate'];
+const CSRF_EXEMPT_PATHS = ['/webhooks/razorpay', '/api/chat', '/coupon/validate', '/order/save-progress'];
 
 app.use((req, res, next) => {
   if (!req.session.csrfToken) {
@@ -280,6 +281,72 @@ function slugify(str) {
 function renderTemplate(str, data) {
   return (str || '').replace(/{{\s*(\w+)\s*}}/g, (m, key) =>
     (data[key] !== undefined && data[key] !== null) ? data[key] : '');
+}
+
+// ---------- Abandoned order recovery scheduler ----------
+// Same SITE_URL-or-request-host pattern used per-request in res.locals.siteUrl
+// above, but this runs outside any request, so it falls back to just the env
+// var (no req.protocol/req.get('host') to read from).
+function jobsSiteUrl() {
+  return (process.env.SITE_URL || '').replace(/\/$/, '');
+}
+
+// Sends one reminder for a single saved order_progress row and marks it sent.
+// Shared by the scheduler loop and the admin "Send Now" button.
+async function sendAbandonedReminder(p, settings) {
+  const continueUrl = `${jobsSiteUrl()}/order?` + new URLSearchParams({
+    name: p.name || '', phone: p.phone || '', email: p.email || '',
+    art_type: p.art_type || '', size: p.size || ''
+  }).toString();
+  const data = { name: p.name || 'there', art_type: p.art_type || 'your artwork', continue_url: continueUrl, site_name: settings.site_name };
+
+  if (p.email) {
+    await mailer.sendMail({
+      to: p.email,
+      subject: renderTemplate(settings.tmpl_abandoned_recovery_subject, data),
+      html: renderTemplate(settings.tmpl_abandoned_recovery_body, data).replace(/\n/g, '<br>')
+    });
+  }
+  if (p.phone) {
+    const to = notify.toE164(p.phone);
+    if (to && sms.isConfigured()) {
+      sms.sendSMS({ to, body: `Hi ${data.name}, you started an order at ${settings.site_name} but didn't finish. Complete it here: ${continueUrl}` })
+        .catch(err => console.error('[abandoned-recovery] SMS failed:', err.message));
+    }
+  }
+
+  const mdb = await db.getDB();
+  await mdb.collection('order_progress').updateOne(
+    { _id: p._id },
+    { $set: { reminder_sent: true, reminder_sent_at: new Date().toISOString() } }
+  );
+}
+
+// Runs periodically: finds everyone who saved progress, never converted to a
+// real order, and has gone quiet past the configured delay — then reminds
+// them once. Best-effort and self-contained; a failure here never touches
+// the request/response cycle of the live site.
+async function runAbandonedRecoveryJob() {
+  try {
+    const settings = await db.getAllSettings();
+    if (settings.abandoned_recovery_enabled !== '1') return;
+    const delayHours = parseFloat(settings.abandoned_recovery_delay_hours) || 2;
+    const cutoff = new Date(Date.now() - delayHours * 60 * 60 * 1000).toISOString();
+
+    const mdb = await db.getDB();
+    const pending = await mdb.collection('order_progress').find({
+      converted: false,
+      reminder_sent: false,
+      updated_at: { $lte: cutoff }
+    }).toArray();
+
+    for (const p of pending) {
+      await sendAbandonedReminder(p, settings).catch(err =>
+        console.error(`[abandoned-recovery] reminder failed for ${p.email}:`, err.message));
+    }
+  } catch (err) {
+    console.error('[abandoned-recovery] job run failed:', err.message);
+  }
 }
 
 function requireAdmin(req, res, next) {
@@ -614,6 +681,11 @@ app.get('/order', ah(async (req, res) => {
   }
   if (walletUsed > 0 && loggedInCustomer) {
     await db.updateById('customers', loggedInCustomer.id, { wallet_balance: (loggedInCustomer.wallet_balance || 0) - walletUsed });
+  }
+  // They finished the order — don't send them an "you forgot something" reminder later.
+  if (email) {
+    const mdb = await db.getDB();
+    await mdb.collection('order_progress').updateOne({ email: email.trim().toLowerCase() }, { $set: { converted: true } });
   }
 
   const s = res.locals.settings;
@@ -1722,6 +1794,57 @@ app.post('/coupon/validate', express.json(), ah(async (req, res) => {
   if (!result.valid) return res.json({ valid: false, message: result.message });
   res.json({ valid: true, discount_percent: result.coupon.discount_percent, message: `Coupon applied: ${result.coupon.discount_percent}% off` });
 }));
+
+// ---- Abandoned order recovery: silent auto-save while the customer fills the form ----
+// Fired on a debounce from order.ejs once an email address is present. Upserts
+// on email so re-saving just overwrites the same row instead of piling up
+// duplicates. Never blocks or errors visibly to the customer — this is a
+// best-effort background save, not part of the actual order submission.
+app.post('/order/save-progress', express.json(), ah(async (req, res) => {
+  const email = String(req.body.email || '').trim().toLowerCase();
+  if (!email || !/^\S+@\S+\.\S+$/.test(email)) return res.json({ saved: false });
+  const { name, phone, art_type, size, delivery_date, notes, address_line, city, state, pincode, estimated_price } = req.body;
+  const mdb = await db.getDB();
+  await mdb.collection('order_progress').updateOne(
+    { email },
+    {
+      $set: {
+        email, name, phone, art_type, size, delivery_date, notes,
+        address_line, city, state, pincode, estimated_price,
+        customer_id: (req.session && req.session.customerId) || null,
+        updated_at: new Date().toISOString(),
+        // Re-engaging (editing the form again) earns a fresh reminder window.
+        reminder_sent: false
+      },
+      $setOnInsert: { created_at: new Date().toISOString(), converted: false }
+    },
+    { upsert: true }
+  );
+  res.json({ saved: true });
+}));
+// ---- Abandoned Order Recovery ----
+app.get('/admin/abandoned-orders', requireAdmin, ah(async (req, res) => {
+  const mdb = await db.getDB();
+  const rows = await mdb.collection('order_progress').find({ converted: false }).sort({ updated_at: -1 }).limit(200).toArray();
+  res.render('admin/abandoned-orders', { rows: db.normalize(rows) });
+}));
+
+app.post('/admin/abandoned-orders/settings', requireAdmin, ah(async (req, res) => {
+  await db.setSetting('abandoned_recovery_enabled', req.body.enabled === '1' ? '1' : '0');
+  await db.setSetting('abandoned_recovery_delay_hours', String(parseFloat(req.body.delay_hours) || 2));
+  res.redirect('/admin/abandoned-orders');
+}));
+
+app.post('/admin/abandoned-orders/:id/send-now', requireAdmin, ah(async (req, res) => {
+  const mdb = await db.getDB();
+  const p = await mdb.collection('order_progress').findOne({ _id: new db.ObjectId(req.params.id) });
+  if (p) {
+    const settings = await db.getAllSettings();
+    await sendAbandonedReminder(p, settings);
+  }
+  res.redirect('/admin/abandoned-orders');
+}));
+
 // ---- FAQs ----
 app.get('/admin/faqs', requireAdmin, ah(async (req, res) => {
   const faqs = db.normalize(await db.find('faqs', {}, { created_at: 1 }));
@@ -1754,5 +1877,9 @@ app.use((err, req, res, next) => {
 // ---------- Start ----------
 db.initSchema().then(() => {
   app.listen(PORT, () => console.log(`Kishor Kanna Arts running at http://localhost:${PORT}`));
+  // Abandoned order recovery: check every 30 minutes, plus once shortly
+  // after boot so a restart doesn't leave reminders waiting a full cycle.
+  setInterval(runAbandonedRecoveryJob, 30 * 60 * 1000);
+  setTimeout(runAbandonedRecoveryJob, 60 * 1000);
 });
 
