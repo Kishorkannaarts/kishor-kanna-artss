@@ -1,0 +1,68 @@
+<% pageTitle = 'Gift Reminders' %>
+<%- include('../partials/header') %>
+
+<section class="section">
+  <div class="account-header">
+    <div>
+      <h2>Hi, <%= customer.name %></h2>
+      <p class="sub">Never miss a birthday, anniversary or wedding again — we'll remind you in time to order.</p>
+    </div>
+    <form action="/account/logout" method="POST">
+      <button class="btn btn-outline" type="submit">Log Out</button>
+    </form>
+  </div>
+
+  <% activeTab = 'gift-reminders' %>
+  <%- include('../partials/account-nav') %>
+
+  <% if (reminderError) { %><div class="alert alert-error" style="margin-top:20px;"><%= reminderError %></div><% } %>
+
+  <div class="account-panels">
+    <div>
+      <h3>Your Reminders</h3>
+      <% if (!reminders.length) { %>
+        <p class="sub">You haven't set up any gift reminders yet.</p>
+      <% } else { %>
+        <div class="address-grid">
+          <% reminders.forEach(r => { %>
+            <div class="address-card">
+              <strong><%= r.occasion %> — <%= r.recipient_name %></strong>
+              <p>On <%= r.event_date %><% if (r.recurring) { %> (repeats every year)<% } %></p>
+              <p class="sub">We'll remind you <%= r.remind_days_before %> day<%= r.remind_days_before == 1 ? '' : 's' %> before.</p>
+              <div class="address-actions">
+                <a class="btn btn-sm btn-outline" href="/order">Order a Gift Now</a>
+                <form action="/account/gift-reminders/<%= r.id %>/delete" method="POST" style="display:inline;" onsubmit="return confirm('Remove this reminder?');">
+                  <button class="btn btn-sm btn-outline" type="submit">Remove</button>
+                </form>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="form-box">
+      <h3>Add a Reminder</h3>
+      <form action="/account/gift-reminders" method="POST">
+        <div class="form-group"><label>Occasion</label>
+          <select name="occasion" required>
+            <option value="Birthday">Birthday</option>
+            <option value="Anniversary">Anniversary</option>
+            <option value="Wedding">Wedding</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Who is it for?</label><input type="text" name="recipient_name" placeholder="e.g. Mom, Priya, Rahul & Sneha" required></div>
+        <div class="form-group"><label>Date</label><input type="date" name="event_date" required></div>
+        <div class="form-group"><label>Remind me how many days before?</label><input type="number" name="remind_days_before" min="1" value="7"></div>
+        <div class="form-group"><label>Phone for WhatsApp/SMS reminder (optional)</label><input type="tel" name="phone" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" value="<%= customer.phone || '' %>" placeholder="10-digit mobile number"></div>
+        <label style="display:flex; align-items:center; gap:8px; margin-bottom:16px; font-size:0.9rem;">
+          <input type="checkbox" name="recurring" value="1" style="width:auto;"> Repeats every year (birthdays, anniversaries)
+        </label>
+        <button class="btn btn-primary" type="submit">Save Reminder</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>
