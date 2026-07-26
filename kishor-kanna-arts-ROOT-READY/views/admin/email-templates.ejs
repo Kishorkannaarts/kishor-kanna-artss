@@ -10,7 +10,7 @@
     <p style="color:var(--muted); font-size:0.9rem; max-width:640px;">
       These control the wording of every automatic email the site sends. You can use these placeholders
       anywhere in the subject or message and they'll be filled in automatically:
-      <code>{{name}} {{order_code}} {{art_type}} {{size}} {{amount}} {{payment_link}} {{track_url}} {{site_name}} {{status}} {{reason}} {{artwork_image}} {{artwork_note}}</code>
+      <code>{{name}} {{order_code}} {{art_type}} {{size}} {{amount}} {{payment_link}} {{track_url}} {{site_name}} {{status}} {{reason}} {{artwork_image}} {{artwork_note}} {{progress_image}} {{progress_note}} {{video_url}} {{courier_name}} {{tracking_number}} {{tracking_url}} {{review_url}} {{email}} {{phone}} {{subject}} {{message}} {{rating}}</code>
       (not every placeholder applies to every template — unused ones are simply left blank).
     </p>
 
@@ -55,6 +55,62 @@
       <p style="color:var(--muted); font-size:0.85rem; margin-top:-8px;">Extra placeholders for this one: <code>{{artwork_image}} {{artwork_note}}</code></p>
       <div class="form-group"><label>Subject</label><input type="text" name="tmpl_artwork_ready_subject" value="<%= settings.tmpl_artwork_ready_subject %>"></div>
       <div class="form-group"><label>Message</label><textarea name="tmpl_artwork_ready_body" style="min-height:160px;"><%= settings.tmpl_artwork_ready_body %></textarea></div>
+
+      <hr style="border-color:var(--border); margin:24px 0;">
+      <h3 style="font-size:1rem;">8. Progress Update (sent when you click "Send Progress Update")</h3>
+      <p style="color:var(--muted); font-size:0.85rem; margin-top:-8px;">Extra placeholders: <code>{{progress_image}} {{progress_note}}</code></p>
+      <div class="form-group"><label>Subject</label><input type="text" name="tmpl_progress_update_subject" value="<%= settings.tmpl_progress_update_subject %>"></div>
+      <div class="form-group"><label>Message</label><textarea name="tmpl_progress_update_body" style="min-height:120px;"><%= settings.tmpl_progress_update_body %></textarea></div>
+
+      <hr style="border-color:var(--border); margin:24px 0;">
+      <h3 style="font-size:1rem;">9. Making Video (sent when you click "Share Making Video")</h3>
+      <p style="color:var(--muted); font-size:0.85rem; margin-top:-8px;">Extra placeholder: <code>{{video_url}}</code></p>
+      <div class="form-group"><label>Subject</label><input type="text" name="tmpl_making_video_subject" value="<%= settings.tmpl_making_video_subject %>"></div>
+      <div class="form-group"><label>Message</label><textarea name="tmpl_making_video_body" style="min-height:100px;"><%= settings.tmpl_making_video_body %></textarea></div>
+
+      <hr style="border-color:var(--border); margin:24px 0;">
+      <h3 style="font-size:1rem;">10. Packing (sent when you click "Mark Packing")</h3>
+      <div class="form-group"><label>Subject</label><input type="text" name="tmpl_packing_subject" value="<%= settings.tmpl_packing_subject %>"></div>
+      <div class="form-group"><label>Message</label><textarea name="tmpl_packing_body" style="min-height:100px;"><%= settings.tmpl_packing_body %></textarea></div>
+
+      <hr style="border-color:var(--border); margin:24px 0;">
+      <h3 style="font-size:1rem;">11. Tracking Info (sent when you click "Add Tracking Info")</h3>
+      <p style="color:var(--muted); font-size:0.85rem; margin-top:-8px;">Extra placeholders: <code>{{courier_name}} {{tracking_number}} {{tracking_url}}</code></p>
+      <div class="form-group"><label>Subject</label><input type="text" name="tmpl_tracking_subject" value="<%= settings.tmpl_tracking_subject %>"></div>
+      <div class="form-group"><label>Message</label><textarea name="tmpl_tracking_body" style="min-height:120px;"><%= settings.tmpl_tracking_body %></textarea></div>
+
+      <hr style="border-color:var(--border); margin:24px 0;">
+      <h3 style="font-size:1rem;">12. Delivered (sent when you click "Mark Delivered")</h3>
+      <div class="form-group"><label>Subject</label><input type="text" name="tmpl_delivered_subject" value="<%= settings.tmpl_delivered_subject %>"></div>
+      <div class="form-group"><label>Message</label><textarea name="tmpl_delivered_body" style="min-height:100px;"><%= settings.tmpl_delivered_body %></textarea></div>
+
+      <hr style="border-color:var(--border); margin:24px 0;">
+      <h3 style="font-size:1rem;">13. Review Request (sent when you click "Send Review Request")</h3>
+      <p style="color:var(--muted); font-size:0.85rem; margin-top:-8px;">Extra placeholder: <code>{{review_url}}</code></p>
+      <div class="form-group"><label>Subject</label><input type="text" name="tmpl_review_request_subject" value="<%= settings.tmpl_review_request_subject %>"></div>
+      <div class="form-group"><label>Message</label><textarea name="tmpl_review_request_body" style="min-height:120px;"><%= settings.tmpl_review_request_body %></textarea></div>
+
+      <hr style="border-color:var(--border); margin:24px 0;">
+      <h3 style="font-size:1rem;">Admin Alerts</h3>
+      <p style="color:var(--muted); font-size:0.85rem; margin-top:-8px;">These are sent to your own inbox (set <code>NOTIFY_EMAIL</code> in <code>.env</code>), not the customer.</p>
+
+      <h4 style="font-size:0.9rem; margin-top:16px;">14. Advance Paid</h4>
+      <div class="form-group"><label>Subject</label><input type="text" name="tmpl_advance_paid_admin_subject" value="<%= settings.tmpl_advance_paid_admin_subject %>"></div>
+      <div class="form-group"><label>Message</label><textarea name="tmpl_advance_paid_admin_body" style="min-height:80px;"><%= settings.tmpl_advance_paid_admin_body %></textarea></div>
+
+      <h4 style="font-size:0.9rem; margin-top:16px;">15. Final Payment Received</h4>
+      <div class="form-group"><label>Subject</label><input type="text" name="tmpl_balance_paid_admin_subject" value="<%= settings.tmpl_balance_paid_admin_subject %>"></div>
+      <div class="form-group"><label>Message</label><textarea name="tmpl_balance_paid_admin_body" style="min-height:80px;"><%= settings.tmpl_balance_paid_admin_body %></textarea></div>
+
+      <h4 style="font-size:0.9rem; margin-top:16px;">16. Contact Form Message</h4>
+      <p style="color:var(--muted); font-size:0.85rem; margin-top:-8px;">Extra placeholders: <code>{{email}} {{phone}} {{subject}} {{message}}</code></p>
+      <div class="form-group"><label>Subject</label><input type="text" name="tmpl_contact_form_admin_subject" value="<%= settings.tmpl_contact_form_admin_subject %>"></div>
+      <div class="form-group"><label>Message</label><textarea name="tmpl_contact_form_admin_body" style="min-height:100px;"><%= settings.tmpl_contact_form_admin_body %></textarea></div>
+
+      <h4 style="font-size:0.9rem; margin-top:16px;">17. New Review Submitted</h4>
+      <p style="color:var(--muted); font-size:0.85rem; margin-top:-8px;">Extra placeholders: <code>{{message}} {{rating}}</code></p>
+      <div class="form-group"><label>Subject</label><input type="text" name="tmpl_new_review_admin_subject" value="<%= settings.tmpl_new_review_admin_subject %>"></div>
+      <div class="form-group"><label>Message</label><textarea name="tmpl_new_review_admin_body" style="min-height:100px;"><%= settings.tmpl_new_review_admin_body %></textarea></div>
 
       <br>
       <button class="btn btn-primary" type="submit">Save All Templates</button>
