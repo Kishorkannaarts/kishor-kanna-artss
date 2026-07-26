@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Referrals & Wallet | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
+<body class="admin">
+<div class="admin-shell">
+  <% active = 'referrals' %>
+  <%- include('partials/sidebar') %>
+  <div class="admin-main">
+    <div class="admin-topbar"><h1>Referrals & Wallet</h1></div>
+    <p style="color:var(--muted); font-size:0.9rem; margin-top:-10px;">
+      Customers share their referral link. When someone they referred gets their first order marked
+      "Delivered", the referrer is automatically credited the reward below as wallet balance — redeemable
+      on their next order. The referred friend also gets the first-order discount automatically.
+    </p>
+
+    <h2 style="font-size:1.1rem;">Reward Settings</h2>
+    <form class="admin-form" action="/admin/referrals/settings" method="POST" style="margin-bottom:30px;">
+      <div class="form-group"><label>Wallet Reward for Referrer (₹)</label><input type="number" name="reward_amount" min="0" step="1" value="<%= rewardAmount %>" required></div>
+      <div class="form-group"><label>First-Order Discount for Referred Friend (%)</label><input type="number" name="discount_percent" min="0" max="100" step="1" value="<%= discountPercent %>" required></div>
+      <button class="btn btn-primary" type="submit">Save Settings</button>
+    </form>
+
+    <h2 style="font-size:1.1rem;">All Referrals</h2>
+    <table>
+      <tr><th>Referred By</th><th>Friend Referred</th><th>Status</th><th>Sent On</th><th>Rewarded On</th></tr>
+      <% referrals.forEach(r => { %>
+        <tr>
+          <td><strong><%= r.referrer_name %></strong><br><small style="color:var(--muted);"><%= r.referrer_email %></small></td>
+          <td><%= r.referred_name %><br><small style="color:var(--muted);"><%= r.referred_email %></small></td>
+          <td><span class="badge <%= r.status === 'rewarded' ? 'badge-ok' : 'badge-new' %>"><%= r.status === 'rewarded' ? 'Rewarded' : 'Pending First Order' %></span></td>
+          <td><small style="color:var(--muted);"><%= new Date(r.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) %></small></td>
+          <td><small style="color:var(--muted);"><%= r.rewarded_at ? new Date(r.rewarded_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—' %></small></td>
+        </tr>
+      <% }) %>
+      <% if (referrals.length === 0) { %><tr><td colspan="5">No referrals yet.</td></tr><% } %>
+    </table>
+  </div>
+</div>
