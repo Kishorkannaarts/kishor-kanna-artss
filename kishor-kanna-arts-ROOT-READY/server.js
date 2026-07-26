@@ -349,6 +349,85 @@ async function runAbandonedRecoveryJob() {
   }
 }
 
+// ---------- Gift reminders (birthday / anniversary / wedding) ----------
+// The customer picks a date once; for a recurring occasion we always store
+// the *next* upcoming occurrence (rolling the year forward as needed) so the
+// scheduler's query never has to reason about "which year" itself.
+function nextOccurrence(dateStr, recurring) {
+  const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d.getTime())) return dateStr;
+  if (!recurring) return dateStr; // one-time event — keep the exact date the customer chose
+  const today = new Date(new Date().toDateString());
+  const thisYear = new Date(d);
+  thisYear.setFullYear(today.getFullYear());
+  if (thisYear < today) thisYear.setFullYear(today.getFullYear() + 1);
+  return thisYear.toISOString().slice(0, 10);
+}
+
+// Shared by the daily job and the admin "Send Now" button.
+async function sendGiftReminder(r, settings) {
+  const orderUrl = `${jobsSiteUrl()}/order`;
+  const data = {
+    name: r.name || 'there', recipient_name: r.recipient_name, occasion: r.occasion,
+    event_date: r.event_date, order_url: orderUrl, site_name: settings.site_name
+  };
+
+  if (r.email) {
+    await mailer.sendMail({
+      to: r.email,
+      subject: renderTemplate(settings.tmpl_gift_reminder_subject, data),
+      html: renderTemplate(settings.tmpl_gift_reminder_body, data).replace(/\n/g, '<br>')
+    });
+  }
+  if (r.phone) {
+    const to = notify.toE164(r.phone);
+    if (to && sms.isConfigured()) {
+      sms.sendSMS({ to, body: `Hi ${data.name}, ${r.recipient_name}'s ${r.occasion} is coming up on ${r.event_date}! Order a custom portrait gift: ${orderUrl}` })
+        .catch(err => console.error('[gift-reminder] SMS failed:', err.message));
+    }
+  }
+
+  const mdb = await db.getDB();
+  if (r.recurring) {
+    // Roll straight to next year and re-arm — a recurring reminder should
+    // never need the customer to re-add it.
+    const next = new Date(r.event_date + 'T00:00:00');
+    next.setFullYear(next.getFullYear() + 1);
+    await mdb.collection('gift_reminders').updateOne(
+      { _id: r._id },
+      { $set: { event_date: next.toISOString().slice(0, 10), reminder_sent: false } }
+    );
+  } else {
+    await mdb.collection('gift_reminders').updateOne(
+      { _id: r._id },
+      { $set: { reminder_sent: true, reminder_sent_at: new Date().toISOString() } }
+    );
+  }
+}
+
+// Runs a few times a day rather than exactly at midnight — good enough for
+// a "days before" reminder window and avoids relying on server timezone.
+async function runGiftReminderJob() {
+  try {
+    const settings = await db.getAllSettings();
+    const mdb = await db.getDB();
+    const today = new Date(new Date().toDateString());
+    const candidates = await mdb.collection('gift_reminders').find({ reminder_sent: false }).toArray();
+
+    for (const r of candidates) {
+      const eventDate = new Date(r.event_date + 'T00:00:00');
+      if (isNaN(eventDate.getTime())) continue;
+      const remindFrom = new Date(eventDate);
+      remindFrom.setDate(remindFrom.getDate() - (r.remind_days_before || 7));
+      if (today < remindFrom) continue;
+      await sendGiftReminder(r, settings).catch(err =>
+        console.error(`[gift-reminder] reminder failed for ${r.email}:`, err.message));
+    }
+  } catch (err) {
+    console.error('[gift-reminder] job run failed:', err.message);
+  }
+}
+
 function requireAdmin(req, res, next) {
   if (req.session && req.session.isAdmin) return next();
   return res.redirect('/admin/login');
@@ -943,6 +1022,45 @@ app.post('/account/addresses/:id/delete', requireCustomer, ah(async (req, res) =
     await db.deleteById('addresses', req.params.id);
   }
   res.redirect('/account/addresses');
+}));
+
+// ---------- Gift Reminders ----------
+app.get('/account/gift-reminders', requireCustomer, ah(async (req, res) => {
+  const customer = db.normalize(await db.findById('customers', req.session.customerId));
+  const reminders = db.normalize(await db.find('gift_reminders', { customer_id: req.session.customerId }, { event_date: 1 }));
+  res.render('account/gift-reminders', { customer, reminders, reminderError: null });
+}));
+
+app.post('/account/gift-reminders', requireCustomer, ah(async (req, res) => {
+  const { recipient_name, occasion, event_date, remind_days_before, phone } = req.body;
+  const isRecurring = req.body.recurring === '1';
+  if (!recipient_name || !occasion || !event_date) {
+    const customer = db.normalize(await db.findById('customers', req.session.customerId));
+    const reminders = db.normalize(await db.find('gift_reminders', { customer_id: req.session.customerId }, { event_date: 1 }));
+    return res.render('account/gift-reminders', { customer, reminders, reminderError: 'Please fill in the recipient, occasion and date.' });
+  }
+  const customer = await db.findById('customers', req.session.customerId);
+  await db.insertOne('gift_reminders', {
+    customer_id: req.session.customerId,
+    name: customer.name,
+    email: customer.email,
+    phone: (phone || customer.phone || '').trim(),
+    recipient_name: recipient_name.trim(),
+    occasion: occasion.trim(),
+    event_date: nextOccurrence(event_date, isRecurring),
+    recurring: isRecurring,
+    remind_days_before: Math.max(1, parseInt(remind_days_before, 10) || 7),
+    reminder_sent: false
+  });
+  res.redirect('/account/gift-reminders');
+}));
+
+app.post('/account/gift-reminders/:id/delete', requireCustomer, ah(async (req, res) => {
+  const reminder = await db.findById('gift_reminders', req.params.id);
+  if (reminder && reminder.customer_id === req.session.customerId) {
+    await db.deleteById('gift_reminders', req.params.id);
+  }
+  res.redirect('/account/gift-reminders');
 }));
 
 // ---------- Wishlist ----------
@@ -1845,6 +1963,26 @@ app.post('/admin/abandoned-orders/:id/send-now', requireAdmin, ah(async (req, re
   res.redirect('/admin/abandoned-orders');
 }));
 
+// ---- Gift Reminders ----
+app.get('/admin/gift-reminders', requireAdmin, ah(async (req, res) => {
+  const rows = db.normalize(await db.find('gift_reminders', {}, { event_date: 1 }));
+  res.render('admin/gift-reminders', { rows });
+}));
+
+app.post('/admin/gift-reminders/:id/send-now', requireAdmin, ah(async (req, res) => {
+  const r = await db.findById('gift_reminders', req.params.id);
+  if (r) {
+    const settings = await db.getAllSettings();
+    await sendGiftReminder(r, settings);
+  }
+  res.redirect('/admin/gift-reminders');
+}));
+
+app.post('/admin/gift-reminders/:id/delete', requireAdmin, ah(async (req, res) => {
+  await db.deleteById('gift_reminders', req.params.id);
+  res.redirect('/admin/gift-reminders');
+}));
+
 // ---- FAQs ----
 app.get('/admin/faqs', requireAdmin, ah(async (req, res) => {
   const faqs = db.normalize(await db.find('faqs', {}, { created_at: 1 }));
@@ -1881,5 +2019,8 @@ db.initSchema().then(() => {
   // after boot so a restart doesn't leave reminders waiting a full cycle.
   setInterval(runAbandonedRecoveryJob, 30 * 60 * 1000);
   setTimeout(runAbandonedRecoveryJob, 60 * 1000);
+  // Gift reminders only need to be checked a few times a day, not every 30 min.
+  setInterval(runGiftReminderJob, 6 * 60 * 60 * 1000);
+  setTimeout(runGiftReminderJob, 90 * 1000);
 });
 
