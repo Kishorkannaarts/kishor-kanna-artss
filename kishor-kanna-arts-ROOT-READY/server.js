@@ -548,7 +548,10 @@ app.get('/portfolio', ah(async (req, res) => {
 app.get('/portfolio/:id', ah(async (req, res) => {
   const artwork = db.normalize(await db.findById('artworks', req.params.id));
   if (!artwork) return res.status(404).send('Artwork not found');
-
+// Best-effort match: a Service titled the same as this artwork's category
+  // (e.g. "Pencil Art") carries the real per-size price table.
+  const allServices = db.normalize(await db.find('services', {}, { created_at: -1 }));
+  const matchedService = allServices.find(s => (s.title || '').toLowerCase() === (artwork.category || '').toLowerCase()) || null;
   // "You Might Also Like" — other pieces in the same category first (most
   // relevant to someone already looking at this style), topped up with the
   // most recent artworks overall if the category doesn't have enough on its
