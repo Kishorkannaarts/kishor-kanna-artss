@@ -4,8 +4,37 @@
 
 <section class="section">
   <div class="container" style="max-width:760px;">
-    <h2>Contact Us</h2>
-    <p class="sub"><%= settings.contact_phone %> &nbsp;|&nbsp; <%= settings.contact_email %></p>
+    <h2>Get in Touch</h2>
+    <p class="sub">We'd love to hear from you. Feel free to reach out for any queries or questions.</p>
+
+    <div class="grid grid-2" style="margin-bottom:30px;">
+      <a class="card reveal" href="tel:<%= settings.contact_phone %>" style="text-decoration:none; color:inherit; padding:18px; display:flex; align-items:center; gap:12px;">
+        <span style="font-size:1.4rem;">📞</span>
+        <div><strong>Phone</strong><br><span class="sub" style="margin:0;"><%= settings.contact_phone %></span></div>
+      </a>
+      <a class="card reveal" href="mailto:<%= settings.contact_email %>" style="text-decoration:none; color:inherit; padding:18px; display:flex; align-items:center; gap:12px;">
+        <span style="font-size:1.4rem;">✉️</span>
+        <div><strong>Email</strong><br><span class="sub" style="margin:0;"><%= settings.contact_email %></span></div>
+      </a>
+      <% if (settings.whatsapp_number) { %>
+      <a class="card reveal" href="https://wa.me/<%= settings.whatsapp_number.replace(/[^0-9]/g,'') %>" target="_blank" rel="noopener" style="text-decoration:none; color:inherit; padding:18px; display:flex; align-items:center; gap:12px;">
+        <span style="font-size:1.4rem;">💬</span>
+        <div><strong>WhatsApp</strong><br><span class="sub" style="margin:0;"><%= settings.whatsapp_number %></span></div>
+      </a>
+      <% } %>
+      <% if (settings.contact_address) { %>
+      <a class="card reveal" href="https://www.google.com/maps/dir/?api=1&destination=<%= encodeURIComponent(settings.contact_address) %>" target="_blank" rel="noopener" style="text-decoration:none; color:inherit; padding:18px; display:flex; align-items:center; gap:12px;">
+        <span style="font-size:1.4rem;">📍</span>
+        <div><strong>Location</strong><br><span class="sub" style="margin:0;"><%= settings.contact_address %></span></div>
+      </a>
+      <% } %>
+      <% if (settings.business_hours) { %>
+      <div class="card reveal" style="padding:18px; display:flex; align-items:center; gap:12px;">
+        <span style="font-size:1.4rem;">🕒</span>
+        <div><strong>Working Hours</strong><br><span class="sub" style="margin:0;"><%= settings.business_hours %></span></div>
+      </div>
+      <% } %>
+    </div>
 
     <div class="form-box">
       <% if (sent) { %>
@@ -14,12 +43,12 @@
       <form action="/contact" method="POST">
         <div style="position:absolute;left:-9999px;top:-9999px;" aria-hidden="true"><input type="text" name="website" tabindex="-1" autocomplete="off"></div>
         <div class="form-row">
-          <div class="form-group"><label>Name</label><input type="text" name="name" required></div>
-          <div class="form-group"><label>Phone</label><input type="text" name="phone"></div>
+          <div class="form-group"><label>Your Name</label><input type="text" name="name" required></div>
+          <div class="form-group"><label>Phone Number</label><input type="text" name="phone"></div>
         </div>
-        <div class="form-group"><label>Email</label><input type="email" name="email" required></div>
+        <div class="form-group"><label>Email Address</label><input type="email" name="email" required></div>
         <div class="form-group"><label>Subject</label><input type="text" name="subject"></div>
-        <div class="form-group"><label>Message</label><textarea name="message" required></textarea></div>
+        <div class="form-group"><label>Your Message</label><textarea name="message" required></textarea></div>
         <button class="btn btn-gold" type="submit">Send Message</button>
       </form>
     </div>
