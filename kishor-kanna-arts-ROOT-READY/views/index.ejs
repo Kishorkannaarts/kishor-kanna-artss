@@ -12,7 +12,7 @@
       <span class="hero-eyebrow hero-anim" style="--d:0s">Handmade in India • Since Day One</span>
       <h1 class="hero-anim" style="--d:0.12s"><%= settings.hero_title %></h1>
       <p class="lead hero-anim" style="--d:0.24s"><%= settings.hero_subtitle %></p>
-       <div class="hero-actions hero-anim" style="--d:0.36s">
+      <div class="hero-actions hero-anim" style="--d:0.36s">
         <a class="btn btn-gold" href="/order">Order Your Artwork</a>
         <a class="btn btn-outline<%= settings.hero_image_url ? ' btn-outline-onimage' : '' %>" href="/portfolio">View Portfolio</a>
       </div>
@@ -31,6 +31,7 @@
     <div class="hero-scroll-cue" aria-hidden="true"><span></span></div>
   <% } %>
 </section>
+
 <%
   var categoryThumbs = {};
   (featured || []).forEach(function(a){ if (a.category && !categoryThumbs[a.category]) categoryThumbs[a.category] = a; });
@@ -49,6 +50,7 @@
     </div>
   </div>
 </section>
+
 <!-- Trust bar -->
 <section class="trust-bar reveal">
   <div class="container trust-bar-inner">
@@ -135,19 +137,6 @@
     </div>
   </div>
 </section>
-<script>
-  document.querySelectorAll('[data-ba]').forEach(function (el) {
-    var range = el.querySelector('.ba-range');
-    var beforeImg = el.querySelector('.ba-before');
-    var handle = el.querySelector('.ba-handle');
-    function update() {
-      beforeImg.style.clipPath = 'inset(0 ' + (100 - range.value) + '% 0 0)';
-      handle.style.left = range.value + '%';
-    }
-    range.addEventListener('input', update);
-    update();
-  });
-</script>
 <% } %>
 
 <section class="section section-tint">
@@ -260,7 +249,6 @@
     Array.from(track.children).forEach(card => track.appendChild(card.cloneNode(true)));
 
     function loadFacade(facade, muted) {
-    function loadFacade(facade, muted) {
       const embed = facade.getAttribute('data-embed');
       const sep = embed.includes('?') ? '&' : '?';
       const params = muted ? 'autoplay=1&mute=1&playsinline=1' : 'autoplay=1&playsinline=1';
@@ -274,17 +262,12 @@
       facade.appendChild(iframe);
       facade.dataset.played = '1';
       facade.dataset.muted = muted ? '1' : '0';
-      // Stop the row from sliding a playing video off-screen.
       const marquee = facade.closest('.videos-marquee');
       if (marquee) marquee.classList.add('playing');
     }
 
     const facades = Array.from(track.querySelectorAll('.video-facade'));
 
-    // Belt-and-suspenders visibility check: some mobile browsers delay or
-    // never fire IntersectionObserver callbacks reliably for elements inside
-    // a horizontally-animating row. This manual check runs alongside the
-    // observer and catches anything it misses.
     function checkVisibilityFallback() {
       facades.forEach(function (f) {
         if (f.dataset.played) return;
@@ -305,8 +288,6 @@
       }, { root: null, threshold: 0.25 });
       facades.forEach(function (f) { io.observe(f); });
     }
-    // Always also run the manual check on load and on scroll, in case the
-    // observer never fires (older/low-power mobile browsers).
     checkVisibilityFallback();
     window.addEventListener('scroll', checkVisibilityFallback, { passive: true });
     window.addEventListener('load', checkVisibilityFallback);
