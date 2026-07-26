@@ -265,6 +265,9 @@ Give a gift they'll treasure forever — a custom hand-made portrait from {{site
   // everything the scheduler still needs to check on its next run.
   await db.collection('gift_reminders').createIndex({ customer_id: 1 }, { background: true });
   await db.collection('gift_reminders').createIndex({ reminder_sent: 1, event_date: 1 }, { background: true });
+  // Customer Gallery: the public page and homepage teaser both query
+  // approved-only, newest first.
+  await db.collection('gallery_photos').createIndex({ approved: 1, created_at: -1 }, { background: true });
 
   console.log('[db] MongoDB connected and schema ready');
 }
