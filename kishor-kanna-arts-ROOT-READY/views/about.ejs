@@ -3,9 +3,22 @@
 <%- include('partials/header') %>
 
 <section class="section">
-  <div class="container" style="max-width:760px;">
-    <h2>About Us</h2>
-    <p><%= settings.about_text %></p>
+  <div class="container">
+    <div class="about-hero">
+      <% if (settings.about_image_url) { %>
+        <img src="<%= settings.about_image_url %>" alt="<%= settings.site_name %>" class="about-hero-img" loading="lazy" decoding="async">
+      <% } %>
+      <div>
+        <h1>About <%= settings.site_name %></h1>
+        <p><%= settings.about_text %></p>
+        <div class="about-stats">
+          <% if (settings.about_years_experience) { %><div class="about-stat"><strong><%= settings.about_years_experience %>+</strong><span>Years Experience</span></div><% } %>
+          <div class="about-stat"><strong>1000+</strong><span>Portraits Completed</span></div>
+          <div class="about-stat"><strong>500+</strong><span>Happy Customers</span></div>
+          <div class="about-stat"><strong>100%</strong><span>Handmade</span></div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
