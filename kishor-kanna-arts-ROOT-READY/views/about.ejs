@@ -1,5 +1,5 @@
-<% pageTitle = 'About Us' %>
-<% pageDescription = `Meet the artist behind ${settings.site_name}. Real customer reviews, FAQs, and answers before you place a custom portrait order.` %>
+<% pageTitle = settings.seo_about_title || 'About Us' %>
+<% pageDescription = settings.seo_about_description || `Meet the artist behind ${settings.site_name}. Real customer reviews, FAQs, and answers before you place a custom portrait order.` %>
 <%- include('partials/header') %>
 
 <section class="section">
