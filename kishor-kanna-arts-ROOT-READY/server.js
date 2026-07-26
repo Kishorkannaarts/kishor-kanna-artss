@@ -141,6 +141,15 @@ app.use((req, res, next) => {
   next();
 });
 
+// ---------- Spam protection (honeypot) ----------
+// A hidden field named "website" that's invisible to real visitors (and
+// meaningless to autofill) but that bots reliably fill in because they
+// blindly complete every field on a form. No CAPTCHA, no external API keys,
+// no friction for real customers.
+function isSpamBot(req) {
+  return !!(req.body && req.body.website);
+}
+
 function csrfCheck(req, res, next) {
   const sent = (req.body && req.body._csrf) || req.headers['x-csrf-token'];
   if (!sent || sent !== req.session.csrfToken) {
@@ -422,6 +431,7 @@ app.get('/about', ah(async (req, res) => {
 app.get('/courses', (req, res) => res.render('courses', { submitted: false }));
 
 app.post('/courses/waitlist', ah(async (req, res) => {
+  if (isSpamBot(req)) return res.render('courses', { submitted: true }); // silently drop, no tell for bots
   const { name, email } = req.body;
   if (name && email) {
     const mdb = await db.getDB();
@@ -437,6 +447,7 @@ app.post('/courses/waitlist', ah(async (req, res) => {
 app.get('/contact', (req, res) => res.render('contact', { sent: false }));
 
 app.post('/contact', ah(async (req, res) => {
+  if (isSpamBot(req)) return res.render('contact', { sent: true }); // silently drop, no tell for bots
   const { name, email, phone, subject, message } = req.body;
   await db.insertOne('messages', { name, email, phone, subject, message, read: false });
   res.render('contact', { sent: true });
@@ -475,6 +486,7 @@ if (!chatbot.isConfigured()) {
   }
 }));
 app.post('/newsletter', ah(async (req, res) => {
+  if (isSpamBot(req)) return res.redirect(req.get('Referrer') || '/'); // silently drop, no tell for bots
   try { await db.insertOne('newsletter', { email: req.body.email }); } catch (e) {}
   res.redirect(req.get('Referrer') || '/');
 }));
@@ -854,6 +866,7 @@ app.get('/account/invoice/:id', requireCustomer, ah(async (req, res) => {
 }));
 
 app.post('/testimonials', memoryUpload.single('photo'), csrfCheck, ah(async (req, res) => {
+  if (isSpamBot(req)) return res.redirect('/about?thanks=1'); // silently drop, no tell for bots
   const { name, message, rating, video_url } = req.body;
   const photoUrl = await uploadImage(req.file, 'reviews');
   // Only accept a video link if we can actually turn it into an embeddable
