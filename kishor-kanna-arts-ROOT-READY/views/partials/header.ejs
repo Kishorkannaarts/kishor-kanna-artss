@@ -93,30 +93,30 @@
 
   <nav class="nav">
     <a href="/">Home</a>
-    <a href="/portfolio">Portfolio</a>
 
     <details class="nav-more nav-mega">
-      <summary>Services</summary>
+      <summary>Shop</summary>
       <div class="nav-mega-menu">
         <a href="/services#pencil"><strong>Pencil Portraits</strong><span>Classic graphite, timeless detail</span></a>
         <a href="/services#color"><strong>Color Portraits</strong><span>Vivid, lifelike color work</span></a>
         <a href="/services#canvas"><strong>Canvas Paintings</strong><span>Gallery-ready framed art</span></a>
         <a href="/services#couple"><strong>Couple &amp; Wedding</strong><span>Romantic keepsake portraits</span></a>
         <a href="/services#pet"><strong>Pet Portraits</strong><span>Your pet, hand-painted</span></a>
-        <a href="/services" class="nav-mega-viewall">View All Services →</a>
+        <a href="/portfolio" class="nav-mega-viewall">View All Portraits →</a>
       </div>
     </details>
 
-    <a href="/track-order">Track Order</a>
+    <% if (settings.courses_enabled) { %><a href="/courses">Courses</a><% } %>
+    <a href="/about">About</a>
+    <a href="/contact">Contact</a>
 
     <details class="nav-more">
       <summary>More</summary>
       <div class="nav-more-menu">
+        <a href="/track-order">Track Order</a>
         <a href="/blog">Blog</a>
         <a href="/gallery">Customer Gallery</a>
-        <% if (settings.courses_enabled) { %><a href="/courses">Courses</a><% } %>
-        <a href="/about">About Us</a>
-        <a href="/contact">Contact</a>
+        <% if (!settings.courses_enabled) { %><a href="/courses">Courses</a><% } %>
       </div>
     </details>
 
