@@ -1,5 +1,5 @@
-<% pageTitle = 'Contact' %>
-<% pageDescription = `Get in touch with ${settings.site_name} — ask about a custom portrait, check pricing, or say hello. We reply fast.` %>
+<% pageTitle = settings.seo_contact_title || 'Contact' %>
+<% pageDescription = settings.seo_contact_description || `Get in touch with ${settings.site_name} — ask about a custom portrait, check pricing, or say hello. We reply fast.` %>
 <%- include('partials/header') %>
 
 <section class="section">
