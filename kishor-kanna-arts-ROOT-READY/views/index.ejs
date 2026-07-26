@@ -1,5 +1,5 @@
-<% pageTitle = 'Home' %>
-<% pageDescription = settings.meta_description || `${settings.site_name} — custom hand-made pencil, colour and canvas portraits made from your photo. Couple, family, wedding and pet portraits, shipped anywhere in India.` %>
+<% pageTitle = settings.seo_home_title || 'Home' %>
+<% pageDescription = settings.seo_home_description || settings.meta_description || `${settings.site_name} — custom hand-made pencil, colour and canvas portraits made from your photo. Couple, family, wedding and pet portraits, shipped anywhere in India.` %>
 <%- include('partials/header') %>
 
 <!-- 1. HERO -->
