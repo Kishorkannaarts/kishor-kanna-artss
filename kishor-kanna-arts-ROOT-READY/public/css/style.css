@@ -386,7 +386,11 @@ a:hover { color: var(--color-gold); }
 }
 .hero p.lead { font-size: 1.1rem; max-width: 480px; margin-top: var(--space-md); }
 .hero-actions { display: flex; gap: 16px; margin-top: var(--space-md); flex-wrap: wrap; }
-
+.hero-social-proof { display: flex; align-items: center; gap: 12px; margin-top: 18px; font-size: 0.88rem; color: var(--text-secondary); }
+.hero-with-image .hero-social-proof { color: rgba(255,255,255,0.85); }
+.hero-avatars { display: flex; }
+.hero-avatar { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--bg-primary); margin-left: -10px; }
+.hero-avatars .hero-avatar:first-child { margin-left: 0; }
 /* First-paint entrance — the hero is visible immediately on load, so it can't
    rely on the scroll-triggered .reveal system; each element fades/slides up
    in its own beat instead of everything popping in at once. */
