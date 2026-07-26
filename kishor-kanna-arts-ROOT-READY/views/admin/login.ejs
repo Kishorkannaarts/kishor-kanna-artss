@@ -25,5 +25,14 @@
     </form>
   </div>
 </div>
+<script>
+  document.querySelectorAll('form[method="POST"], form[method="post"]').forEach(function (f) {
+    var i = document.createElement('input');
+    i.type = 'hidden';
+    i.name = '_csrf';
+    i.value = "<%= csrfToken %>";
+    f.appendChild(i);
+  });
+</script>
 </body>
 </html>
