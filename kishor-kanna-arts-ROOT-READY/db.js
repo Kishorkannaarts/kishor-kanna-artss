@@ -208,6 +208,74 @@ Please review it and confirm so we can proceed with packing & delivery:
 {{name}} has reviewed and confirmed the finished artwork for order {{order_code}}. You can proceed with packing & delivery.
 
 — {{site_name}}`,
+    tmpl_progress_update_subject: 'A Peek at Your {{art_type}} in Progress - {{order_code}}',
+    tmpl_progress_update_body: `Hi {{name}},
+
+Here's a quick progress update on your order {{order_code}}:
+
+{{progress_image}}
+
+{{progress_note}}
+
+— {{site_name}}`,
+    tmpl_making_video_subject: 'Watch Your Artwork Being Made - {{order_code}} 🎥',
+    tmpl_making_video_body: `Hi {{name}},
+
+We recorded a short video of your {{art_type}} being made — take a look:
+{{video_url}}
+
+— {{site_name}}`,
+    tmpl_packing_subject: 'Order {{order_code}} is Being Packed 📦',
+    tmpl_packing_body: `Hi {{name}},
+
+Your order {{order_code}} has been carefully packed and will be handed to our courier partner shortly.
+
+— {{site_name}}`,
+    tmpl_tracking_subject: 'Order {{order_code}} Has Shipped - Tracking Inside',
+    tmpl_tracking_body: `Hi {{name}},
+
+Your order {{order_code}} is on its way!
+
+Courier: {{courier_name}}
+Tracking Number: {{tracking_number}}
+Track your shipment: {{tracking_url}}
+
+— {{site_name}}`,
+    tmpl_delivered_subject: 'Order {{order_code}} Delivered! 🎉',
+    tmpl_delivered_body: `Hi {{name}},
+
+Your order {{order_code}} has been delivered. We hope you love it!
+
+— {{site_name}}`,
+    tmpl_review_request_subject: 'How Did We Do? - {{site_name}}',
+    tmpl_review_request_body: `Hi {{name}},
+
+We'd love to hear what you think of your {{art_type}}! Could you spare a minute to leave a review?
+{{review_url}}
+
+Thank you for choosing {{site_name}}.
+
+— {{site_name}}`,
+    // Admin-side alerts — sent to NOTIFY_EMAIL (see .env), not the customer.
+    tmpl_advance_paid_admin_subject: 'Advance Paid - {{order_code}}',
+    tmpl_advance_paid_admin_body: `{{name}} has paid the advance ({{amount}}) for order {{order_code}}. Work can begin.`,
+    tmpl_balance_paid_admin_subject: 'Final Payment Received - {{order_code}}',
+    tmpl_balance_paid_admin_body: `{{name}} has paid the final balance ({{amount}}) for order {{order_code}}. Ready for packing & delivery.`,
+    tmpl_contact_form_admin_subject: 'New Contact Form Message - {{site_name}}',
+    tmpl_contact_form_admin_body: `New message from the Contact form:
+
+Name: {{name}}
+Email: {{email}}
+Phone: {{phone}}
+Subject: {{subject}}
+
+{{message}}`,
+    tmpl_new_review_admin_subject: 'New Review Submitted - {{site_name}}',
+    tmpl_new_review_admin_body: `{{name}} submitted a new review ({{rating}}/5):
+
+"{{message}}"
+
+Go to Admin > Reviews to approve or delete it.`,
     // Referral & wallet rewards program (see referral.js)
     referral_reward_amount: '200',
     referral_discount_percent: '10',
