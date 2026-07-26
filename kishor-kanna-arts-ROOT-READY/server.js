@@ -1834,6 +1834,9 @@ app.post('/admin/settings/save', requireAdmin, memoryUpload.fields([{ name: 'log
   if (uploadedLogo) await db.setSetting('logo_url', uploadedLogo);
   const uploadedHero = await uploadImage(heroFile, 'hero');
   if (uploadedHero) await db.setSetting('hero_image_url', uploadedHero);
+  const aboutFile = req.files && req.files.about_image && req.files.about_image[0];
+  const uploadedAbout = await uploadImage(aboutFile, 'about');
+  if (uploadedAbout) await db.setSetting('about_image_url', uploadedAbout);
   res.redirect('/admin/settings');
 }));
 
