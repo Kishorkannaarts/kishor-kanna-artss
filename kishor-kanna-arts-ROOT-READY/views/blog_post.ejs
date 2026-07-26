@@ -12,7 +12,9 @@
       <img src="<%= post.cover_image %>" alt="<%= post.title %>" fetchpriority="high" decoding="async" style="width:100%; max-height:420px; object-fit:cover; border-radius:12px; margin-bottom:24px;">
     <% } %>
     <h1 style="text-align:center; margin-bottom:8px;"><%= post.title %></h1>
-    <p class="sub" style="margin-bottom:30px;"><%= post.created_at %></p>
+    <p class="sub" style="margin-bottom:8px; text-align:center;">
+      <% if (post.category) { %><span class="tag"><%= post.category %></span> · <% } %><%= post.created_at %>
+    </p>
 
     <div style="font-size:1.05rem; line-height:1.75; color:var(--text-primary);">
       <% (post.content || '').split(/\n\s*\n/).forEach(paragraph => { %>
