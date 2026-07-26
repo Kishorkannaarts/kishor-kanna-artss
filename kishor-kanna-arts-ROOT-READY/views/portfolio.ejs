@@ -58,8 +58,11 @@
           <% artworks.forEach((a, i) => { %>
             <div class="card" style="position:relative;" data-category="<%= a.category %>" data-size="<%= a.size || '' %>" data-price="<%= a.price || 0 %>" data-order="<%= i %>">
               <a href="/portfolio/<%= a.id %>">
-                <img src="<%= a.image || 'https://placehold.co/400x300?text=Artwork' %>" alt="<%= a.title %>" loading="lazy" decoding="async">
+                <img src="<%= a.image || 'https://placehold.co/400x300?text=Artwork' %>" alt="<%= a.title %>" loading="lazy" decoding="async" class="lightbox-trigger" data-full="<%= a.image || 'https://placehold.co/1200x1200?text=Artwork' %>" data-title="<%= a.title %>" data-category="<%= a.category %>">
               </a>
+              <button type="button" class="lightbox-open-btn" aria-label="View <%= a.title %> fullscreen" data-full="<%= a.image || 'https://placehold.co/1200x1200?text=Artwork' %>" data-title="<%= a.title %>" data-category="<%= a.category %>">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+              </button>
               <% if (isCustomer) { %>
                 <% const wished = typeof wishlistIds !== 'undefined' && wishlistIds.includes(a.id); %>
                 <form action="/wishlist/<%= a.id %>/toggle" method="POST" class="wishlist-heart-form">
@@ -140,6 +143,76 @@
       sizeBoxes.forEach(b => b.checked = false);
       priceBoxes.forEach(b => b.checked = false);
       applyFilters();
+    });
+  })();
+</script>
+
+<!-- Fullscreen lightbox viewer -->
+<div class="lightbox-overlay" id="lightboxOverlay" role="dialog" aria-modal="true" aria-label="Artwork fullscreen viewer" hidden>
+  <button type="button" class="lightbox-close" id="lightboxClose" aria-label="Close fullscreen viewer">&times;</button>
+  <button type="button" class="lightbox-nav lightbox-prev" id="lightboxPrev" aria-label="Previous artwork">&#8249;</button>
+  <div class="lightbox-content">
+    <img id="lightboxImage" src="" alt="">
+    <div class="lightbox-caption">
+      <span id="lightboxTitle"></span>
+      <span class="tag" id="lightboxCategory"></span>
+    </div>
+  </div>
+  <button type="button" class="lightbox-nav lightbox-next" id="lightboxNext" aria-label="Next artwork">&#8250;</button>
+</div>
+
+<script>
+  (function () {
+    var overlay = document.getElementById('lightboxOverlay');
+    var imgEl = document.getElementById('lightboxImage');
+    var titleEl = document.getElementById('lightboxTitle');
+    var catEl = document.getElementById('lightboxCategory');
+    var closeBtn = document.getElementById('lightboxClose');
+    var prevBtn = document.getElementById('lightboxPrev');
+    var nextBtn = document.getElementById('lightboxNext');
+    var currentIndex = 0;
+
+    function visibleItems() {
+      // Only cycle through cards the current filters haven't hidden.
+      return Array.prototype.slice.call(document.querySelectorAll('.lightbox-open-btn'))
+        .filter(function (btn) { return btn.closest('.card').style.display !== 'none'; });
+    }
+
+    function openAt(index) {
+      var items = visibleItems();
+      if (!items.length) return;
+      currentIndex = (index + items.length) % items.length;
+      var btn = items[currentIndex];
+      imgEl.src = btn.getAttribute('data-full');
+      imgEl.alt = btn.getAttribute('data-title');
+      titleEl.textContent = btn.getAttribute('data-title');
+      catEl.textContent = btn.getAttribute('data-category');
+      overlay.hidden = false;
+      document.body.style.overflow = 'hidden';
+    }
+
+    function close() {
+      overlay.hidden = true;
+      document.body.style.overflow = '';
+    }
+
+    document.querySelectorAll('.lightbox-open-btn').forEach(function (btn, i) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        openAt(visibleItems().indexOf(btn));
+      });
+    });
+
+    closeBtn.addEventListener('click', close);
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+    prevBtn.addEventListener('click', function () { openAt(currentIndex - 1); });
+    nextBtn.addEventListener('click', function () { openAt(currentIndex + 1); });
+
+    document.addEventListener('keydown', function (e) {
+      if (overlay.hidden) return;
+      if (e.key === 'Escape') close();
+      if (e.key === 'ArrowLeft') openAt(currentIndex - 1);
+      if (e.key === 'ArrowRight') openAt(currentIndex + 1);
     });
   })();
 </script>
