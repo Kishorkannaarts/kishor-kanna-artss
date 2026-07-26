@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Page SEO | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
+<body class="admin">
+<div class="admin-shell">
+  <% active = 'seo' %>
+  <%- include('partials/sidebar') %>
+  <div class="admin-main">
+    <div class="admin-topbar"><h1>Page SEO</h1></div>
+    <p style="color:var(--muted); font-size:0.9rem; margin-top:-10px;">
+      Controls the browser tab title and Google search snippet for each page below. Leave a field blank to use the default shown as its placeholder.
+    </p>
+    <form class="admin-form" action="/admin/seo/save" method="POST">
+
+      <h3>Home Page</h3>
+      <div class="form-group"><label>Title</label><input type="text" name="seo_home_title" value="<%= settings.seo_home_title %>" placeholder="Home"></div>
+      <div class="form-group"><label>Description</label><textarea name="seo_home_description" placeholder="<%= settings.meta_description || (settings.site_name + ' — custom hand-made pencil, colour and canvas portraits made from your photo.') %>"><%= settings.seo_home_description %></textarea></div>
+
+      <h3 style="margin-top:24px;">Shop Page</h3>
+      <div class="form-group"><label>Title</label><input type="text" name="seo_shop_title" value="<%= settings.seo_shop_title %>" placeholder="Shop Custom Art &amp; Portraits"></div>
+      <div class="form-group"><label>Description</label><textarea name="seo_shop_description" placeholder="Browse pencil, colour, pen, blood, digital and canvas portraits. Choose a style and size, then order a custom piece made from your photo."><%= settings.seo_shop_description %></textarea></div>
+
+      <h3 style="margin-top:24px;">About Page</h3>
+      <div class="form-group"><label>Title</label><input type="text" name="seo_about_title" value="<%= settings.seo_about_title %>" placeholder="About Us"></div>
+      <div class="form-group"><label>Description</label><textarea name="seo_about_description" placeholder="Meet the artist. Real customer reviews, FAQs, and answers before you place a custom portrait order."><%= settings.seo_about_description %></textarea></div>
+
+      <h3 style="margin-top:24px;">Contact Page</h3>
+      <div class="form-group"><label>Title</label><input type="text" name="seo_contact_title" value="<%= settings.seo_contact_title %>" placeholder="Contact"></div>
+      <div class="form-group"><label>Description</label><textarea name="seo_contact_description" placeholder="Get in touch — ask about a custom portrait, check pricing, or say hello. We reply fast."><%= settings.seo_contact_description %></textarea></div>
+
+      <h3 style="margin-top:24px;">Order Page</h3>
+      <div class="form-group"><label>Title</label><input type="text" name="seo_order_title" value="<%= settings.seo_order_title %>" placeholder="Order Now"></div>
+      <div class="form-group"><label>Description</label><textarea name="seo_order_description" placeholder="Order a custom hand-made portrait in a few simple steps — choose your art type, upload a photo, and see your price instantly."><%= settings.seo_order_description %></textarea></div>
+
+      <button class="btn btn-primary" type="submit" style="margin-top:20px;">Save SEO Settings</button>
+    </form>
+    <p style="color:var(--muted); font-size:0.85rem; margin-top:16px;">
+      Site-wide fallback description, keywords, social preview image, Google Analytics and Meta Pixel are in <a href="/admin/settings">Site Settings</a>.
+    </p>
+  </div>
+</div>
+</body></html>
