@@ -12,33 +12,20 @@
 <section class="section section-tint">
   <h2>Reviews</h2>
   <p class="sub">What our customers say</p>
+  <div class="review-filters">
+    <a href="/about" class="<%= !reviewFilter ? 'active' : '' %>">All Reviews</a>
+    <a href="/about?type=video" class="<%= reviewFilter === 'video' ? 'active' : '' %>">Video Reviews</a>
+    <a href="/about?type=photo" class="<%= reviewFilter === 'photo' ? 'active' : '' %>">Photo Reviews</a>
+    <a href="/about?type=text" class="<%= reviewFilter === 'text' ? 'active' : '' %>">Written Reviews</a>
+  </div>
   <div class="reviews-marquee">
     <div class="reviews-track" id="reviewsTrack">
-      <% testimonials.forEach(t => {
-        const headline = t.message.length > 55 ? t.message.slice(0, 55).trim() + '…' : t.message;
-        const needsReadMore = t.message.length > 140;
-      %>
-        <div class="testimonial">
-          <div class="quote-mark">&ldquo;</div>
-          <div class="review-title"><%= headline %></div>
-          <div class="review-body"><%= t.message %></div>
-          <% if (needsReadMore) { %>
-            <button type="button" class="read-more" onclick="const c=this.closest('.testimonial'); c.classList.toggle('expanded'); this.textContent = c.classList.contains('expanded') ? 'READ LESS' : 'READ MORE';">READ MORE</button>
-          <% } %>
-          <div class="stars"><%= '★'.repeat(t.rating) %><%= '☆'.repeat(5 - t.rating) %></div>
-          <div class="who-row"><span class="who"><%= t.name %></span></div>
-          <div class="meta-row">
-            <span class="verified">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-              Verified
-            </span>
-            <span class="review-date" data-created="<%= t.created_at %>">just now</span>
-          </div>
-        </div>
+      <% testimonials.forEach(t => { %>
+        <%- include('partials/testimonial-card', { t }) %>
       <% }) %>
     </div>
   </div>
-  <% if (testimonials.length === 0) { %><p class="sub">No reviews yet.</p><% } %>
+  <% if (testimonials.length === 0) { %><p class="sub">No reviews match this filter yet.</p><% } %>
   <% if (settings.google_business_url) { %>
     <div style="text-align:center; margin-top:24px;">
       <a class="btn btn-outline" href="<%= settings.google_business_url %>" target="_blank" rel="noopener">See All Our Reviews on Google</a>
@@ -102,7 +89,7 @@
   <h2>Leave a Review</h2>
   <p class="sub">Reviews are shown after approval by the team</p>
   <div class="form-box">
-    <form action="/testimonials" method="POST">
+    <form action="/testimonials" method="POST" enctype="multipart/form-data">
       <div class="form-group">
         <label>Your Name</label>
         <input type="text" name="name" required>
@@ -120,6 +107,14 @@
       <div class="form-group">
         <label>Your Review</label>
         <textarea name="message" required></textarea>
+      </div>
+      <div class="form-group">
+        <label>Add a Photo (optional)</label>
+        <input type="file" name="photo" accept="image/*">
+      </div>
+      <div class="form-group">
+        <label>Add a Video Link (optional)</label>
+        <input type="url" name="video_url" placeholder="Paste a YouTube or Google Drive link">
       </div>
       <button class="btn" type="submit">Submit Review</button>
     </form>
