@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Making Video | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
+<body class="admin">
+<div class="admin-shell">
+  <% active = 'orders' %>
+  <%- include('partials/sidebar') %>
+  <div class="admin-main">
+    <div class="admin-topbar"><h1>Share a Making Video</h1></div>
+    <p style="color:var(--muted); margin-top:-10px;">Order <%= order.order_code %> — <%= order.name %> (<%= order.email || 'no email on file' %>)</p>
+
+    <% if (typeof error !== 'undefined' && error) { %>
+      <div class="error-box"><%= error %></div>
+    <% } %>
+
+    <form class="admin-form" action="/admin/orders/<%= order.id %>/making-video" method="POST">
+      <div class="form-group">
+        <label>Video Link (YouTube, Instagram, or Google Drive)</label>
+        <input type="text" name="video_url" value="<%= order.making_video_url || '' %>" placeholder="https://..." required>
+        <small style="color:var(--muted);">Upload the short clip anywhere convenient (YouTube unlisted, Drive shared link, Instagram Reel) and paste the link here.</small>
+      </div>
+      <button class="btn btn-primary" type="submit">Send Video Link to Customer</button>
+      <a class="btn btn-ghost" href="/admin/orders">Cancel</a>
+    </form>
+  </div>
+</div>
+</body></html>
