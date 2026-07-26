@@ -1821,7 +1821,7 @@ app.post('/admin/blocks/:id/delete', requireAdmin, ah(async (req, res) => {
 }));
 
 // ---- Settings ----
-app.get('/admin/settings', requireAdmin, (req, res) => res.render('admin/settings'));
+app.post('/admin/settings/save', requireAdmin, memoryUpload.fields([{ name: 'logo', maxCount: 1 }, { name: 'hero_image', maxCount: 1 }, { name: 'about_image', maxCount: 1 }]), csrfCheck, ah(async (req, res) => {
 
 app.post('/admin/settings/save', requireAdmin, memoryUpload.fields([{ name: 'logo', maxCount: 1 }, { name: 'hero_image', maxCount: 1 }]), csrfCheck, ah(async (req, res) => {
   for (const [key, value] of Object.entries(req.body)) await db.setSetting(key, value);
