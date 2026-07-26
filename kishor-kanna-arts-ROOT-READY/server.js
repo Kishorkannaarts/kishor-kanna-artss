@@ -14,6 +14,7 @@ const helmet = require('helmet');
 const db = require('./db');
 const mailer = require('./mailer');
 const notify = require('./notify');
+const referral = require('./referral');
 const razorpay = require('./razorpay');
 const chatbot = require('./chatbot');
 
@@ -88,6 +89,13 @@ app.use(async (req, res, next) => {
     res.locals.unreadNotifCount = res.locals.isCustomer
       ? await db.count('notifications', { customer_id: req.session.customerId, read: false })
       : 0;
+    // Wallet balance from referral rewards — available on every page so the
+    // order form can offer "use my wallet balance" without a separate lookup.
+    res.locals.walletBalance = 0;
+    if (res.locals.isCustomer) {
+      const _c = await db.findById('customers', req.session.customerId);
+      res.locals.walletBalance = (_c && _c.wallet_balance) || 0;
+    }
     res.locals.popupOffer = await db.findOne('offers', { active: true }, { created_at: -1 });
     res.locals.artTypes = await db.getArtTypes();
     res.locals.sizes = await db.getSizes();
@@ -554,15 +562,26 @@ app.get('/order', ah(async (req, res) => {
     return res.render('order', { success: null, error: 'Please fill in your full delivery address.', blockedDates, old: req.body, services, offerDiscount, presetPrice: req.body.preset_price || '' });
   }
 
+  // Referred-friend discount: if this customer signed up via someone's
+  // referral link and hasn't placed an order yet, they get an automatic
+  // first-order discount (percent set in Settings).
+  let loggedInCustomer = null;
+  let referralDiscount = 0;
+  if (req.session && req.session.customerId) {
+    loggedInCustomer = db.normalize(await db.findById('customers', req.session.customerId));
+    referralDiscount = await referral.getFirstOrderDiscountPercent(loggedInCustomer);
+  }
+
   // Re-check the coupon on the server — the client-side discount is only a
   // preview and must never be trusted for the final price or usage count.
-  let discount_percent_applied = offerDiscount;
+  // Precedence: an actively-entered coupon always wins (matches the client
+  // preview); otherwise the better of the referral discount or the passive
+  // site-wide offer applies.
+  let discount_percent_applied = Math.max(offerDiscount, referralDiscount);
   let appliedCouponCode = null;
   if (coupon_code) {
     const couponResult = await checkCoupon(coupon_code);
     if (couponResult.valid) {
-      // Match the client: an actively-entered coupon always wins over the
-      // passive site-wide offer, so applying it visibly changes the price.
       discount_percent_applied = couponResult.coupon.discount_percent;
       appliedCouponCode = couponResult.coupon.code;
     }
@@ -572,9 +591,14 @@ app.get('/order', ah(async (req, res) => {
   // since those are just hidden form fields anyone can edit before submitting.
   const matchedService = services.find(sv => sv.title === art_type);
   const verifiedBasePrice = parseFloat(String(priceForSize(matchedService, size) || '').replace(/[^0-9.]/g, '')) || null;
-  const finalPrice = verifiedBasePrice
+  const priceAfterDiscount = verifiedBasePrice
     ? (verifiedBasePrice - (verifiedBasePrice * discount_percent_applied / 100))
     : null; // Custom size (or unrecognised art type) — price to be confirmed manually, same as before
+
+  // Wallet redemption — never trust a client-submitted amount, only whether
+  // they ticked the box; the actual rupee value is capped server-side.
+  const walletUsed = referral.calcWalletRedemption(loggedInCustomer, priceAfterDiscount, req.body.use_wallet === '1');
+  const finalPrice = priceAfterDiscount !== null ? (priceAfterDiscount - walletUsed) : null;
 
   const order_code = genOrderCode();
   // Prefer the pre-compressed base64 image sent as a hidden field — the raw
@@ -583,10 +607,13 @@ app.get('/order', ah(async (req, res) => {
   const refImage = req.body.compressed_image_data
     ? await uploadImageDataUri(req.body.compressed_image_data, 'orders')
     : await uploadImage(req.file, 'orders');
-  await db.insertOne('orders', { order_code, name, phone, email, art_type, size, reference_image: refImage, delivery_date, notes, estimated_price: finalPrice ? finalPrice.toFixed(0) : null, discount_percent_applied, coupon_code: appliedCouponCode, address_line, city, state, pincode, status: 'Received', advance_amount: null, advance_payment_link: null, advance_paid: false, balance_amount: null, balance_payment_link: null, balance_paid: false, customer_id: (req.session && req.session.customerId) || null });
+  await db.insertOne('orders', { order_code, name, phone, email, art_type, size, reference_image: refImage, delivery_date, notes, estimated_price: finalPrice ? finalPrice.toFixed(0) : null, discount_percent_applied, coupon_code: appliedCouponCode, wallet_used: walletUsed || 0, address_line, city, state, pincode, status: 'Received', advance_amount: null, advance_payment_link: null, advance_paid: false, balance_amount: null, balance_payment_link: null, balance_paid: false, customer_id: (req.session && req.session.customerId) || null });
   if (appliedCouponCode) {
     const mdb = await db.getDB();
     await mdb.collection('coupons').updateOne({ code: appliedCouponCode }, { $inc: { used_count: 1 } });
+  }
+  if (walletUsed > 0 && loggedInCustomer) {
+    await db.updateById('customers', loggedInCustomer.id, { wallet_balance: (loggedInCustomer.wallet_balance || 0) - walletUsed });
   }
 
   const s = res.locals.settings;
@@ -687,20 +714,22 @@ app.post('/webhooks/razorpay', ah(async (req, res) => {
 // =========================================================
 app.get('/account/signup', (req, res) => {
   if (req.session && req.session.customerId) return res.redirect('/account/dashboard');
-  res.render('account/signup', { error: null, old: {} });
+  res.render('account/signup', { error: null, old: {}, refCode: req.query.ref || '' });
 });
 
 app.post('/account/signup', ah(async (req, res) => {
-  const { name, email, phone, password } = req.body;
+  const { name, email, phone, password, ref_code } = req.body;
   if (!name || !email || !password || password.length < 6) {
-    return res.render('account/signup', { error: 'Please fill all fields. Password must be at least 6 characters.', old: req.body });
+    return res.render('account/signup', { error: 'Please fill all fields. Password must be at least 6 characters.', old: req.body, refCode: ref_code || '' });
   }
   const existing = await db.findOne('customers', { email: email.toLowerCase().trim() });
   if (existing) {
-    return res.render('account/signup', { error: 'An account with this email already exists. Please log in instead.', old: req.body });
+    return res.render('account/signup', { error: 'An account with this email already exists. Please log in instead.', old: req.body, refCode: ref_code || '' });
   }
   const password_hash = bcrypt.hashSync(password, 10);
-  const customer = await db.insertOne('customers', { name, email: email.toLowerCase().trim(), phone: phone || '', password_hash });
+  const referral_code = await referral.generateUniqueReferralCode(name);
+  const customer = await db.insertOne('customers', { name, email: email.toLowerCase().trim(), phone: phone || '', password_hash, referral_code, referred_by: null, wallet_balance: 0 });
+  if (ref_code) await referral.linkReferralIfAny(customer, ref_code);
   req.session.customerId = customer.id;
   req.session.customerName = customer.name;
   res.redirect(req.query.next || '/account/dashboard');
@@ -732,6 +761,20 @@ app.get('/account/dashboard', requireCustomer, ah(async (req, res) => {
   const customer = db.normalize(await db.findById('customers', req.session.customerId));
   const orders = db.normalize(await db.find('orders', { customer_id: req.session.customerId }, { created_at: -1 }));
   res.render('account/dashboard', { customer, orders });
+}));
+
+app.get('/account/referrals', requireCustomer, ah(async (req, res) => {
+  let customer = db.normalize(await db.findById('customers', req.session.customerId));
+  // Older accounts created before this feature existed won't have a code yet —
+  // generate one on first visit so nobody is left without a shareable link.
+  if (!customer.referral_code) {
+    const code = await referral.generateUniqueReferralCode(customer.name);
+    await db.updateById('customers', customer.id, { referral_code: code });
+    customer = db.normalize(await db.findById('customers', req.session.customerId));
+  }
+  const { rewardAmount, discountPercent } = await referral.getReferralSettings();
+  const referrals = db.normalize(await db.find('referrals', { referrer_id: customer.id }, { created_at: -1 }));
+  res.render('account/referrals', { customer, referrals, rewardAmount, discountPercent });
 }));
 
 // ---------- Profile ----------
@@ -1140,6 +1183,11 @@ app.post('/admin/orders/:id/status', requireAdmin, ah(async (req, res) => {
       mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_status_update_subject, data), html: renderTemplate(s.tmpl_status_update_body, data).replace(/\n/g, '<br>') });
     }
     notify.notifyOrder('status_update', order, data);
+    // Referral reward: pays out the referrer's wallet credit the first time
+    // the referred friend's order reaches "Delivered".
+    if (order.status === 'Delivered' && order.customer_id) {
+      referral.rewardIfEligible(order.customer_id).catch(err => console.error('[referral] reward failed:', err.message));
+    }
   }
   res.redirect('/admin/orders');
 }));
@@ -1292,6 +1340,9 @@ app.post('/admin/orders/:id/shipped', requireAdmin, ah(async (req, res) => {
     await mailer.sendMail({ to: order.email, subject: renderTemplate(s.tmpl_shipped_subject, data), html: renderTemplate(s.tmpl_shipped_body, data).replace(/\n/g, '<br>') });
   }
   notify.notifyOrder('shipped', order, data);
+  if (order.customer_id) {
+    referral.rewardIfEligible(order.customer_id).catch(err => console.error('[referral] reward failed:', err.message));
+  }
   res.redirect('/admin/orders');
 }));
 
@@ -1596,6 +1647,29 @@ app.post('/admin/offers/:id/delete', requireAdmin, ah(async (req, res) => {
 }));
 
 // ---- Coupon Codes ----
+app.get('/admin/referrals', requireAdmin, ah(async (req, res) => {
+  const referrals = db.normalize(await db.find('referrals', {}, { created_at: -1 }));
+  // Look up names/emails for display without an N+1 query per row.
+  const customerIds = [...new Set(referrals.flatMap(r => [r.referrer_id, r.referred_id]).filter(Boolean))];
+  const mdb = await db.getDB();
+  const customers = await mdb.collection('customers').find({ _id: { $in: customerIds.map(id => new db.ObjectId(id)) } }).toArray();
+  const byId = {};
+  customers.forEach(c => { byId[c._id.toString()] = c; });
+  const rows = referrals.map(r => ({
+    ...r,
+    referrer_name: byId[r.referrer_id] ? byId[r.referrer_id].name : '—',
+    referrer_email: byId[r.referrer_id] ? byId[r.referrer_id].email : '',
+  }));
+  const { rewardAmount, discountPercent } = await referral.getReferralSettings();
+  res.render('admin/referrals', { referrals: rows, rewardAmount, discountPercent });
+}));
+
+app.post('/admin/referrals/settings', requireAdmin, ah(async (req, res) => {
+  await db.setSetting('referral_reward_amount', String(parseFloat(req.body.reward_amount) || 200));
+  await db.setSetting('referral_discount_percent', String(parseFloat(req.body.discount_percent) || 10));
+  res.redirect('/admin/referrals');
+}));
+
 app.get('/admin/coupons', requireAdmin, ah(async (req, res) => {
   res.render('admin/coupons', { coupons: db.normalize(await db.find('coupons', {}, { created_at: -1 })) });
 }));
