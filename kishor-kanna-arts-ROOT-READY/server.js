@@ -1,4 +1,4 @@
- require('dotenv').config();
+require('dotenv').config();
 const express = require('express');
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
@@ -675,6 +675,8 @@ app.get('/order', ah(async (req, res) => {
   const old = {};
   if (req.query.art_type) old.art_type = req.query.art_type;
   if (req.query.size) old.size = req.query.size;
+  if (req.query.frame) old.frame = req.query.frame;
+  if (req.query.occasion) old.occasion = req.query.occasion;
   // Prefill contact + delivery address fields when they arrive as query params —
   // this is how "Use for New Order" on a saved address links here.
   ['name', 'phone', 'email', 'address_line', 'city', 'state', 'pincode'].forEach(f => {
@@ -713,7 +715,14 @@ app.get('/order', ah(async (req, res) => {
     })().catch(next);
   });
 }, csrfCheck, ah(async (req, res) => {
-  const { name, phone, email, art_type, size, delivery_date, notes, estimated_price, address_line, city, state, pincode, coupon_code } = req.body;
+  const { name, phone, email, art_type, size, delivery_date, estimated_price, address_line, city, state, pincode, coupon_code, frame, occasion } = req.body;
+  // Fold the optional Frame Selection / Occasion (from the product page and
+  // gift-occasion tiles) into the free-text notes field, so they show up
+  // everywhere notes already do — admin, emails, tracking — with no schema change.
+  const extraNoteParts = [];
+  if (frame && frame !== 'No Frame') extraNoteParts.push(`Frame: ${frame}`);
+  if (occasion) extraNoteParts.push(`Occasion: ${occasion}`);
+  const notes = [extraNoteParts.join(' · '), req.body.notes].filter(Boolean).join(' — ');
   const blocked = await db.find('blocked_dates', {}, { date: 1 });
   const blockedDates = blocked.map(r => r.date);
   const services = db.normalize(await db.find('services', {}, { created_at: -1 }));
@@ -1180,8 +1189,13 @@ app.post('/gallery/submit', memoryUpload.single('photo'), csrfCheck, ah(async (r
 }));
 
 app.get('/blog', ah(async (req, res) => {
-  const posts = db.normalize(await db.find('posts', { published: true }, { created_at: -1 }));
-  res.render('blog_list', { posts });
+  const category = req.query.category || null;
+  const filter = { published: true };
+  if (category) filter.category = category;
+  const posts = db.normalize(await db.find('posts', filter, { created_at: -1 }));
+  const allPosts = category ? db.normalize(await db.find('posts', { published: true }, { created_at: -1 })) : posts;
+  const categories = [...new Set(allPosts.map(p => p.category).filter(Boolean))];
+  res.render('blog_list', { posts, categories, activeCategory: category });
 }));
 
 app.get('/blog/:slug', ah(async (req, res) => {
@@ -1779,17 +1793,17 @@ app.get('/admin/blog/:id/edit', requireAdmin, ah(async (req, res) => {
 }));
 
 app.post('/admin/blog/save', requireAdmin, memoryUpload.single('cover_image'), csrfCheck, ah(async (req, res) => {
-  const { id, title, excerpt, content, published } = req.body;
+  const { id, title, excerpt, content, published, category } = req.body;
   const uploadedUrl = await uploadImage(req.file, 'blog');
   if (id) {
     const existing = await db.findById('posts', id);
     const cover_image = uploadedUrl || (existing ? existing.cover_image : null);
-    await db.updateById('posts', id, { title, excerpt, content, cover_image, published: !!published });
+    await db.updateById('posts', id, { title, excerpt, content, cover_image, category, published: !!published });
   } else {
     let slug = slugify(title);
     const clash = await db.findOne('posts', { slug });
     if (clash) slug = slug + '-' + Date.now().toString().slice(-5);
-    await db.insertOne('posts', { title, slug, excerpt, content, cover_image: uploadedUrl, published: !!published });
+    await db.insertOne('posts', { title, slug, excerpt, content, cover_image: uploadedUrl, category, published: !!published });
   }
   res.redirect('/admin/blog');
 }));
