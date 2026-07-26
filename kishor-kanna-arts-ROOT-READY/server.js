@@ -578,7 +578,7 @@ app.get('/portfolio/:id', ah(async (req, res) => {
     isWishlisted = !!(await db.findOne('wishlist', { customer_id: req.session.customerId, artwork_id: artwork.id }));
   }
 
-  res.render('artwork-detail', { artwork, related, isWishlisted });
+  res.render('artwork-detail', { artwork, related, isWishlisted, matchedService });
 }));
 
 // Retired as a separate page — Services and the Shop/Portfolio catalog were
