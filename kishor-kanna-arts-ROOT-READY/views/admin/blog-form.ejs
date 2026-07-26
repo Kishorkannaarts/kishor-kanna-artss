@@ -17,6 +17,14 @@
       </div>
       <div class="form-group"><label>Short Excerpt (shown on the blog list page)</label><textarea name="excerpt" required><%= post ? post.excerpt : '' %></textarea></div>
       <div class="form-group">
+        <label>Category</label>
+        <select name="category">
+          <% ['Gift Ideas', 'Art Tips', 'Drawing Tutorials', 'Behind the Scenes'].forEach(c => { %>
+            <option value="<%= c %>" <%= (post && post.category === c) ? 'selected' : '' %>><%= c %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="form-group">
         <label>Full Content</label>
         <small style="color:var(--muted); display:block; margin-bottom:6px;">Leave a blank line between paragraphs — that's all the formatting you need.</small>
         <textarea name="content" rows="14" required><%= post ? post.content : '' %></textarea>
