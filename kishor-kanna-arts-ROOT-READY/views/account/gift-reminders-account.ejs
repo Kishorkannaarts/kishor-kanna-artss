@@ -55,7 +55,7 @@
         <div class="form-group"><label>Who is it for?</label><input type="text" name="recipient_name" placeholder="e.g. Mom, Priya, Rahul & Sneha" required></div>
         <div class="form-group"><label>Date</label><input type="date" name="event_date" required></div>
         <div class="form-group"><label>Remind me how many days before?</label><input type="number" name="remind_days_before" min="1" value="7"></div>
-        <div class="form-group"><label>Phone for WhatsApp/SMS reminder (optional)</label><input type="tel" name="phone" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" value="<%= customer.phone || '' %>" placeholder="10-digit mobile number"></div>
+        <div class="form-group"><label>Phone for WhatsApp reminder (optional)</label><input type="tel" name="phone" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" value="<%= customer.phone || '' %>" placeholder="10-digit mobile number"></div>
         <label style="display:flex; align-items:center; gap:8px; margin-bottom:16px; font-size:0.9rem;">
           <input type="checkbox" name="recurring" value="1" style="width:auto;"> Repeats every year (birthdays, anniversaries)
         </label>
