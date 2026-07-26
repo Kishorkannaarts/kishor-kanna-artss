@@ -31,6 +31,9 @@
             <td style="white-space:nowrap;">
               <a class="btn btn-sm btn-outline" href="/track-order?order_code=<%= o.order_code %>">Track</a>
               <a class="btn btn-sm btn-outline" href="/account/invoice/<%= o.id %>">Invoice</a>
+              <% if (o.status === 'Delivered' || o.status === 'Customer Confirmed') { %>
+                <a class="btn btn-sm btn-outline" href="/gallery">Share Photo</a>
+              <% } %>
             </td>
           </tr>
         <% }) %>
