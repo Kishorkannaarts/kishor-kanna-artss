@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Gallery | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
+<body class="admin">
+<div class="admin-shell">
+  <% active = 'customer-gallery' %>
+  <%- include('partials/sidebar') %>
+  <div class="admin-main">
+    <div class="admin-topbar"><h1>Customer Gallery</h1></div>
+    <p style="color:var(--muted); font-size:0.9rem; margin-top:-16px; margin-bottom:20px;">
+      Photos customers share of their framed portraits. Approved photos show on the public Gallery page and the homepage. Pending ones stay hidden until you approve them.
+    </p>
+
+    <table>
+      <tr><th>Photo</th><th>Name</th><th>Caption</th><th>Status</th><th>Actions</th></tr>
+      <% photos.forEach(p => { %>
+        <tr>
+          <td><img class="thumb" src="<%= p.photo_url %>" alt=""></td>
+          <td><%= p.name %></td>
+          <td style="max-width:300px;"><%= p.caption || '—' %></td>
+          <td><span class="badge <%= p.approved ? 'badge-ok' : 'badge-new' %>"><%= p.approved ? 'Approved' : 'Pending' %></span></td>
+          <td class="actions-row">
+            <% if (!p.approved) { %>
+              <form action="/admin/customer-gallery/<%= p.id %>/approve" method="POST">
+                <button class="btn btn-success btn-sm" type="submit">Approve</button>
+              </form>
+            <% } else { %>
+              <form action="/admin/customer-gallery/<%= p.id %>/unapprove" method="POST">
+                <button class="btn btn-ghost btn-sm" type="submit">Unapprove</button>
+              </form>
+            <% } %>
+            <form action="/admin/customer-gallery/<%= p.id %>/delete" method="POST" onsubmit="return confirm('Delete this photo?');">
+              <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+      <% if (photos.length === 0) { %><tr><td colspan="5">No submissions yet.</td></tr><% } %>
+    </table>
+  </div>
+</div>
+</body></html>
