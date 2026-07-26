@@ -2044,6 +2044,23 @@ app.post('/admin/settings/save', requireAdmin, memoryUpload.fields([{ name: 'log
   res.redirect('/admin/settings');
 }));
 
+// ---- Per-Page SEO (title/description for key pages, no code changes needed) ----
+app.get('/admin/seo', requireAdmin, ah(async (req, res) => {
+  res.render('admin/seo', {});
+}));
+
+app.post('/admin/seo/save', requireAdmin, ah(async (req, res) => {
+  const seoKeys = [
+    'seo_home_title', 'seo_home_description',
+    'seo_shop_title', 'seo_shop_description',
+    'seo_about_title', 'seo_about_description',
+    'seo_contact_title', 'seo_contact_description',
+    'seo_order_title', 'seo_order_description'
+  ];
+  for (const key of seoKeys) await db.setSetting(key, req.body[key] || '');
+  res.redirect('/admin/seo');
+}));
+
 // ---- Calendar ----
 app.get('/admin/calendar', requireAdmin, ah(async (req, res) => {
   res.render('admin/calendar', { blocked: await db.find('blocked_dates', {}, { date: 1 }) });
