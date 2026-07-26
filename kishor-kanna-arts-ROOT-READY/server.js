@@ -1,5 +1,7 @@
 require('dotenv').config();
 const express = require('express');
+const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
 const session = require('express-session');
 const FileStore = require('session-file-store')(session);
 const bcrypt = require('bcryptjs');
@@ -97,6 +99,62 @@ app.use(async (req, res, next) => {
     };
     next();
   } catch (err) { next(err); }
+});
+
+// ---------- Rate limiting ----------
+// A gentle global limit so no single visitor/bot can hammer the site, plus a
+// much stricter limit on the two login forms specifically, since those are
+// the routes brute-force attempts actually target.
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false
+});
+app.use(generalLimiter);
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many login attempts. Please wait 15 minutes and try again.'
+});
+
+// ---------- CSRF protection ----------
+// Synchronizer token pattern: one random token per logged-in session, echoed
+// back by every form as a hidden "_csrf" field and checked on every
+// state-changing request. res.locals.csrfToken makes it available to every
+// EJS view automatically.
+//
+// Multipart (file-upload) forms are skipped in this global check because
+// multer hasn't parsed req.body yet at this point in the middleware chain —
+// those specific routes call csrfCheck() themselves, right after their
+// multer middleware runs (see the routes below that accept file uploads).
+const CSRF_EXEMPT_PATHS = ['/webhooks/razorpay', '/api/chat', '/coupon/validate'];
+
+app.use((req, res, next) => {
+  if (!req.session.csrfToken) {
+    req.session.csrfToken = crypto.randomBytes(32).toString('hex');
+  }
+  res.locals.csrfToken = req.session.csrfToken;
+  next();
+});
+
+function csrfCheck(req, res, next) {
+  const sent = (req.body && req.body._csrf) || req.headers['x-csrf-token'];
+  if (!sent || sent !== req.session.csrfToken) {
+    return res.status(403).send('Your session expired or the form was submitted incorrectly. Please go back, refresh the page, and try again.');
+  }
+  next();
+}
+
+app.use((req, res, next) => {
+  const isStateChanging = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
+  const isExempt = CSRF_EXEMPT_PATHS.includes(req.path);
+  const isMultipart = (req.headers['content-type'] || '').includes('multipart/form-data');
+  if (!isStateChanging || isExempt || isMultipart) return next();
+  csrfCheck(req, res, next);
 });
 
 // ---------- Image uploads via Cloudinary ----------
@@ -466,7 +524,7 @@ app.get('/order', ah(async (req, res) => {
       res.render('order', { success: null, error: message, blockedDates: blocked.map(r => r.date), old: req.body, services, offerDiscount, presetPrice: req.body.preset_price || '' });
     })().catch(next);
   });
-}, ah(async (req, res) => {
+}, csrfCheck, ah(async (req, res) => {
   const { name, phone, email, art_type, size, delivery_date, notes, estimated_price, address_line, city, state, pincode, coupon_code } = req.body;
   const blocked = await db.find('blocked_dates', {}, { date: 1 });
   const blockedDates = blocked.map(r => r.date);
@@ -638,7 +696,7 @@ app.get('/account/login', (req, res) => {
   res.render('account/login', { error: null, oldEmail: '' });
 });
 
-app.post('/account/login', ah(async (req, res) => {
+app.post('/account/login', loginLimiter, ah(async (req, res) => {
   const { email, password } = req.body;
   const customer = await db.findOne('customers', { email: (email || '').toLowerCase().trim() });
   if (!customer || !bcrypt.compareSync(password || '', customer.password_hash)) {
@@ -795,7 +853,7 @@ app.get('/account/invoice/:id', requireCustomer, ah(async (req, res) => {
   res.render('account/invoice', { order });
 }));
 
-app.post('/testimonials', memoryUpload.single('photo'), ah(async (req, res) => {
+app.post('/testimonials', memoryUpload.single('photo'), csrfCheck, ah(async (req, res) => {
   const { name, message, rating, video_url } = req.body;
   const photoUrl = await uploadImage(req.file, 'reviews');
   // Only accept a video link if we can actually turn it into an embeddable
@@ -838,7 +896,7 @@ app.get('/admin/login', (req, res) => {
   res.render('admin/login', { error: null });
 });
 
-app.post('/admin/login', (req, res) => {
+app.post('/admin/login', loginLimiter, (req, res) => {
   const { username, password } = req.body;
   const validUser = username === process.env.ADMIN_USERNAME;
   const storedPass = process.env.ADMIN_PASSWORD || '';
@@ -967,7 +1025,7 @@ app.post('/admin/artworks/:id/revert-image', requireAdmin, ah(async (req, res) =
   res.redirect(`/admin/artworks/${req.params.id}/edit?ai=revert_ok`);
 }));
 
-app.post('/admin/artworks/save', requireAdmin, memoryUpload.fields([{ name: 'image', maxCount: 1 }, { name: 'before_image', maxCount: 1 }]), ah(async (req, res) => {
+app.post('/admin/artworks/save', requireAdmin, memoryUpload.fields([{ name: 'image', maxCount: 1 }, { name: 'before_image', maxCount: 1 }]), csrfCheck, ah(async (req, res) => {
   const { id, title, category, description, story, size, price, featured } = req.body;
   const imageFile = req.files && req.files.image && req.files.image[0];
   const beforeFile = req.files && req.files.before_image && req.files.before_image[0];
@@ -995,7 +1053,7 @@ app.get('/admin/services', requireAdmin, ah(async (req, res) => {
   res.render('admin/services', { services: db.normalize(await db.find('services', {}, { created_at: -1 })) });
 }));
 
-app.post('/admin/services/save', requireAdmin, memoryUpload.single('image'), ah(async (req, res) => {
+app.post('/admin/services/save', requireAdmin, memoryUpload.single('image'), csrfCheck, ah(async (req, res) => {
   const { id, title, description } = req.body;
   const prices = extractPrices(req.body);
   const uploadedUrl = await uploadImage(req.file, 'services');
@@ -1218,7 +1276,7 @@ app.get('/admin/orders/:id/send-artwork', requireAdmin, ah(async (req, res) => {
   res.render('admin/send-artwork', { order });
 }));
 
-app.post('/admin/orders/:id/send-artwork', requireAdmin, memoryUpload.single('artwork_image'), ah(async (req, res) => {
+app.post('/admin/orders/:id/send-artwork', requireAdmin, memoryUpload.single('artwork_image'), csrfCheck, ah(async (req, res) => {
   const order = db.normalize(await db.findById('orders', req.params.id));
   if (!order) return res.redirect('/admin/orders');
   const uploadedUrl = await uploadImage(req.file, 'final-artwork');
@@ -1249,7 +1307,7 @@ app.get('/admin/testimonials', requireAdmin, ah(async (req, res) => {
   res.render('admin/testimonials', { testimonials });
 }));
 
-app.post('/admin/testimonials/add', requireAdmin, memoryUpload.single('photo'), ah(async (req, res) => {
+app.post('/admin/testimonials/add', requireAdmin, memoryUpload.single('photo'), csrfCheck, ah(async (req, res) => {
   const { name, message, rating, video_url } = req.body;
   const photoUrl = await uploadImage(req.file, 'reviews');
   const validVideoUrl = videoEmbedUrl(video_url) ? video_url.trim() : null;
@@ -1385,7 +1443,7 @@ app.get('/admin/blog/:id/edit', requireAdmin, ah(async (req, res) => {
   res.render('admin/blog-form', { post });
 }));
 
-app.post('/admin/blog/save', requireAdmin, memoryUpload.single('cover_image'), ah(async (req, res) => {
+app.post('/admin/blog/save', requireAdmin, memoryUpload.single('cover_image'), csrfCheck, ah(async (req, res) => {
   const { id, title, excerpt, content, published } = req.body;
   const uploadedUrl = await uploadImage(req.file, 'blog');
   if (id) {
@@ -1430,7 +1488,7 @@ app.post('/admin/blocks/:id/delete', requireAdmin, ah(async (req, res) => {
 // ---- Settings ----
 app.get('/admin/settings', requireAdmin, (req, res) => res.render('admin/settings'));
 
-app.post('/admin/settings/save', requireAdmin, memoryUpload.fields([{ name: 'logo', maxCount: 1 }, { name: 'hero_image', maxCount: 1 }]), ah(async (req, res) => {
+app.post('/admin/settings/save', requireAdmin, memoryUpload.fields([{ name: 'logo', maxCount: 1 }, { name: 'hero_image', maxCount: 1 }]), csrfCheck, ah(async (req, res) => {
   for (const [key, value] of Object.entries(req.body)) await db.setSetting(key, value);
   // Checkboxes are absent from req.body entirely when unchecked, so the generic
   // loop above can turn this ON but can never turn it back OFF. Handle it explicitly.
@@ -1479,7 +1537,7 @@ app.get('/admin/offers', requireAdmin, ah(async (req, res) => {
   res.render('admin/offers', { offers: db.normalize(await db.find('offers', {}, { created_at: -1 })) });
 }));
 
-app.post('/admin/offers/save', requireAdmin, memoryUpload.single('image'), ah(async (req, res) => {
+app.post('/admin/offers/save', requireAdmin, memoryUpload.single('image'), csrfCheck, ah(async (req, res) => {
   const discount = parseFloat(req.body.discount_percent) || 0;
   const uploadedUrl = await uploadImage(req.file, 'offers');
   // A newly published offer becomes the one live offer, so the popup/banner
