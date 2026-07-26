@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Abandoned Orders | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
+<body class="admin">
+<div class="admin-shell">
+  <% active = 'abandoned-orders' %>
+  <%- include('partials/sidebar') %>
+  <div class="admin-main">
+    <div class="admin-topbar"><h1>Abandoned Orders</h1></div>
+    <p style="color:var(--muted); font-size:0.9rem; margin-top:-10px;">Customers who started the order form and gave an email but never finished. They're saved automatically as they type, and get one reminder email (and SMS, if Twilio is configured) once they've gone quiet past the delay below.</p>
+
+    <form class="admin-form" action="/admin/abandoned-orders/settings" method="POST" style="display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap; margin-bottom:24px;">
+      <div class="form-group" style="margin-bottom:0;">
+        <label>Reminders</label>
+        <select name="enabled">
+          <option value="1" <%= settings.abandoned_recovery_enabled === '1' ? 'selected' : '' %>>On</option>
+          <option value="0" <%= settings.abandoned_recovery_enabled !== '1' ? 'selected' : '' %>>Off</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label>Send after (hours of inactivity)</label>
+        <input type="number" name="delay_hours" min="0.5" step="0.5" value="<%= settings.abandoned_recovery_delay_hours || 2 %>" style="width:100px;">
+      </div>
+      <button class="btn btn-primary" type="submit">Save</button>
+    </form>
+
+    <table>
+      <tr><th>Name</th><th>Email / Phone</th><th>Art Type / Size</th><th>Last Active</th><th>Reminder</th><th>Actions</th></tr>
+      <% rows.forEach(p => { %>
+        <tr>
+          <td><%= p.name || '—' %></td>
+          <td><%= p.email || '—' %><br><small style="color:var(--muted);"><%= p.phone || '' %></small></td>
+          <td><%= p.art_type || '—' %><% if (p.size) { %> / <%= p.size %><% } %></td>
+          <td><%= p.updated_at ? new Date(p.updated_at).toLocaleString() : '—' %></td>
+          <td><span class="badge <%= p.reminder_sent ? 'badge-ok' : 'badge-new' %>"><%= p.reminder_sent ? 'Sent' : 'Pending' %></span></td>
+          <td class="actions-row">
+            <form action="/admin/abandoned-orders/<%= p.id %>/send-now" method="POST">
+              <button class="btn btn-outline btn-sm" type="submit">Send Now</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+      <% if (rows.length === 0) { %><tr><td colspan="6">No abandoned orders right now.</td></tr><% } %>
+    </table>
+  </div>
+</div>
+</body></html>
