@@ -66,7 +66,14 @@ app.use(express.urlencoded({ extended: true }));
 // raw bytes, not the re-serialized object — capturing it here (once,
 // globally) is simpler than giving the webhook route its own body parser.
 app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
-app.use('/public', express.static(path.join(__dirname, 'public')));
+app.use('/public', express.static(path.join(__dirname, 'public'), {
+  // CSS/JS here are versionless (no content-hash in the filename), so a long
+  // cache without validation would strand visitors on stale assets after a
+  // deploy. maxAge gives fast repeat-visit loads, etag lets the browser
+  // revalidate cheaply (304) when a file actually changes.
+  maxAge: '7d',
+  etag: true
+}));
 
 const sessionsDir = path.join(__dirname, 'data', 'sessions');
 if (!fs.existsSync(sessionsDir)) fs.mkdirSync(sessionsDir, { recursive: true });
@@ -1955,7 +1962,31 @@ app.post('/admin/blocks/:id/delete', requireAdmin, ah(async (req, res) => {
   res.redirect('/admin/blocks');
 }));
 
+// ---- FAQs (shown on the About page) ----
+app.get('/admin/faqs', requireAdmin, ah(async (req, res) => {
+  res.render('admin/faqs', { faqs: db.normalize(await db.find('faqs', {}, { created_at: 1 })) });
+}));
+
+app.post('/admin/faqs/add', requireAdmin, ah(async (req, res) => {
+  await db.insertOne('faqs', { question: req.body.question, answer: req.body.answer });
+  res.redirect('/admin/faqs');
+}));
+
+app.post('/admin/faqs/:id/update', requireAdmin, ah(async (req, res) => {
+  await db.updateById('faqs', req.params.id, { question: req.body.question, answer: req.body.answer });
+  res.redirect('/admin/faqs');
+}));
+
+app.post('/admin/faqs/:id/delete', requireAdmin, ah(async (req, res) => {
+  await db.deleteById('faqs', req.params.id);
+  res.redirect('/admin/faqs');
+}));
+
 // ---- Settings ----
+app.get('/admin/settings', requireAdmin, ah(async (req, res) => {
+  res.render('admin/settings', {});
+}));
+
 app.post('/admin/settings/save', requireAdmin, memoryUpload.fields([{ name: 'logo', maxCount: 1 }, { name: 'hero_image', maxCount: 1 }, { name: 'about_image', maxCount: 1 }]), csrfCheck, ah(async (req, res) => {
   for (const [key, value] of Object.entries(req.body)) await db.setSetting(key, value);
   // Checkboxes are absent from req.body entirely when unchecked, so the generic
