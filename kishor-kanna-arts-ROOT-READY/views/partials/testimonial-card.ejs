@@ -1,0 +1,33 @@
+<%
+  // Expects `t` (a testimonial with embed_url already computed by the route).
+  const headline = t.message.length > 55 ? t.message.slice(0, 55).trim() + '…' : t.message;
+  const needsReadMore = t.message.length > 140;
+%>
+<div class="testimonial <%= t.embed_url ? 'has-video' : '' %>">
+  <% if (t.embed_url) { %>
+    <div class="review-media review-media-video">
+      <iframe src="<%= t.embed_url %>" title="Video review from <%= t.name %>" loading="lazy" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+    </div>
+  <% } else if (t.photo_url) { %>
+    <div class="review-media review-media-photo">
+      <img src="<%= t.photo_url %>" alt="Photo shared by <%= t.name %>" loading="lazy" decoding="async">
+    </div>
+  <% } %>
+  <div class="quote-mark">&ldquo;</div>
+  <div class="review-title"><%= headline %></div>
+  <div class="review-body"><%= t.message %></div>
+  <% if (needsReadMore) { %>
+    <button type="button" class="read-more" onclick="const c=this.closest('.testimonial'); c.classList.toggle('expanded'); this.textContent = c.classList.contains('expanded') ? 'READ LESS' : 'READ MORE';">READ MORE</button>
+  <% } %>
+  <div class="stars"><%= '★'.repeat(t.rating) %><%= '☆'.repeat(5 - t.rating) %></div>
+  <div class="who-row"><span class="who"><%= t.name %></span></div>
+  <div class="meta-row">
+    <% if (t.verified) { %>
+      <span class="verified">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        Verified
+      </span>
+    <% } %>
+    <span class="review-date" data-created="<%= t.created_at %>">just now</span>
+  </div>
+</div>
