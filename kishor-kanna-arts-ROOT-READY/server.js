@@ -85,6 +85,9 @@ app.use(async (req, res, next) => {
     res.locals.isAdmin = !!(req.session && req.session.isAdmin);
     res.locals.isCustomer = !!(req.session && req.session.customerId);
     res.locals.customerName = (req.session && req.session.customerName) || '';
+    res.locals.unreadNotifCount = res.locals.isCustomer
+      ? await db.count('notifications', { customer_id: req.session.customerId, read: false })
+      : 0;
     res.locals.popupOffer = await db.findOne('offers', { active: true }, { created_at: -1 });
     res.locals.artTypes = await db.getArtTypes();
     res.locals.sizes = await db.getSizes();
@@ -598,7 +601,7 @@ app.get('/order', ah(async (req, res) => {
   if (email) {
     mailer.sendMail({ to: email, subject: renderTemplate(s.tmpl_order_received_subject, data), html: renderTemplate(s.tmpl_order_received_body, data).replace(/\n/g, '<br>') });
   }
-  notify.notifyOrder('order_received', { phone }, data);
+  notify.notifyOrder('order_received', { phone, order_code, customer_id: (req.session && req.session.customerId) || null }, data);
 
   res.render('order', { success: order_code, error: null, blockedDates, old: {}, services, offerDiscount, presetPrice: '' });
 }));
@@ -854,6 +857,16 @@ app.get('/account/wishlist', requireCustomer, ah(async (req, res) => {
     artworks.sort((a, b) => (orderIndex[a.id] ?? 999) - (orderIndex[b.id] ?? 999));
   }
   res.render('account/wishlist', { customer, artworks });
+}));
+
+// ---------- Notifications ----------
+app.get('/account/notifications', requireCustomer, ah(async (req, res) => {
+  const customer = db.normalize(await db.findById('customers', req.session.customerId));
+  const notifications = db.normalize(await db.find('notifications', { customer_id: req.session.customerId }, { created_at: -1 }));
+  // Viewing the page marks everything read — the bell badge clears next request.
+  const mdb = await db.getDB();
+  await mdb.collection('notifications').updateMany({ customer_id: req.session.customerId, read: false }, { $set: { read: true } });
+  res.render('account/notifications', { customer, notifications });
 }));
 
 // ---------- Invoice ----------
@@ -1668,3 +1681,4 @@ app.use((err, req, res, next) => {
 db.initSchema().then(() => {
   app.listen(PORT, () => console.log(`Kishor Kanna Arts running at http://localhost:${PORT}`));
 });
+
