@@ -207,7 +207,10 @@ Please review it and confirm so we can proceed with packing & delivery:
 
 {{name}} has reviewed and confirmed the finished artwork for order {{order_code}}. You can proceed with packing & delivery.
 
-— {{site_name}}`
+— {{site_name}}`,
+    // Referral & wallet rewards program (see referral.js)
+    referral_reward_amount: '200',
+    referral_discount_percent: '10'
   };
 
   const db = await getDB();
@@ -221,6 +224,11 @@ Please review it and confirm so we can proceed with packing & delivery:
   await db.collection('blocked_dates').createIndex({ date: 1 }, { unique: true, background: true });
   await db.collection('settings').createIndex({ key: 1 }, { unique: true, background: true });
   await db.collection('customers').createIndex({ email: 1 }, { unique: true, background: true });
+  // Sparse: only customers that have a referral_code need to be unique on it;
+  // older rows created before this feature existed simply won't have one yet.
+  await db.collection('customers').createIndex({ referral_code: 1 }, { unique: true, sparse: true, background: true });
+  await db.collection('referrals').createIndex({ referrer_id: 1 }, { background: true });
+  await db.collection('referrals').createIndex({ referred_id: 1, status: 1 }, { background: true });
   await db.collection('addresses').createIndex({ customer_id: 1 }, { background: true });
   // One wishlist row per customer+artwork — toggling relies on this being unique
   // so we can't ever end up with duplicate hearts on the same piece.
