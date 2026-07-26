@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customers | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
+<body class="admin">
+<div class="admin-shell">
+  <% active = 'customers' %>
+  <%- include('partials/sidebar') %>
+  <div class="admin-main">
+    <div class="admin-topbar"><h1>Customers</h1></div>
+    <p style="color:var(--muted); font-size:0.9rem; margin-top:-10px;">
+      Registered accounts only — guest checkouts (orders placed without signing up) won't appear here, but do show in Orders.
+    </p>
+    <form method="GET" action="/admin/customers" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:18px; background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:14px;">
+      <input type="text" name="q" value="<%= q %>" placeholder="Search name, email, phone" style="flex:1; min-width:200px; padding:9px 12px; border-radius:6px; background:var(--panel-2); color:var(--text); border:1px solid var(--border);">
+      <button class="btn btn-primary btn-sm" type="submit">Search</button>
+      <% if (q) { %><a class="btn btn-ghost btn-sm" href="/admin/customers">Clear</a><% } %>
+    </form>
+    <table>
+      <tr><th>Customer</th><th>Wallet</th><th>Referral Code</th><th>Orders</th><th>Total Spent</th><th>Joined</th><th>Actions</th></tr>
+      <% customers.forEach(c => { %>
+        <tr>
+          <td><%= c.name %><br><small style="color:var(--muted);"><%= c.email %><br><%= c.phone || 'no phone' %></small></td>
+          <td>₹<%= c.wallet_balance || 0 %></td>
+          <td><%= c.referral_code || '—' %></td>
+          <td><%= c.order_count %></td>
+          <td>₹<%= c.total_spent.toFixed(0) %></td>
+          <td><%= c.created_at %></td>
+          <td class="actions-row">
+            <a class="btn btn-ghost btn-sm" href="/admin/orders?q=<%= encodeURIComponent(c.email) %>">View Orders</a>
+          </td>
+        </tr>
+      <% }) %>
+      <% if (customers.length === 0) { %><tr><td colspan="7"><%= q ? 'No customers match your search.' : 'No registered customers yet.' %></td></tr><% } %>
+    </table>
+  </div>
+</div>
+</body></html>
