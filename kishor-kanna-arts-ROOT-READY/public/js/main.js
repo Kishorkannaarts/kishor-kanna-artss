@@ -68,4 +68,21 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.setItem('kka-theme', next);
     });
   }
+
+  // Before & After comparison sliders (homepage). The range input sits
+  // invisible on top of the images purely to capture drag/click input —
+  // this listener is what actually moves the reveal and the handle.
+  document.querySelectorAll('[data-ba]').forEach(function (slider) {
+    var range = slider.querySelector('.ba-range');
+    var before = slider.querySelector('.ba-before');
+    var handle = slider.querySelector('.ba-handle');
+    if (!range || !before || !handle) return;
+    function update() {
+      var val = range.value;
+      before.style.clipPath = 'inset(0 ' + (100 - val) + '% 0 0)';
+      handle.style.left = val + '%';
+    }
+    range.addEventListener('input', update);
+    update();
+  });
 });
