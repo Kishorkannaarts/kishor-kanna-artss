@@ -1,0 +1,32 @@
+<% pageTitle = 'Notifications' %>
+<%- include('../partials/header') %>
+
+<section class="section">
+  <div class="account-header">
+    <div>
+      <h2>Hi, <%= customer.name %></h2>
+      <p class="sub">Updates on your orders, all in one place.</p>
+    </div>
+    <form action="/account/logout" method="POST">
+      <button class="btn btn-outline" type="submit">Log Out</button>
+    </form>
+  </div>
+
+  <% activeTab = 'notifications' %>
+  <%- include('../partials/account-nav') %>
+
+  <% if (!notifications.length) { %>
+    <p class="sub" style="margin-top:28px;">No notifications yet — you'll see updates here as soon as there's news on an order.</p>
+  <% } else { %>
+    <div class="notif-list" style="margin-top:28px; display:flex; flex-direction:column; gap:10px;">
+      <% notifications.forEach(n => { %>
+        <a href="<%= n.link || '/account/dashboard' %>" class="card" style="display:flex; justify-content:space-between; align-items:center; gap:16px; padding:16px 20px; text-decoration:none; color:inherit;<%= n.read ? '' : ' border-color: var(--color-gold);' %>">
+          <span><%= n.message %></span>
+          <span class="sub" style="white-space:nowrap; font-size:0.8rem;"><%= new Date(n.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) %></span>
+        </a>
+      <% }) %>
+    </div>
+  <% } %>
+</section>
+
+<%- include('../partials/footer') %>
