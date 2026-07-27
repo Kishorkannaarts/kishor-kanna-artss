@@ -75,14 +75,19 @@
       var categoryThumbs = {};
       (featured || []).forEach(function(a){ if (a.category && !categoryThumbs[a.category]) categoryThumbs[a.category] = a; });
     %>
-    <div class="style-grid">
-      <% (artTypes || []).forEach(function(cat){ var thumb = categoryThumbs[cat]; %>
-        <a class="style-card reveal" href="/portfolio?category=<%= encodeURIComponent(cat) %>">
-          <img src="<%= thumb ? thumb.image : 'https://placehold.co/300x300?text=' + encodeURIComponent(cat) %>" alt="<%= cat %>" loading="lazy" decoding="async">
-          <span class="style-card-name"><%= cat %></span>
-          <% if (thumb && thumb.price) { %><span class="style-card-price">Starting ₹<%= thumb.price %></span><% } %>
-        </a>
-      <% }) %>
+    <div class="style-slider" data-slider>
+      <button type="button" class="style-slider-arrow is-prev" data-slider-prev aria-label="Scroll left">&#8249;</button>
+      <div class="style-grid" data-slider-track>
+        <% (artTypes || []).forEach(function(cat){ var thumb = categoryThumbs[cat]; %>
+          <a class="style-card reveal" href="/portfolio?category=<%= encodeURIComponent(cat) %>">
+            <img src="<%= thumb ? thumb.image : 'https://placehold.co/300x300?text=' + encodeURIComponent(cat) %>" alt="<%= cat %>" loading="lazy" decoding="async">
+            <span class="style-card-name"><%= cat %></span>
+            <% if (thumb && thumb.price) { %><span class="style-card-price">Starting ₹<%= thumb.price %></span><% } %>
+            <% if (thumb && thumb.description) { %><span class="style-card-desc"><%= thumb.description %></span><% } %>
+          </a>
+        <% }) %>
+      </div>
+      <button type="button" class="style-slider-arrow is-next" data-slider-next aria-label="Scroll right">&#8250;</button>
     </div>
     <div style="text-align:center; margin-top:24px;">
       <a class="btn btn-outline" href="/portfolio">View All Collections</a>
@@ -130,22 +135,10 @@
   <div class="container">
     <h2 class="reveal">Find the Perfect Gift for Every Occasion</h2>
     <p class="sub reveal">A handcrafted portrait makes every moment unforgettable</p>
-    <div class="grid grid-4 occasion-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:16px; margin-top:20px;">
-      <%
-        var occasions = [
-          { name: 'Birthday',        emoji: '🎂' },
-          { name: 'Anniversary',     emoji: '💞' },
-          { name: 'Wedding',         emoji: '💍' },
-          { name: 'Family',          emoji: '👨‍👩‍👧‍👦' },
-          { name: 'Baby',            emoji: '👶' },
-          { name: 'Pet',             emoji: '🐾' },
-          { name: 'Graduation',      emoji: '🎓' },
-          { name: 'Corporate Gifts', emoji: '🎁' }
-        ];
-      %>
-      <% occasions.forEach(function(occ){ %>
-        <a class="card reveal occasion-card" href="/order?occasion=<%= encodeURIComponent(occ.name) %>" style="text-decoration:none; color:inherit; text-align:center; padding:26px 12px;">
-          <span style="font-size:2rem; display:block; margin-bottom:10px;"><%= occ.emoji %></span>
+    <div class="grid occasion-grid">
+      <% (occasions || []).forEach(function(occ){ %>
+        <a class="card reveal occasion-card" href="/order?occasion=<%= encodeURIComponent(occ.name) %>">
+          <span class="ic"><%= occ.emoji %></span>
           <strong><%= occ.name %></strong>
         </a>
       <% }) %>
@@ -198,31 +191,13 @@
     <h2 class="reveal">From Your Photo to a Masterpiece</h2>
     <p class="sub reveal">Simple 5-step order process</p>
     <div class="timeline">
-      <div class="timeline-step reveal">
-        <div class="timeline-num">1</div>
-        <h3>Upload Your Photo</h3>
-        <p>Pick your art type, size, and upload the photo you love.</p>
-      </div>
-      <div class="timeline-step reveal">
-        <div class="timeline-num">2</div>
-        <h3>Choose Art Style &amp; Size</h3>
-        <p>Select your favorite style and the size that fits your space.</p>
-      </div>
-      <div class="timeline-step reveal">
-        <div class="timeline-num">3</div>
-        <h3>Our Artist Creates Your Portrait</h3>
-        <p>Our artist hand-draws or paints your portrait with care.</p>
-      </div>
-      <div class="timeline-step reveal">
-        <div class="timeline-num">4</div>
-        <h3>Approve Your Artwork</h3>
-        <p>Preview the finished piece and request changes if needed.</p>
-      </div>
-      <div class="timeline-step reveal">
-        <div class="timeline-num">5</div>
-        <h3>Delivered to Your Doorstep</h3>
-        <p>Safely packed and shipped straight to your door.</p>
-      </div>
+      <% (howItWorks || []).forEach(function(step, i){ %>
+        <div class="timeline-step reveal">
+          <div class="timeline-num"><%= i + 1 %></div>
+          <h3><%= step.title %></h3>
+          <p><%= step.text %></p>
+        </div>
+      <% }) %>
     </div>
   </div>
 </section>
