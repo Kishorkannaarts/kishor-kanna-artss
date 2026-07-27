@@ -63,6 +63,53 @@ async function saveSizes(list) {
   await setSetting('sizes', JSON.stringify(list));
 }
 
+// ---------- Gift Occasions grid (homepage, admin-managed) ----------
+// Stored as flat numbered settings (occ1_name/occ1_emoji ... occ8_name/occ8_emoji)
+// so the existing generic /admin/settings/save handler (which just loops over
+// req.body and calls setSetting) can save this with no extra code — the same
+// convention already used for the "Why Choose Us" boxes.
+const DEFAULT_OCCASIONS = [
+  { name: 'Birthday',        emoji: '🎂' },
+  { name: 'Anniversary',     emoji: '💞' },
+  { name: 'Wedding',         emoji: '💍' },
+  { name: 'Family',          emoji: '👨‍👩‍👧‍👦' },
+  { name: 'Baby',            emoji: '👶' },
+  { name: 'Pet',             emoji: '🐾' },
+  { name: 'Graduation',      emoji: '🎓' },
+  { name: 'Corporate Gifts', emoji: '🎁' }
+];
+
+async function getOccasions() {
+  const settings = await getAllSettings();
+  return DEFAULT_OCCASIONS.map(function (def, idx) {
+    const i = idx + 1;
+    const name = (settings['occ' + i + '_name'] || '').trim();
+    const emoji = (settings['occ' + i + '_emoji'] || '').trim();
+    return { name: name || def.name, emoji: emoji || def.emoji };
+  });
+}
+
+// ---------- How It Works steps (homepage, admin-managed) ----------
+// Stored as flat numbered settings (step1_title/step1_text ... step5_title/step5_text)
+// for the same reason as above.
+const DEFAULT_HOW_IT_WORKS = [
+  { title: 'Upload Your Photo',              text: 'Pick your art type, size, and upload the photo you love.' },
+  { title: 'Choose Art Style & Size',        text: 'Select your favorite style and the size that fits your space.' },
+  { title: 'Our Artist Creates Your Portrait', text: 'Our artist hand-draws or paints your portrait with care.' },
+  { title: 'Approve Your Artwork',           text: 'Preview the finished piece and request changes if needed.' },
+  { title: 'Delivered to Your Doorstep',     text: 'Safely packed and shipped straight to your door.' }
+];
+
+async function getHowItWorks() {
+  const settings = await getAllSettings();
+  return DEFAULT_HOW_IT_WORKS.map(function (def, idx) {
+    const i = idx + 1;
+    const title = (settings['step' + i + '_title'] || '').trim();
+    const text = (settings['step' + i + '_text'] || '').trim();
+    return { title: title || def.title, text: text || def.text };
+  });
+}
+
 // ---------- Generic collection helpers ----------
 async function find(col, filter = {}, sort = { created_at: -1 }, limit = 0) {
   const db = await getDB();
@@ -352,5 +399,6 @@ module.exports = {
   getDB, getSetting, setSetting, getAllSettings,
   find, findOne, findById, insertOne, updateById, deleteById, count,
   normalize, ObjectId, initSchema,
-  getArtTypes, saveArtTypes, getSizes, saveSizes
+  getArtTypes, saveArtTypes, getSizes, saveSizes,
+  getOccasions, getHowItWorks
 };
