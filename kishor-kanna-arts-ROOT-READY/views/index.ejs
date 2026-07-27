@@ -96,6 +96,7 @@
 </section>
 
 <!-- 4. FEATURED COLLECTIONS -->
+<% if (featured && featured.length > 0) { %>
 <section class="section">
   <div class="container">
     <h2 class="reveal"><%= settings.featured_heading || 'Our Most Loved Portraits' %></h2>
@@ -120,15 +121,13 @@
           </div>
         </div>
       <% }) %>
-<% if (featured.length === 0) { %>
-        <p class="sub">No artworks added yet — add some from the admin panel.</p>
-      <% } %>
     </div>
     <div style="text-align:center; margin-top:24px;">
       <a class="btn btn-outline" href="/portfolio">View All</a>
     </div>
   </div>
 </section>
+<% } %>
 
 <!-- 5. PORTRAIT INSPIRATION — Find the Perfect Gift for Every Occasion -->
 <section class="section section-tint">
@@ -190,14 +189,18 @@
   <div class="container">
     <h2 class="reveal">From Your Photo to a Masterpiece</h2>
     <p class="sub reveal">Simple 5-step order process</p>
-    <div class="timeline">
-      <% (howItWorks || []).forEach(function(step, i){ %>
-        <div class="timeline-step reveal">
-          <div class="timeline-num"><%= i + 1 %></div>
-          <h3><%= step.title %></h3>
-          <p><%= step.text %></p>
-        </div>
-      <% }) %>
+    <div class="style-slider" data-slider>
+      <button type="button" class="style-slider-arrow is-prev" data-slider-prev aria-label="Scroll left">&#8249;</button>
+      <div class="timeline" data-slider-track>
+        <% (howItWorks || []).forEach(function(step, i){ %>
+          <div class="timeline-step reveal">
+            <div class="timeline-num"><%= i + 1 %></div>
+            <h3><%= step.title %></h3>
+            <p><%= step.text %></p>
+          </div>
+        <% }) %>
+      </div>
+      <button type="button" class="style-slider-arrow is-next" data-slider-next aria-label="Scroll right">&#8250;</button>
     </div>
   </div>
 </section>
@@ -266,7 +269,14 @@
       facade.dataset.played = '1';
       facade.dataset.muted = muted ? '1' : '0';
       const marquee = facade.closest('.videos-marquee');
-      if (marquee) marquee.classList.add('playing');
+      // Only pause the auto-scroll marquee once a video is actually playing
+      // with sound (a deliberate click). The silent scroll-into-view
+      // autoplay must never set this, or the very first video to come
+      // into view freezes the whole row's auto-scroll permanently.
+      if (marquee) {
+        if (!muted) marquee.classList.add('playing');
+        else marquee.classList.remove('playing');
+      }
     }
 
     const facades = Array.from(track.querySelectorAll('.video-facade'));
@@ -350,7 +360,7 @@
   <div class="container">
     <h2 class="reveal">Customer Gallery</h2>
     <p class="sub reveal">Real portraits, in real homes — shared by the people who ordered them.</p>
-    <div class="gallery-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:14px; margin-top:20px;">
+    <div class="gallery-grid">
       <% galleryPhotos.forEach(p => { %>
         <a href="/gallery" style="display:block; aspect-ratio:1; border-radius:10px; overflow:hidden;">
           <img src="<%= p.photo_url %>" alt="Photo shared by <%= p.name %>" loading="lazy" decoding="async" style="width:100%; height:100%; object-fit:cover;">
