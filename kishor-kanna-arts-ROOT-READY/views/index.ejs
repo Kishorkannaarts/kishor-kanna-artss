@@ -71,20 +71,19 @@
   <div class="container">
     <h2 class="reveal" style="text-align:center;">Choose Your Perfect Art Style</h2>
     <p class="sub reveal" style="text-align:center;">Pencil Portraits, Color Portraits, Pen Sketches, Digital Portraits, Canvas Paintings &amp; Blood Portraits</p>
-    <%
-      var categoryThumbs = {};
-      (featured || []).forEach(function(a){ if (a.category && !categoryThumbs[a.category]) categoryThumbs[a.category] = a; });
-    %>
     <div class="style-slider" data-slider>
       <button type="button" class="style-slider-arrow is-prev" data-slider-prev aria-label="Scroll left">&#8249;</button>
       <div class="style-grid" data-slider-track>
-        <% (artTypes || []).forEach(function(cat){ var thumb = categoryThumbs[cat]; %>
-          <a class="style-card reveal" href="/portfolio?category=<%= encodeURIComponent(cat) %>">
-            <img src="<%= thumb ? thumb.image : 'https://placehold.co/300x300?text=' + encodeURIComponent(cat) %>" alt="<%= cat %>" loading="lazy" decoding="async">
-            <span class="style-card-name"><%= cat %></span>
-            <% if (thumb && thumb.price) { %><span class="style-card-price">Starting ₹<%= thumb.price %></span><% } %>
-            <% if (thumb && thumb.description) { %><span class="style-card-desc"><%= thumb.description %></span><% } %>
-          </a>
+        <% (categoryPreviews || []).forEach(function(cat){ %>
+          <div class="style-card reveal">
+            <a href="<%= cat.button_link %>" style="display:block;">
+              <img src="<%= cat.image || ('https://placehold.co/300x300?text=' + encodeURIComponent(cat.name)) %>" alt="<%= cat.name %>" loading="lazy" decoding="async">
+              <span class="style-card-name"><%= cat.name %></span>
+              <% if (cat.starting_price) { %><span class="style-card-price">Starting ₹<%= cat.starting_price %></span><% } %>
+              <% if (cat.description) { %><span class="style-card-desc"><%= cat.description %></span><% } %>
+            </a>
+            <a class="btn btn-sm btn-primary style-card-btn" href="<%= cat.button_link %>"><%= cat.button_text %></a>
+          </div>
         <% }) %>
       </div>
       <button type="button" class="style-slider-arrow is-next" data-slider-next aria-label="Scroll right">&#8250;</button>
