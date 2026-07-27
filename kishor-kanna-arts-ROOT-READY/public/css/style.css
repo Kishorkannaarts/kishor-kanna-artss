@@ -321,6 +321,9 @@ a:hover { color: var(--color-gold); }
 @media (max-width: 600px) {
   .grid-2 { gap: 12px; }
 }
+@media (max-width: 480px) {
+  .grid-2 { grid-template-columns: 1fr; }
+}
 @media (max-width: 420px) {
   .grid-2 .card-body { padding: 14px; }
   .grid-2 .card-body h3 { font-size: 1rem; }
