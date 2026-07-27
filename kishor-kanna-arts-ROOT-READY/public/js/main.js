@@ -69,6 +69,68 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Generic horizontal slider behaviour — used by the "Choose Your Perfect
+  // Art Style" row (and any future [data-slider] block). Adds working
+  // prev/next arrows, mouse drag-to-scroll, and native touch swipe, with
+  // smooth animation and arrows that hide themselves once there's nothing
+  // left to scroll to.
+  document.querySelectorAll('[data-slider]').forEach(function (wrap) {
+    var track = wrap.querySelector('[data-slider-track]');
+    var prevBtn = wrap.querySelector('[data-slider-prev]');
+    var nextBtn = wrap.querySelector('[data-slider-next]');
+    if (!track) return;
+
+    function cardWidth() {
+      var card = track.querySelector('.style-card');
+      return card ? card.getBoundingClientRect().width + 16 : track.clientWidth * 0.8;
+    }
+
+    function updateOverflowState() {
+      var hasOverflow = track.scrollWidth > track.clientWidth + 4;
+      wrap.classList.toggle('has-overflow', hasOverflow);
+      if (prevBtn) prevBtn.style.visibility = track.scrollLeft > 8 ? 'visible' : 'hidden';
+      if (nextBtn) {
+        var atEnd = track.scrollLeft + track.clientWidth >= track.scrollWidth - 8;
+        nextBtn.style.visibility = atEnd ? 'hidden' : 'visible';
+      }
+    }
+
+    if (prevBtn) prevBtn.addEventListener('click', function () {
+      track.scrollBy({ left: -cardWidth(), behavior: 'smooth' });
+    });
+    if (nextBtn) nextBtn.addEventListener('click', function () {
+      track.scrollBy({ left: cardWidth(), behavior: 'smooth' });
+    });
+
+    // Mouse drag-to-scroll (desktop/trackpad users without a touchscreen).
+    var isDown = false, startX = 0, startScroll = 0, dragged = false;
+    track.addEventListener('mousedown', function (e) {
+      isDown = true; dragged = false;
+      startX = e.pageX; startScroll = track.scrollLeft;
+      track.style.scrollBehavior = 'auto';
+      track.style.cursor = 'grabbing';
+    });
+    window.addEventListener('mouseup', function () {
+      isDown = false;
+      track.style.scrollBehavior = '';
+      track.style.cursor = '';
+    });
+    window.addEventListener('mousemove', function (e) {
+      if (!isDown) return;
+      var delta = e.pageX - startX;
+      if (Math.abs(delta) > 4) dragged = true;
+      track.scrollLeft = startScroll - delta;
+    });
+    // Suppress the click-through to a card link right after a drag.
+    track.addEventListener('click', function (e) {
+      if (dragged) { e.preventDefault(); e.stopPropagation(); dragged = false; }
+    }, true);
+
+    track.addEventListener('scroll', updateOverflowState, { passive: true });
+    window.addEventListener('resize', updateOverflowState);
+    updateOverflowState();
+  });
+
   // Before & After comparison sliders (homepage). The range input sits
   // invisible on top of the images purely to capture drag/click input —
   // this listener is what actually moves the reveal and the handle.
