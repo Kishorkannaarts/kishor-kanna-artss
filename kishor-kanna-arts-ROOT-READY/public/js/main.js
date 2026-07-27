@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!track) return;
 
     function cardWidth() {
-      var card = track.querySelector('.style-card');
+      var card = track.firstElementChild;
       return card ? card.getBoundingClientRect().width + 16 : track.clientWidth * 0.8;
     }
 
@@ -131,20 +131,43 @@ document.addEventListener('DOMContentLoaded', () => {
     updateOverflowState();
   });
 
-  // Before & After comparison sliders (homepage). The range input sits
-  // invisible on top of the images purely to capture drag/click input —
-  // this listener is what actually moves the reveal and the handle.
+  // Before & After comparison sliders (homepage). The <input type=range>
+  // stays for keyboard/screen-reader access, but dragging is driven
+  // directly from pointer position — a full-width invisible range thumb
+  // doesn't reliably respond to touch drag on a lot of mobile browsers,
+  // so Pointer Events (touch + mouse, unified) are the primary driver.
   document.querySelectorAll('[data-ba]').forEach(function (slider) {
     var range = slider.querySelector('.ba-range');
     var before = slider.querySelector('.ba-before');
     var handle = slider.querySelector('.ba-handle');
     if (!range || !before || !handle) return;
-    function update() {
-      var val = range.value;
+
+    function update(val) {
+      val = Math.max(0, Math.min(100, val));
+      range.value = val;
       before.style.clipPath = 'inset(0 ' + (100 - val) + '% 0 0)';
       handle.style.left = val + '%';
     }
-    range.addEventListener('input', update);
-    update();
+    function posToVal(clientX) {
+      var rect = slider.getBoundingClientRect();
+      return ((clientX - rect.left) / rect.width) * 100;
+    }
+
+    range.addEventListener('input', function () { update(range.value); });
+    update(range.value);
+
+    var dragging = false;
+    slider.addEventListener('pointerdown', function (e) {
+      dragging = true;
+      if (slider.setPointerCapture) { try { slider.setPointerCapture(e.pointerId); } catch (err) {} }
+      update(posToVal(e.clientX));
+    });
+    slider.addEventListener('pointermove', function (e) {
+      if (!dragging) return;
+      update(posToVal(e.clientX));
+    });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (evt) {
+      slider.addEventListener(evt, function () { dragging = false; });
+    });
   });
 });
