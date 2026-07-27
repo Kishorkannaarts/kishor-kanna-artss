@@ -504,13 +504,32 @@ app.get('/', ah(async (req, res) => {
   const galleryPhotos = db.normalize(await db.find('gallery_photos', { approved: true }, { created_at: -1 }, 8));
   const instagramPhotos = db.normalize(await db.find('instagram_gallery', {}, { created_at: -1 }, 8));
 
-  // "Shop by Art Style" tiles — one representative artwork image per
-  // category so the homepage doesn't need separate admin-managed images.
+  // "Shop by Art Style" tiles — image, description, starting price and
+  // button now come from the admin-managed category_cards collection
+  // (see /admin/taxonomy). If admin hasn't set a card yet for a given art
+  // type, we fall back to a sample artwork image so the section never
+  // looks broken/empty while it's being filled in.
   const artTypes = await db.getArtTypes();
+  const categoryCards = db.normalize(await db.find('category_cards', {}));
+  const categoryCardMap = {};
+  categoryCards.forEach(function (c) { categoryCardMap[c.art_type] = c; });
+
   const categoryPreviews = [];
   for (const cat of artTypes.slice(0, 8)) {
-    const sample = db.normalize(await db.find('artworks', { category: cat }, { created_at: -1 }, 1))[0];
-    categoryPreviews.push({ name: cat, image: sample ? sample.image : null });
+    const card = categoryCardMap[cat];
+    let image = card && card.image ? card.image : null;
+    if (!image) {
+      const sample = db.normalize(await db.find('artworks', { category: cat }, { created_at: -1 }, 1))[0];
+      image = sample ? sample.image : null;
+    }
+    categoryPreviews.push({
+      name: cat,
+      image: image,
+      description: (card && card.description) || '',
+      starting_price: (card && card.starting_price) || '',
+      button_text: (card && card.button_text) || 'View Collection',
+      button_link: (card && card.button_link) || ('/portfolio?category=' + encodeURIComponent(cat))
+    });
   }
 
   // Homepage FAQ — reuse the same admin-managed FAQ list as the About page
@@ -2001,7 +2020,34 @@ app.post('/admin/newsletter/send', requireAdmin, ah(async (req, res) => {
 // ---- Art Types & Sizes (drives Portfolio categories, the Artwork form,
 //      Services pricing, and the Order form) ----
 app.get('/admin/taxonomy', requireAdmin, ah(async (req, res) => {
-  res.render('admin/taxonomy', { artTypesList: await db.getArtTypes(), sizesList: await db.getSizes() });
+  const artTypesList = await db.getArtTypes();
+  const sizesList = await db.getSizes();
+  const categoryCardsList = db.normalize(await db.find('category_cards', {}));
+  const categoryCardMap = {};
+  categoryCardsList.forEach(function (c) { categoryCardMap[c.art_type] = c; });
+  res.render('admin/taxonomy', { artTypesList, sizesList, categoryCardMap });
+}));
+
+// Homepage "Choose Your Perfect Art Style" cards — one admin-editable record
+// per art type (image, description, starting price, button). Lives on the
+// same Taxonomy page since it's keyed off the same art-type list.
+app.post('/admin/taxonomy/category-card/save', requireAdmin, memoryUpload.single('image'), csrfCheck, ah(async (req, res) => {
+  const art_type = (req.body.art_type || '').trim();
+  if (!art_type) return res.redirect('/admin/taxonomy');
+  const description = req.body.description || '';
+  const starting_price = req.body.starting_price || '';
+  const button_text = req.body.button_text || '';
+  const button_link = req.body.button_link || '';
+  const uploadedUrl = await uploadImage(req.file, 'category-cards');
+  const existing = db.normalize(await db.findOne('category_cards', { art_type }));
+  const image = uploadedUrl || (existing ? existing.image : null);
+  const data = { art_type, image, description, starting_price, button_text, button_link };
+  if (existing) {
+    await db.updateById('category_cards', existing.id, data);
+  } else {
+    await db.insertOne('category_cards', data);
+  }
+  res.redirect('/admin/taxonomy');
 }));
 
 app.post('/admin/taxonomy/art-types/add', requireAdmin, ah(async (req, res) => {
