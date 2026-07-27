@@ -71,6 +71,49 @@
       </div>
 
     </div>
+
+    <h2 style="font-size:1.1rem; margin-top:36px;">Homepage Category Cards</h2>
+    <p style="color:var(--muted); font-size:0.9rem; margin-top:-10px; margin-bottom:20px;">
+      Controls the "Choose Your Perfect Art Style" cards on the homepage — image, description,
+      starting price and button for each art type above. Leave the image blank to fall back to a
+      sample artwork photo automatically.
+    </p>
+    <div style="display:grid; gap:20px;">
+      <% artTypesList.forEach(function(t){ var card = categoryCardMap[t] || {}; %>
+        <form class="admin-form" action="/admin/taxonomy/category-card/save" method="POST" enctype="multipart/form-data"
+              style="border:1px solid var(--border-color, #e5e0d8); border-radius:10px; padding:16px; display:grid; grid-template-columns:80px 1fr; gap:16px; align-items:start;">
+          <input type="hidden" name="art_type" value="<%= t %>">
+          <img class="thumb" src="<%= card.image || 'https://placehold.co/80x80?text=' + encodeURIComponent(t) %>" style="width:80px; height:80px; object-fit:cover; border-radius:8px;">
+          <div>
+            <h3 style="margin:0 0 10px; font-size:1rem;"><%= t %></h3>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+              <div class="form-group">
+                <label>Category Image</label>
+                <input type="file" name="image" accept="image/*">
+              </div>
+              <div class="form-group">
+                <label>Starting Price (₹)</label>
+                <input type="text" name="starting_price" value="<%= card.starting_price || '' %>" placeholder="e.g. 999">
+              </div>
+              <div class="form-group" style="grid-column:1 / -1;">
+                <label>Description</label>
+                <textarea name="description" rows="2" placeholder="Short one-line description shown on the card"><%= card.description || '' %></textarea>
+              </div>
+              <div class="form-group">
+                <label>Button Text</label>
+                <input type="text" name="button_text" value="<%= card.button_text || 'View Collection' %>">
+              </div>
+              <div class="form-group">
+                <label>Button Link</label>
+                <input type="text" name="button_link" value="<%= card.button_link || ('/portfolio?category=' + encodeURIComponent(t)) %>">
+              </div>
+            </div>
+            <button class="btn btn-primary btn-sm" type="submit" style="margin-top:10px;">Save Card</button>
+          </div>
+        </form>
+      <% }) %>
+    </div>
+
   </div>
 </div>
 </body></html>
