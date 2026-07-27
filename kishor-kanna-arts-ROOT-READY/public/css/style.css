@@ -304,21 +304,18 @@ a:hover { color: var(--color-gold); }
 .style-slider-arrow:hover { color: var(--color-gold); border-color: var(--color-gold); }
 .style-slider-arrow.is-prev { left: -6px; }
 .style-slider-arrow.is-next { right: -6px; }
+/* Arrows only ever appear once JS confirms the track actually overflows
+   (.has-overflow) — this covers both the Art Style row (switches to a
+   non-scrolling grid at 640px) and the How It Works row (switches at
+   900px) without a conflicting hardcoded breakpoint. */
 .style-slider.has-overflow .style-slider-arrow { display: flex; }
-@media (min-width: 640px) {
-  .style-slider-arrow { display: none !important; }
-}
 .grid { display: grid; gap: var(--space-md); }
 .artwork-detail-grid { grid-template-columns: 1fr 1fr; align-items: start; }
 @media (max-width: 700px) { .artwork-detail-grid { grid-template-columns: 1fr; } }
 .grid-2 { grid-template-columns: repeat(2, 1fr); }
-.grid-3 { grid-template-columns: repeat(3, 1fr); }
-.grid-4 { grid-template-columns: repeat(4, 1fr); }
-@media (max-width: 900px) {
-  .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); }
-}
+.grid-3 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.grid-4 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 @media (max-width: 600px) {
-  .grid-3, .grid-4 { grid-template-columns: 1fr; }
   .grid-2 { gap: 12px; }
 }
 @media (max-width: 420px) {
@@ -328,7 +325,7 @@ a:hover { color: var(--color-gold); }
   .grid-2 .card-footer { flex-direction: column; align-items: flex-start; gap: 8px; }
   .grid-2 .card-footer .btn { width: 100%; text-align: center; }
 }
-.gallery-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:20px; margin-top:24px; }
+.gallery-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:20px; margin-top:24px; }
 .gallery-item { position:relative; padding:0; border:none; border-radius:var(--radius-md); overflow:hidden; cursor:pointer; background:none; aspect-ratio:1; box-shadow: var(--shadow-soft); }
 .card {
   background: var(--bg-primary); border: 1px solid var(--border-color);
@@ -563,10 +560,19 @@ a:hover { color: var(--color-gold); }
   display: flex; align-items: center; justify-content: center;
   font-family: var(--font-display); font-weight: 700; margin-bottom: 12px;
 }
-@media (max-width: 900px) { .timeline { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 560px) {
-  .timeline { grid-template-columns: 1fr; gap: 14px; }
-  .timeline-step { padding: 18px 16px; }
+@media (max-width: 900px) {
+  /* Below desktop, the 5-step process scrolls horizontally as a snapping
+     card row instead of stacking full-width — reads as one continuous
+     process rather than a long vertical list. */
+  .timeline {
+    display: flex; grid-template-columns: none; overflow-x: auto;
+    scroll-snap-type: x proximity; gap: 14px; padding: 4px 2px 10px;
+    scrollbar-width: none;
+  }
+  .timeline::-webkit-scrollbar { display: none; }
+  .timeline-step {
+    flex: 0 0 240px; scroll-snap-align: start; padding: 18px 16px;
+  }
   .timeline-num { width: 34px; height: 34px; font-size: 0.95rem; margin-bottom: 10px; }
   .timeline-step h3 { font-size: 1rem; }
   .timeline-step p { font-size: 0.85rem; margin-bottom: 0; }
