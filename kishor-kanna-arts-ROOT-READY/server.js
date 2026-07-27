@@ -517,7 +517,10 @@ app.get('/', ah(async (req, res) => {
   // so there's one place to edit them, but only show the first few here.
   const faqs = db.normalize(await db.find('faqs', {}, { created_at: 1 }, 6));
 
-  res.render('index', { featured, testimonials, videos, services, offers, blocks, recentPosts, beforeAfter, galleryPhotos, instagramPhotos, categoryPreviews, faqs });
+  const occasions = await db.getOccasions();
+  const howItWorks = await db.getHowItWorks();
+
+  res.render('index', { featured, testimonials, videos, services, offers, blocks, recentPosts, beforeAfter, galleryPhotos, instagramPhotos, categoryPreviews, faqs, occasions, howItWorks });
 }));
 
 app.get('/portfolio', ah(async (req, res) => {
