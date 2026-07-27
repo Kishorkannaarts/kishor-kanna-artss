@@ -289,6 +289,9 @@ a:hover { color: var(--color-gold); }
   display: block; font-size: 0.78rem; color: var(--text-secondary); margin-top: 2px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+.style-card-btn {
+  margin-top: 12px; align-self: center;
+}
 @media (min-width: 640px) {
   .style-grid {
     grid-auto-flow: row; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
