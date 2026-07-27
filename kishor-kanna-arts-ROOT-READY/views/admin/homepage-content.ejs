@@ -48,6 +48,24 @@
       <div class="form-group"><label>Subtitle</label><input type="text" name="cta_subtitle" value="<%= settings.cta_subtitle %>" placeholder="Tell us your idea — we'll bring it to life."></div>
       <div class="form-group"><label>Button Text</label><input type="text" name="cta_button_text" value="<%= settings.cta_button_text %>" placeholder="Start Your Order"></div>
 
+      <h3 style="margin-top:28px;">"How It Works" Steps</h3>
+      <p style="color:var(--muted); font-size:0.85rem; margin-top:-8px;">Leave a step's title blank to fall back to the default 5-step process.</p>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+        <% for (let i = 1; i <= 5; i++) { %>
+          <div class="form-group"><label>Step <%= i %> Title</label><input type="text" name="step<%= i %>_title" value="<%= settings['step' + i + '_title'] || '' %>"></div>
+          <div class="form-group"><label>Step <%= i %> Text</label><input type="text" name="step<%= i %>_text" value="<%= settings['step' + i + '_text'] || '' %>"></div>
+        <% } %>
+      </div>
+
+      <h3 style="margin-top:28px;">"Find the Perfect Gift for Every Occasion" Cards</h3>
+      <p style="color:var(--muted); font-size:0.85rem; margin-top:-8px;">Leave a card's name blank to fall back to the default 8 occasions. Emoji is optional — defaults to 🎁.</p>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px;">
+        <% for (let i = 1; i <= 8; i++) { %>
+          <div class="form-group"><label>Card <%= i %> Emoji</label><input type="text" name="occ<%= i %>_emoji" value="<%= settings['occ' + i + '_emoji'] || '' %>" style="width:70px;"></div>
+          <div class="form-group" style="grid-column:span 2;"><label>Card <%= i %> Name</label><input type="text" name="occ<%= i %>_name" value="<%= settings['occ' + i + '_name'] || '' %>"></div>
+        <% } %>
+      </div>
+
       <button class="btn btn-primary" type="submit" style="margin-top:20px;">Save Homepage Content</button>
     </form>
   </div>
