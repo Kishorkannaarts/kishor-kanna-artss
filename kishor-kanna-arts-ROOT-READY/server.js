@@ -93,13 +93,18 @@ if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
     'sessions are signed with a public fallback value and can be forged. ***\n');
 }
 
+const sessionStore = MongoStore.create({
+  mongoUrl: process.env.MONGODB_URI,
+  dbName: 'kishorkannaarts',
+  collectionName: 'sessions',
+  ttl: 60 * 60 * 8 // 8 hours, matches cookie maxAge below
+});
+sessionStore.on('error', (err) => {
+  console.error('SESSION STORE ERROR:', err);
+});
+
 app.use(session({
-  store: MongoStore.create({
-    mongoUrl: process.env.MONGODB_URI,
-    dbName: 'kishorkannaarts',
-    collectionName: 'sessions',
-    ttl: 60 * 60 * 8 // 8 hours, matches cookie maxAge below
-  }),
+  store: sessionStore,
   secret: process.env.SESSION_SECRET || 'insecure_dev_secret_change_me',
   resave: false,
   saveUninitialized: false,
