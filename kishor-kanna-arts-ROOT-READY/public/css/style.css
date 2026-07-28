@@ -249,7 +249,7 @@ a:hover { color: var(--color-gold); }
     transform: translateX(0) !important; visibility: visible !important; opacity: 1 !important;
     transition: transform var(--transition), opacity var(--transition);
   }
-  .nav > a, .nav-more { width: 100%; padding: 14px 4px; border-bottom: 1px solid var(--border-color); }
+  .nav > a, .nav-more { width: 100%; padding: 14px 6px; border-bottom: 1px solid var(--border-color); font-size: 1rem; }
   .nav-icons {
     width: 100%; border-left: none; border-bottom: 1px solid var(--border-color);
     padding: 10px 0; margin: 0; gap: 18px; justify-content: flex-start;
