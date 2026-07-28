@@ -521,55 +521,79 @@ app.get('/sitemap.xml', ah(async (req, res) => {
 }));
 
 app.get('/', ah(async (req, res) => {
-  const featured  = db.normalize(await db.find('artworks', { featured: true }, { created_at: -1 }, 8));
-  const testimonials = db.normalize(await db.find('testimonials', { approved: true }, { created_at: -1 }, 6))
-    .map(t => ({ ...t, embed_url: videoEmbedUrl(t.video_url) }));
-  const videos    = db.normalize(await db.find('videos', {}, { created_at: -1 }, 12)).map(v => ({ ...v, embed_url: videoEmbedUrl(v.video_url) }));
-  const services  = await getAllServices();
-  const offers    = db.normalize(await db.find('offers', { active: true }, { created_at: -1 }));
-  const blocks    = db.normalize(await db.find('blocks', {}, { created_at: 1 }));
-  const recentPosts = db.normalize(await db.find('posts', { published: true }, { created_at: -1 }, 3));
-  const beforeAfter = db.normalize(await db.find('artworks', { before_image: { $exists: true, $ne: null } }, { created_at: -1 }, 6))
-    .filter(a => a.image && a.before_image);
-  const galleryPhotos = db.normalize(await db.find('gallery_photos', { approved: true }, { created_at: -1 }, 8));
-  const instagramPhotos = db.normalize(await db.find('instagram_gallery', {}, { created_at: -1 }, 8));
+  // All of these reads are independent of each other, so running them in
+  // parallel with Promise.all cuts total DB wait time on this (highest
+  // traffic) page down to roughly the slowest single query instead of the
+  // sum of ~14 sequential round-trips.
+  const [
+    featuredRaw, testimonialsRaw, videosRaw, services, offers, blocks,
+    recentPosts, beforeAfterRaw, galleryPhotosRaw, instagramPhotosRaw,
+    artTypes, categoryCardsRaw, faqsRaw, occasions, howItWorks
+  ] = await Promise.all([
+    db.find('artworks', { featured: true }, { created_at: -1 }, 8),
+    db.find('testimonials', { approved: true }, { created_at: -1 }, 6),
+    db.find('videos', {}, { created_at: -1 }, 12),
+    getAllServices(),
+    db.find('offers', { active: true }, { created_at: -1 }),
+    db.find('blocks', {}, { created_at: 1 }),
+    db.find('posts', { published: true }, { created_at: -1 }, 3),
+    db.find('artworks', { before_image: { $exists: true, $ne: null } }, { created_at: -1 }, 6),
+    db.find('gallery_photos', { approved: true }, { created_at: -1 }, 8),
+    db.find('instagram_gallery', {}, { created_at: -1 }, 8),
+    db.getArtTypes(),
+    db.find('category_cards', {}),
+    db.find('faqs', {}, { created_at: 1 }, 6),
+    db.getOccasions(),
+    db.getHowItWorks()
+  ]);
+
+  const featured = db.normalize(featuredRaw);
+  const testimonials = db.normalize(testimonialsRaw).map(t => ({ ...t, embed_url: videoEmbedUrl(t.video_url) }));
+  const videos = db.normalize(videosRaw).map(v => ({ ...v, embed_url: videoEmbedUrl(v.video_url) }));
+  const recentPostsNorm = db.normalize(recentPosts);
+  const beforeAfter = db.normalize(beforeAfterRaw).filter(a => a.image && a.before_image);
+  const galleryPhotos = db.normalize(galleryPhotosRaw);
+  const instagramPhotos = db.normalize(instagramPhotosRaw);
+  const faqs = db.normalize(faqsRaw);
 
   // "Shop by Art Style" tiles — image, description, starting price and
   // button now come from the admin-managed category_cards collection
   // (see /admin/taxonomy). If admin hasn't set a card yet for a given art
   // type, we fall back to a sample artwork image so the section never
   // looks broken/empty while it's being filled in.
-  const artTypes = await db.getArtTypes();
-  const categoryCards = db.normalize(await db.find('category_cards', {}));
+  const categoryCards = db.normalize(categoryCardsRaw);
   const categoryCardMap = {};
   categoryCards.forEach(function (c) { categoryCardMap[c.art_type] = c; });
 
-  const categoryPreviews = [];
-  for (const cat of artTypes.slice(0, 8)) {
+  // The fallback artwork lookups (only run for categories missing an admin
+  // image) are independent of each other too, so they're parallelized as
+  // a second batch rather than looped with a sequential await inside.
+  const topArtTypes = artTypes.slice(0, 8);
+  const fallbackSamples = await Promise.all(topArtTypes.map(function (cat) {
+    const card = categoryCardMap[cat];
+    if (card && card.image) return null; // admin already set an image — no lookup needed
+    return db.find('artworks', { category: cat }, { created_at: -1 }, 1);
+  }));
+
+  const categoryPreviews = topArtTypes.map(function (cat, i) {
     const card = categoryCardMap[cat];
     let image = card && card.image ? card.image : null;
     if (!image) {
-      const sample = db.normalize(await db.find('artworks', { category: cat }, { created_at: -1 }, 1))[0];
+      const sampleRaw = fallbackSamples[i];
+      const sample = sampleRaw ? db.normalize(sampleRaw)[0] : null;
       image = sample ? sample.image : null;
     }
-    categoryPreviews.push({
+    return {
       name: cat,
       image: image,
       description: (card && card.description) || '',
       starting_price: (card && card.starting_price) || '',
       button_text: (card && card.button_text) || 'View Collection',
       button_link: (card && card.button_link) || ('/portfolio?category=' + encodeURIComponent(cat))
-    });
-  }
+    };
+  });
 
-  // Homepage FAQ — reuse the same admin-managed FAQ list as the About page
-  // so there's one place to edit them, but only show the first few here.
-  const faqs = db.normalize(await db.find('faqs', {}, { created_at: 1 }, 6));
-
-  const occasions = await db.getOccasions();
-  const howItWorks = await db.getHowItWorks();
-
-  res.render('index', { featured, testimonials, videos, services, offers, blocks, recentPosts, beforeAfter, galleryPhotos, instagramPhotos, categoryPreviews, faqs, occasions, howItWorks });
+  res.render('index', { featured, testimonials, videos, services, offers, blocks, recentPosts: recentPostsNorm, beforeAfter, galleryPhotos, instagramPhotos, categoryPreviews, faqs, occasions, howItWorks });
 }));
 
 app.get('/portfolio', ah(async (req, res) => {
