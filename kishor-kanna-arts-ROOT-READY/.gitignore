@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# Environment variables — never commit real API keys/secrets
+.env
+.env.*
+!.env.example
+
+# Session store (file-based sessions — contains live session tokens)
+data/sessions/
+
+# Logs
+npm-debug.log*
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
