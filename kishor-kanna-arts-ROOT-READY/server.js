@@ -21,7 +21,6 @@ const chatbot = require('./chatbot');
 const app = express();
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
-const PORT = process.env.PORT || 3000;
 
 // Gzip/Brotli-style compression for every response — meaningful win for
 // Lighthouse/Core Web Vitals with near-zero code cost.
