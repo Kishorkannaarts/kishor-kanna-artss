@@ -115,6 +115,17 @@ app.use(async (req, res, next) => {
       if (status === 'In Progress' || status === 'Artwork Sent - Awaiting Confirmation') return 'badge-progress';
       return 'badge-new'; // Received, Confirmed, Completed
     };
+    // Injects Cloudinary's automatic format (WebP/AVIF where supported) and
+    // automatic quality into a delivery URL, plus an optional resize, without
+    // re-uploading or touching the original asset. Cuts payload size a lot
+    // for the same visual quality. Usage in views: <%= cld(a.image, 'w_800') %>
+    // Safe no-op on anything that isn't a Cloudinary URL (e.g. placehold.co
+    // fallbacks), so it can wrap every <img src> unconditionally.
+    res.locals.cld = function (url, resize) {
+      if (!url || url.indexOf('res.cloudinary.com') === -1 || url.indexOf('/upload/') === -1) return url;
+      const transform = resize ? `f_auto,q_auto,${resize}` : 'f_auto,q_auto';
+      return url.replace('/upload/', `/upload/${transform}/`);
+    };
     next();
   } catch (err) { next(err); }
 });
