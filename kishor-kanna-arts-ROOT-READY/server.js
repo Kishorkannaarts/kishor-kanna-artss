@@ -78,12 +78,31 @@ app.use('/public', express.static(path.join(__dirname, 'public'), {
 const sessionsDir = path.join(__dirname, 'data', 'sessions');
 if (!fs.existsSync(sessionsDir)) fs.mkdirSync(sessionsDir, { recursive: true });
 
+// If this is a production deploy and no SESSION_SECRET env var has been set,
+// sessions would be signed with the public fallback string below — anyone
+// who can read this source (e.g. a public GitHub repo) could forge a valid
+// admin/customer session cookie. This doesn't stop the server (some hosts
+// don't let you set env vars before first boot), but it makes the risk loud
+// and impossible to miss in the logs instead of failing silently.
+if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
+  console.warn('\n*** SECURITY WARNING: SESSION_SECRET is not set. Set a long random ' +
+    'SESSION_SECRET environment variable in your hosting platform now — without it, ' +
+    'sessions are signed with a public fallback value and can be forged. ***\n');
+}
+
 app.use(session({
   store: new FileStore({ path: sessionsDir, logFn: () => {} }),
   secret: process.env.SESSION_SECRET || 'insecure_dev_secret_change_me',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 1000 * 60 * 60 * 8 }
+  cookie: {
+    maxAge: 1000 * 60 * 60 * 8,
+    httpOnly: true,
+    sameSite: 'lax',
+    // Only require HTTPS for the cookie in production — keeps local dev
+    // (plain http://localhost) working without needing a cert.
+    secure: process.env.NODE_ENV === 'production'
+  }
 }));
 
 // Make site settings available to every view
@@ -554,8 +573,12 @@ app.get('/', ah(async (req, res) => {
 }));
 
 app.get('/portfolio', ah(async (req, res) => {
-  const category = req.query.category || null;
-  const search = (req.query.search || '').trim();
+  // req.query.category must be a plain string before it goes into a DB
+  // filter — Express parses bracket-style query strings like
+  // ?category[$ne]=x into a nested object, which would otherwise let a
+  // visitor inject a raw Mongo operator ($ne, $regex, etc.) into the query.
+  const category = (typeof req.query.category === 'string' && req.query.category) || null;
+  const search = (typeof req.query.search === 'string' ? req.query.search : '').trim();
   const filter = category ? { category } : {};
   let artworks = db.normalize(await db.find('artworks', filter, { created_at: -1 }));
 
@@ -1235,7 +1258,7 @@ app.post('/gallery/submit', memoryUpload.single('photo'), csrfCheck, ah(async (r
 }));
 
 app.get('/blog', ah(async (req, res) => {
-  const category = req.query.category || null;
+  const category = (typeof req.query.category === 'string' && req.query.category) || null;
   const filter = { published: true };
   if (category) filter.category = category;
   const posts = db.normalize(await db.find('posts', filter, { created_at: -1 }));
