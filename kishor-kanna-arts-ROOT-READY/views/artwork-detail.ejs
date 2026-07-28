@@ -13,11 +13,11 @@
 
       <!-- Gallery -->
       <div class="pd-gallery">
-        <img class="pd-main-img" id="pdMainImg" src="<%= artwork.image || 'https://placehold.co/600x600?text=Artwork' %>" alt="<%= artwork.title %>" decoding="async">
+        <img class="pd-main-img" id="pdMainImg" src="<%= artwork.image ? cld(artwork.image, 'w_1200') : 'https://placehold.co/600x600?text=Artwork' %>" alt="<%= artwork.title %>" decoding="async">
         <% if (artwork.before_image) { %>
           <div class="pd-thumbs">
-            <img class="pd-thumb active" data-full="<%= artwork.image %>" src="<%= artwork.image %>" alt="Finished artwork">
-            <img class="pd-thumb" data-full="<%= artwork.before_image %>" src="<%= artwork.before_image %>" alt="Original reference photo">
+            <img class="pd-thumb active" data-full="<%= cld(artwork.image, 'w_1200') %>" src="<%= cld(artwork.image, 'w_300') %>" alt="Finished artwork">
+            <img class="pd-thumb" data-full="<%= cld(artwork.before_image, 'w_1200') %>" src="<%= cld(artwork.before_image, 'w_300') %>" alt="Original reference photo">
           </div>
         <% } %>
       </div>
@@ -101,7 +101,7 @@
       <% related.forEach(a => { %>
         <div class="card reveal">
           <a href="/portfolio/<%= a.id %>">
-            <img src="<%= a.image || 'https://placehold.co/400x300?text=Artwork' %>" alt="<%= a.title %>" loading="lazy" decoding="async">
+            <img src="<%= a.image ? cld(a.image, 'w_800') : 'https://placehold.co/400x300?text=Artwork' %>" alt="<%= a.title %>" loading="lazy" decoding="async">
           </a>
           <div class="card-body">
             <span class="tag"><%= a.category %></span>
