@@ -60,9 +60,9 @@
           <% artworks.forEach((a, i) => { %>
             <div class="card" style="position:relative;" data-category="<%= a.category %>" data-size="<%= a.size || '' %>" data-price="<%= a.price || 0 %>" data-order="<%= i %>">
               <a href="/portfolio/<%= a.id %>">
-                <img src="<%= a.image || 'https://placehold.co/400x300?text=Artwork' %>" alt="<%= a.title %>" loading="lazy" decoding="async" class="lightbox-trigger" data-full="<%= a.image || 'https://placehold.co/1200x1200?text=Artwork' %>" data-title="<%= a.title %>" data-category="<%= a.category %>">
+                <img src="<%= a.image ? cld(a.image, 'w_800') : 'https://placehold.co/400x300?text=Artwork' %>" alt="<%= a.title %>" loading="lazy" decoding="async" class="lightbox-trigger" data-full="<%= a.image ? cld(a.image, 'w_1500') : 'https://placehold.co/1200x1200?text=Artwork' %>" data-title="<%= a.title %>" data-category="<%= a.category %>">
               </a>
-              <button type="button" class="lightbox-open-btn" aria-label="View <%= a.title %> fullscreen" data-full="<%= a.image || 'https://placehold.co/1200x1200?text=Artwork' %>" data-title="<%= a.title %>" data-category="<%= a.category %>">
+              <button type="button" class="lightbox-open-btn" aria-label="View <%= a.title %> fullscreen" data-full="<%= a.image ? cld(a.image, 'w_1500') : 'https://placehold.co/1200x1200?text=Artwork' %>" data-title="<%= a.title %>" data-category="<%= a.category %>">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
               </button>
               <% if (isCustomer) { %>
