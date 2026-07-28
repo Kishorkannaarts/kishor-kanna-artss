@@ -3,7 +3,7 @@ const express = require('express');
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const session = require('express-session');
-const FileStore = require('session-file-store')(session);
+const MongoStore = require('connect-mongo');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const path = require('path');
@@ -75,8 +75,10 @@ app.use('/public', express.static(path.join(__dirname, 'public'), {
   etag: true
 }));
 
-const sessionsDir = path.join(__dirname, 'data', 'sessions');
-if (!fs.existsSync(sessionsDir)) fs.mkdirSync(sessionsDir, { recursive: true });
+// Sessions now live in MongoDB (see app.use(session(...)) below) instead of
+// local disk, so they survive restarts/redeploys on hosts with ephemeral
+// filesystems (e.g. Render free/starter tier) instead of randomly
+// invalidating mid-login with a CSRF/session-expired error.
 
 // If this is a production deploy and no SESSION_SECRET env var has been set,
 // sessions would be signed with the public fallback string below — anyone
@@ -91,7 +93,12 @@ if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
 }
 
 app.use(session({
-  store: new FileStore({ path: sessionsDir, logFn: () => {} }),
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGODB_URI,
+    dbName: 'kishorkannaarts',
+    collectionName: 'sessions',
+    ttl: 60 * 60 * 8 // 8 hours, matches cookie maxAge below
+  }),
   secret: process.env.SESSION_SECRET || 'insecure_dev_secret_change_me',
   resave: false,
   saveUninitialized: false,
