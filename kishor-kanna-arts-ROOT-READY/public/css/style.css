@@ -47,6 +47,12 @@
 
   --transition: 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   --header-h: 76px;
+
+  /* Content width tokens: 1280px is the normal max page width; 1400px is
+     available for sections that want extra breathing room (e.g. wide
+     galleries) via .container-wide. */
+  --content-max: 1280px;
+  --content-max-wide: 1400px;
 }
 
 [data-theme="dark"] {
@@ -106,7 +112,8 @@ a:hover { color: var(--color-gold); }
   border-radius: 4px;
 }
 
-.container { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+.container { max-width: var(--content-max); margin: 0 auto; padding: 0 24px; }
+.container-wide { max-width: var(--content-max-wide); margin: 0 auto; padding: 0 24px; }
 
 /* ---------- Buttons ---------- */
 .btn {
@@ -117,7 +124,6 @@ a:hover { color: var(--color-gold); }
   text-decoration: none; white-space: nowrap;
 }
 .btn:hover { text-decoration: none; }
-.btn-sm { padding: 9px 18px; font-size: 0.85rem; }
 .about-hero { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; align-items: center; }
 @media (max-width: 720px) { .about-hero { grid-template-columns: 1fr; } }
 .about-hero-img { width: 100%; border-radius: var(--radius-lg); aspect-ratio: 4/3; object-fit: cover; box-shadow: var(--shadow-medium); }
@@ -474,7 +480,7 @@ a:hover { color: var(--color-gold); }
 .hero-with-image h1 { text-shadow: 0 2px 18px rgba(0,0,0,0.35); }
 .hero-with-image h1::after { display: none; } /* photo already carries visual weight; skip the underline flourish */
 
-.hero-inner { position: relative; z-index: 2; width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 24px; box-sizing: border-box; }
+.hero-inner { position: relative; z-index: 2; width: 100%; max-width: var(--content-max); margin: 0 auto; padding: 0 24px; box-sizing: border-box; }
 .hero-content { position: relative; z-index: 2; max-width: 640px; }
 
 .hero-eyebrow {
