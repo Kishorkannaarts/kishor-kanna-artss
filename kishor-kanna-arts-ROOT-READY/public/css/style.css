@@ -620,8 +620,12 @@ a:hover { color: var(--color-gold); }
 }
 
 /* ---------- Timeline ---------- */
-.timeline { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-md); }
+/* flex-wrap (not a fixed 4-column grid) so however many steps fit per row
+   just reflow naturally, and the last, lone step (5 of 5) centers itself
+   in its own row instead of sitting flush-left with empty space beside it. */
+.timeline { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-md); }
 .timeline-step {
+  flex: 1 1 220px; max-width: 260px;
   background: var(--bg-primary); border: 1px solid var(--border-color);
   border-radius: var(--radius-md); padding: var(--space-md); position: relative;
   transition: transform var(--transition), box-shadow var(--transition);
