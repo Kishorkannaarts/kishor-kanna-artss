@@ -278,19 +278,12 @@ a:hover { color: var(--color-gold); }
   padding: 9px 12px; border-radius: 8px; color: var(--text-primary); font-size: 0.9rem; font-family: inherit;
 }
 .nav-account-logout-btn:hover { background: var(--bg-secondary); color: var(--color-gold); }
-@media (max-width: 960px) {
+@media (max-width: 1180px) {
   .nav-account { flex-shrink: 0; }
   .nav-account summary { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px; padding: 14px 6px; max-width: none; }
   .nav-account-line1 { display: none; }
   .nav-account-line2 { white-space: normal; }
   .nav-account-menu { right: auto; left: 0; position: static; box-shadow: none; border: none; margin-top: 4px; }
-}
-/* Between the mobile hamburger breakpoint and a full desktop window, the
-   text-heavy nav (Home / Shop / About / More / account / icons / Order Now)
-   can run out of room and clip the last item(s) off the right edge — this
-   lets the row wrap onto a second line instead of cutting anything off. */
-@media (min-width: 961px) and (max-width: 1180px) {
-  .nav { flex-wrap: wrap; row-gap: 8px; justify-content: flex-end; }
 }
 
 /* Icon actions (search / theme / notifications) grouped together, visually
@@ -305,7 +298,7 @@ a:hover { color: var(--color-gold); }
   display: none; background: none; border: none; font-size: 1.6rem; cursor: pointer; color: var(--text-primary);
 }
 
-@media (max-width: 960px) {
+@media (max-width: 1180px) {
   .menu-toggle { display: block !important; order: 3; position: relative; z-index: 5; }
   .nav {
     position: fixed !important; top: var(--header-h); left: 0; right: 0; bottom: 0;
@@ -885,7 +878,7 @@ a:hover { color: var(--color-gold); }
 }
 .search-bar input:focus { outline: none; border-color: var(--color-gold); }
 
-@media (max-width: 960px) {
+@media (max-width: 1180px) {
   .nav-mega-menu {
     position: static !important; transform: none !important; min-width: auto !important;
     grid-template-columns: 1fr !important; box-shadow: none !important; border: none !important;
