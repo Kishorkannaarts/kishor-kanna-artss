@@ -92,16 +92,6 @@
   <button class="menu-toggle" id="menuToggle" aria-label="Menu">&#9776;</button>
 
   <nav class="nav">
-<div class="nav-icons">
-      ...icons markup unchanged...
-    </div>
-
-    <div class="account-menu" id="accountMenu">
-      ...unchanged...
-    </div>
-
-    <a class="nav-cta" href="/order">Order Now</a>
-  </nav>
     <a href="/">Home</a>
 
     <details class="nav-more nav-mega">
@@ -130,7 +120,35 @@
       </div>
     </details>
 
-    <% if (isCustomer) { %><a href="/account/dashboard">My Account</a><% } else { %><a href="/account/login">Login</a><% } %>
+    <!-- Account dropdown: single, professional login/account/logout control -->
+    <details class="nav-more nav-account">
+      <summary>
+        <% if (isCustomer) { %>
+          <span class="nav-account-line1">Hello, <%= (customerName || 'there').split(' ')[0] %></span>
+          <span class="nav-account-line2">Account &amp; Orders</span>
+        <% } else { %>
+          <span class="nav-account-line1">Hello, sign in</span>
+          <span class="nav-account-line2">Account &amp; Orders</span>
+        <% } %>
+      </summary>
+      <div class="nav-more-menu nav-account-menu">
+        <% if (isCustomer) { %>
+          <div class="nav-account-menu-title">Hello, <%= customerName || 'there' %></div>
+          <a href="/account/dashboard">My Orders</a>
+          <a href="/account/profile">Profile</a>
+          <a href="/account/wishlist">Wishlist</a>
+          <a href="/account/notifications">Notifications<% if (unreadNotifCount > 0) { %> <span class="nav-account-badge"><%= unreadNotifCount > 9 ? '9+' : unreadNotifCount %></span><% } %></a>
+          <a href="/account/addresses">Saved Addresses</a>
+          <a href="/account/referrals">Referrals &amp; Wallet</a>
+          <form action="/account/logout" method="POST" class="nav-account-logout-form">
+            <button type="submit" class="nav-account-logout-btn">Log Out</button>
+          </form>
+        <% } else { %>
+          <a href="/account/login">Login</a>
+          <a href="/account/signup">Create Account</a>
+        <% } %>
+      </div>
+    </details>
 
     <div class="nav-icons">
       <button class="icon-btn" id="searchToggle" aria-label="Search">
