@@ -11,7 +11,8 @@
   const _canonical = siteUrl + currentPath;
   const _ogImage = (typeof pageImage !== 'undefined' && pageImage) ? pageImage : (settings.og_image_url || settings.logo_url || '');
   const _isAdminPath = currentPath.indexOf('/admin') === 0;
-  const _noIndex = _isAdminPath || currentPath === '/track-order';
+  const _is404 = typeof pageTitle !== 'undefined' && pageTitle === 'Page Not Found';
+  const _noIndex = _isAdminPath || currentPath === '/track-order' || _is404;
 %>
 <meta name="description" content="<%= _desc %>">
 <link rel="canonical" href="<%= _canonical %>">
