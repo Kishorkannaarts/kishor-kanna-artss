@@ -1,0 +1,127 @@
+<% pageTitle = 'Page Not Found' %>
+<% pageDescription = `The page you're looking for doesn't exist or has moved. Explore custom portraits, order art, or head back to the ${settings.site_name} homepage.` %>
+<%- include('partials/header') %>
+
+<section class="section section-404" aria-labelledby="notfound-heading">
+  <div class="container container-404">
+
+    <div class="art-404" aria-hidden="true">
+      <svg viewBox="0 0 240 160" width="220" height="150" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="120" cy="80" r="70" class="art-404__ring" />
+        <path class="art-404__brush" d="M55 105 C 80 40, 140 40, 165 105" stroke-linecap="round" stroke-width="8" fill="none"/>
+        <circle cx="90" cy="72" r="6" class="art-404__dot"/>
+        <circle cx="150" cy="72" r="6" class="art-404__dot"/>
+        <path class="art-404__smile" d="M95 100 Q120 78 145 100" stroke-linecap="round" stroke-width="6" fill="none"/>
+      </svg>
+    </div>
+
+    <p class="eyebrow-404">Error 404</p>
+    <h1 class="section-title" id="notfound-heading">This page wandered off the canvas</h1>
+    <p class="sub sub-404">
+      Sorry, we couldn't find the page you were looking for.
+      It may have been moved, or the link might be out of date.
+    </p>
+
+    <div class="cta-row-404" role="group" aria-label="Suggested pages">
+      <a href="/" class="btn btn-primary">Back to Home</a>
+      <a href="/portfolio" class="btn btn-outline">View Portfolio</a>
+      <a href="/order" class="btn btn-outline">Order Custom Art</a>
+    </div>
+
+    <form class="search-404" role="search" action="/portfolio" method="get" aria-label="Search the site">
+      <label for="notfound-search" class="search-404__label">Or search our portraits</label>
+      <div class="search-404__row">
+        <input
+          id="notfound-search"
+          name="category"
+          type="search"
+          class="search-404__input"
+          placeholder="Try 'pencil', 'canvas', 'couple portrait'…"
+          autocomplete="off"
+        />
+        <button type="submit" class="btn btn-outline search-404__btn">Search</button>
+      </div>
+    </form>
+
+    <nav class="quicklinks-404" aria-label="Popular pages">
+      <span class="quicklinks-404__label">Popular:</span>
+      <a href="/portfolio">Portfolio</a>
+      <a href="/order">Commission Art</a>
+      <a href="/about">About</a>
+      <a href="/contact">Contact</a>
+      <a href="/track-order">Track Order</a>
+    </nav>
+
+  </div>
+</section>
+
+<style>
+  .section-404 { padding: 72px 0 88px; }
+  .container-404 { max-width: 640px; margin: 0 auto; text-align: center; }
+
+  .art-404 { margin: 0 auto 8px; width: 170px; color: var(--accent); animation: float-404 4s ease-in-out infinite; }
+  .art-404__ring { stroke: currentColor; stroke-width: 2; opacity: 0.15; }
+  .art-404__brush, .art-404__smile { stroke: currentColor; opacity: 0.65; }
+  .art-404__dot { fill: currentColor; opacity: 0.65; }
+
+  @keyframes float-404 {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-8px); }
+  }
+
+  .eyebrow-404 {
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    margin: 4px 0 10px;
+  }
+
+  .sub-404 { max-width: 460px; margin: 12px auto 0; }
+
+  .cta-row-404 {
+    margin-top: 28px;
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .search-404 { margin: 40px auto 0; max-width: 420px; }
+  .search-404__label { display: block; font-size: 13px; opacity: 0.65; margin-bottom: 8px; }
+  .search-404__row { display: flex; gap: 8px; }
+  .search-404__input {
+    flex: 1;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(34,26,22,0.15);
+    font-size: 14px;
+    min-width: 0;
+  }
+  .search-404__input:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .quicklinks-404 {
+    margin-top: 32px;
+    font-size: 14px;
+    opacity: 0.8;
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .quicklinks-404__label { opacity: 0.6; }
+  .quicklinks-404 a { text-decoration: underline; text-underline-offset: 3px; }
+
+  @media (max-width: 480px) {
+    .section-404 { padding: 48px 0 64px; }
+    .search-404__row { flex-direction: column; }
+    .search-404__btn { width: 100%; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .art-404 { animation: none; }
+  }
+</style>
+
+<%- include('partials/footer') %>
