@@ -2481,6 +2481,13 @@ app.post('/admin/gift-reminders/:id/delete', requireAdmin, ah(async (req, res) =
 }));
 
 // =========================================================
+// 404 — must be the LAST route registered, after everything else
+// =========================================================
+app.use((req, res) => {
+  res.status(404).render('404');
+});
+
+// =========================================================
 // START SERVER
 // =========================================================
 db.initSchema()
