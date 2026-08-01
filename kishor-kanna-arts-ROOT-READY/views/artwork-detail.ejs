@@ -13,7 +13,10 @@
 
       <!-- Gallery -->
       <div class="pd-gallery">
-        <img class="pd-main-img" id="pdMainImg" src="<%= artwork.image ? cld(artwork.image, 'w_1200') : 'https://placehold.co/600x600?text=Artwork' %>" alt="<%= artwork.title %>" decoding="async">
+        <div class="pd-zoom-wrap" style="position:relative; cursor:zoom-in;" id="pdZoomWrap">
+          <img class="pd-main-img" id="pdMainImg" src="<%= artwork.image ? cld(artwork.image, 'w_1200') : 'https://placehold.co/600x600?text=Artwork' %>" alt="<%= artwork.title %>" decoding="async">
+          <span style="position:absolute; bottom:12px; right:12px; background:rgba(0,0,0,0.55); color:#fff; font-size:0.75rem; padding:5px 10px; border-radius:100px; pointer-events:none;">🔍 Click to Zoom</span>
+        </div>
         <% if (artwork.before_image) { %>
           <div class="pd-thumbs">
             <img class="pd-thumb active" data-full="<%= cld(artwork.image, 'w_1200') %>" src="<%= cld(artwork.image, 'w_300') %>" alt="Finished artwork">
@@ -28,6 +31,13 @@
         <h1 style="margin-top:8px;"><%= artwork.title %></h1>
         <p><%= artwork.description %></p>
         <% if (artwork.story) { %><p style="color:var(--text-secondary); font-style:italic;"><%= artwork.story %></p><% } %>
+
+        <% if (artwork.materials || artwork.estimated_creation_time) { %>
+          <ul class="pd-meta-list" style="list-style:none; padding:0; margin:0 0 16px; display:flex; flex-direction:column; gap:6px; font-size:0.92rem; color:var(--text-secondary);">
+            <% if (artwork.materials) { %><li>🎨 <strong style="color:var(--text-primary);">Materials:</strong> <%= artwork.materials %></li><% } %>
+            <% if (artwork.estimated_creation_time) { %><li>⏱️ <strong style="color:var(--text-primary);">Estimated Creation Time:</strong> <%= artwork.estimated_creation_time %></li><% } %>
+          </ul>
+        <% } %>
 
         <% if (matchedService) { %>
           <!-- Real size/price table from Services -->
@@ -62,7 +72,7 @@
         <p class="sub" style="margin:10px 0 -4px;">🚚 Delivery in 5–7 working days · you'll choose your photo on the next step.</p>
 
         <div class="pd-actions">
-          <a class="btn btn-gold" id="pdOrderBtn" href="/order?art_type=<%= encodeURIComponent(artwork.category) %>&size=<%= encodeURIComponent(artwork.size || '') %>&price=<%= encodeURIComponent(artwork.price || '') %>&frame=<%= encodeURIComponent('No Frame') %>">Order This</a>
+          <a class="btn btn-gold" id="pdOrderBtn" href="/order?art_type=<%= encodeURIComponent(artwork.category) %>&size=<%= encodeURIComponent(artwork.size || '') %>&price=<%= encodeURIComponent(artwork.price || '') %>&frame=<%= encodeURIComponent('No Frame') %>">Order Now</a>
           <% if (isCustomer) { %>
             <form action="/wishlist/<%= artwork.id %>/toggle" method="POST">
               <input type="hidden" name="redirect_to" value="/portfolio/<%= artwork.id %>">
@@ -83,13 +93,45 @@
   </div>
 </section>
 
-<section class="section" style="padding-top:0; padding-bottom:0;">
+<section class="section" style="padding-top:0;">
   <div class="container" style="max-width:1000px;">
-    <div class="pd-trust-row" style="justify-content:flex-start; gap:24px;">
-      <span>⭐ 4.9/5 average rating</span>
-      <span>💬 500+ reviews</span>
+    <h2 class="reveal" style="font-size:1.4rem;">Reviews for This Artwork</h2>
+    <% if (artworkReviews && artworkReviews.length) { %>
+      <div class="grid grid-3" style="margin-top:16px;">
+        <% artworkReviews.forEach(t => { %>
+          <%- include('partials/testimonial-card', { t }) %>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <p class="sub">No reviews yet for this artwork — be the first to share yours.</p>
+    <% } %>
+    <div class="pd-trust-row" style="justify-content:flex-start; gap:24px; margin-top:16px;">
+      <span>⭐ 4.9/5 average rating across all orders</span>
       <a href="/#reviewsTrack" style="text-decoration:underline;">Read all reviews</a>
     </div>
+
+    <details style="margin-top:20px;">
+      <summary style="cursor:pointer; font-weight:600;">Write a Review for This Artwork</summary>
+      <form action="/testimonials" method="POST" enctype="multipart/form-data" class="form-box" style="margin-top:14px; max-width:480px;">
+        <div style="position:absolute;left:-9999px;top:-9999px;" aria-hidden="true"><input type="text" name="website" tabindex="-1" autocomplete="off"></div>
+        <input type="hidden" name="artwork_id" value="<%= artwork.id %>">
+        <input type="hidden" name="redirect_to" value="/portfolio/<%= artwork.id %>">
+        <div class="form-group"><label>Your Name</label><input type="text" name="name" required></div>
+        <div class="form-group">
+          <label>Rating</label>
+          <select name="rating">
+            <option value="5">★★★★★</option>
+            <option value="4">★★★★☆</option>
+            <option value="3">★★★☆☆</option>
+            <option value="2">★★☆☆☆</option>
+            <option value="1">★☆☆☆☆</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Your Review</label><textarea name="message" required></textarea></div>
+        <button type="submit" class="btn btn-primary">Submit Review</button>
+        <p class="sub" style="margin-top:8px;">Reviews are shown after approval by the team.</p>
+      </form>
+    </details>
   </div>
 </section>
 
@@ -113,6 +155,11 @@
   </div>
 </section>
 <% } %>
+
+<div id="pdLightbox" style="display:none; position:fixed; inset:0; background:rgba(10,8,6,0.92); z-index:9999; align-items:center; justify-content:center; padding:20px; cursor:zoom-out;">
+  <img id="pdLightboxImg" src="" alt="" style="max-width:100%; max-height:100%; object-fit:contain; border-radius:8px;">
+  <button id="pdLightboxClose" aria-label="Close" style="position:absolute; top:16px; right:16px; background:rgba(255,255,255,0.15); border:none; color:#fff; width:38px; height:38px; border-radius:50%; font-size:1.4rem; cursor:pointer;">&times;</button>
+</div>
 
 <script type="application/ld+json">
 <%- JSON.stringify({
@@ -141,6 +188,22 @@
         t.classList.add('active');
       });
     });
+
+    var zoomWrap = document.getElementById('pdZoomWrap');
+    var lightbox = document.getElementById('pdLightbox');
+    var lightboxImg = document.getElementById('pdLightboxImg');
+    var lightboxClose = document.getElementById('pdLightboxClose');
+    function openLightbox() {
+      var mainImg = document.getElementById('pdMainImg');
+      lightboxImg.src = mainImg.src;
+      lightboxImg.alt = mainImg.alt;
+      lightbox.style.display = 'flex';
+    }
+    function closeLightbox() { lightbox.style.display = 'none'; }
+    if (zoomWrap) zoomWrap.addEventListener('click', openLightbox);
+    if (lightboxClose) lightboxClose.addEventListener('click', closeLightbox);
+    if (lightbox) lightbox.addEventListener('click', function (e) { if (e.target === lightbox) closeLightbox(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeLightbox(); });
 
     var orderBtn = document.getElementById('pdOrderBtn');
     if (!orderBtn) return;
