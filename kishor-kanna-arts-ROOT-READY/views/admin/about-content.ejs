@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>About Page Content | Admin</title><link rel="stylesheet" href="/public/css/admin.css"></head>
+<body class="admin">
+<div class="admin-shell">
+  <% active = 'about-content' %>
+  <%- include('partials/sidebar') %>
+  <div class="admin-main">
+    <div class="admin-topbar"><h1>About Page Content</h1></div>
+    <p style="color:var(--muted); font-size:0.9rem; margin-top:-16px; margin-bottom:20px;">
+      Mission and Vision text are edited in <a href="/admin/settings">Site Settings</a>. Studio photos, awards, and your journey
+      timeline are managed here — nothing shows on the live About page until you add it.
+    </p>
+
+    <h2 style="font-size:1.1rem;">Studio Photos</h2>
+    <div class="grid grid-4" style="margin-bottom:16px;">
+      <% studioPhotos.forEach(p => { %>
+        <div class="card">
+          <img src="<%= p.image_url %>" alt="<%= p.caption || 'Studio photo' %>" style="aspect-ratio:1; object-fit:cover;">
+          <div class="card-body">
+            <p style="font-size:0.85rem;"><%= p.caption || '—' %></p>
+            <form action="/admin/about-content/studio-photo/<%= p.id %>/delete" method="POST" onsubmit="return confirm('Delete this photo?');">
+              <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+            </form>
+          </div>
+        </div>
+      <% }) %>
+      <% if (studioPhotos.length === 0) { %><p class="sub">No studio photos yet.</p><% } %>
+    </div>
+    <form class="admin-form" action="/admin/about-content/studio-photo/add" method="POST" enctype="multipart/form-data">
+      <div class="form-group"><label>Photo</label><input type="file" name="photo" accept="image/*" required></div>
+      <div class="form-group"><label>Caption (optional)</label><input type="text" name="caption" placeholder="e.g. Our studio workspace"></div>
+      <button class="btn btn-primary" type="submit">Add Photo</button>
+    </form>
+
+    <h2 style="font-size:1.1rem; margin-top:36px;">Awards &amp; Recognition</h2>
+    <table style="margin-bottom:16px;">
+      <tr><th>Title</th><th>Year</th><th>Issuer</th><th>Actions</th></tr>
+      <% awards.forEach(a => { %>
+        <tr>
+          <td><%= a.title %></td><td><%= a.year %></td><td><%= a.issuer %></td>
+          <td>
+            <form action="/admin/about-content/award/<%= a.id %>/delete" method="POST" onsubmit="return confirm('Delete this award?');">
+              <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+      <% if (awards.length === 0) { %><tr><td colspan="4">No awards added yet.</td></tr><% } %>
+    </table>
+    <form class="admin-form" action="/admin/about-content/award/add" method="POST">
+      <div class="form-group"><label>Title</label><input type="text" name="title" required placeholder="e.g. Best Custom Art Studio"></div>
+      <div class="form-group"><label>Year</label><input type="text" name="year" placeholder="e.g. 2024"></div>
+      <div class="form-group"><label>Issued By (optional)</label><input type="text" name="issuer" placeholder="e.g. Local Business Awards"></div>
+      <button class="btn btn-primary" type="submit">Add Award</button>
+    </form>
+
+    <h2 style="font-size:1.1rem; margin-top:36px;">Journey Timeline</h2>
+    <table style="margin-bottom:16px;">
+      <tr><th>Year / Label</th><th>Milestone</th><th>Actions</th></tr>
+      <% timeline.forEach(t => { %>
+        <tr>
+          <td><%= t.year_label %></td><td><%= t.text %></td>
+          <td>
+            <form action="/admin/about-content/timeline/<%= t.id %>/delete" method="POST" onsubmit="return confirm('Delete this milestone?');">
+              <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+      <% if (timeline.length === 0) { %><tr><td colspan="3">No milestones added yet.</td></tr><% } %>
+    </table>
+    <form class="admin-form" action="/admin/about-content/timeline/add" method="POST">
+      <div class="form-group"><label>Year / Label</label><input type="text" name="year_label" placeholder="e.g. 2019 or Year 1"></div>
+      <div class="form-group"><label>Milestone</label><input type="text" name="text" required placeholder="e.g. Opened our first studio"></div>
+      <button class="btn btn-primary" type="submit">Add Milestone</button>
+    </form>
+  </div>
+</div>
+</body></html>
