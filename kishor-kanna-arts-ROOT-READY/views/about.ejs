@@ -19,8 +19,98 @@
         </div>
       </div>
     </div>
+
+    <div class="grid grid-2" style="margin-top:40px; gap:24px;">
+      <div class="card" style="padding:24px;">
+        <h3 style="margin-top:0; font-family:var(--font-display);">Our Mission</h3>
+        <p style="color:var(--text-secondary);"><%= settings.about_mission || "To transform people's most meaningful memories into handcrafted artworks that last forever." %></p>
+      </div>
+      <div class="card" style="padding:24px;">
+        <h3 style="margin-top:0; font-family:var(--font-display);">Our Vision</h3>
+        <p style="color:var(--text-secondary);"><%= settings.about_vision || "To be the studio people trust with their most cherished memories — known not just for skilled portraits, but for the care taken with every single one." %></p>
+      </div>
+    </div>
   </div>
 </section>
+
+<% if (timeline && timeline.length) { %>
+<section class="section section-tint">
+  <div class="container" style="max-width:700px;">
+    <h2>Our Journey</h2>
+    <div class="about-timeline" style="margin-top:24px; display:flex; flex-direction:column; gap:20px;">
+      <% timeline.forEach(t => { %>
+        <div style="display:flex; gap:16px; align-items:flex-start;">
+          <strong style="min-width:90px; color:var(--gold);"><%= t.year_label %></strong>
+          <p style="margin:0;"><%= t.text %></p>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+</section>
+<% } %>
+
+<section class="section">
+  <div class="container">
+    <h2>Our Creative Process</h2>
+    <p class="sub">From your photo to a finished artwork — every order follows the same careful process</p>
+    <div class="grid grid-4" style="margin-top:24px;">
+      <% ['Order Received','Sketch Started','Customer Approval','Artwork Creation','Framing','Packaging','Shipping','Delivered'].forEach((step, i) => { %>
+        <div class="card" style="padding:18px; text-align:center;">
+          <div style="width:36px; height:36px; border-radius:50%; background:var(--gold); color:#221a10; display:flex; align-items:center; justify-content:center; font-weight:700; margin:0 auto 10px;"><%= i + 1 %></div>
+          <p style="margin:0; font-weight:600; font-size:0.92rem;"><%= step %></p>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+</section>
+
+<% if (studioPhotos && studioPhotos.length) { %>
+<section class="section section-tint">
+  <div class="container">
+    <h2>Behind the Scenes</h2>
+    <p class="sub">A look inside our studio</p>
+    <div class="grid grid-4" style="margin-top:20px;">
+      <% studioPhotos.forEach(p => { %>
+        <img src="<%= p.image_url %>" alt="<%= p.caption || 'Studio photo' %>" loading="lazy" decoding="async" style="width:100%; aspect-ratio:1; object-fit:cover; border-radius:10px;">
+      <% }) %>
+    </div>
+  </div>
+</section>
+<% } %>
+
+<% if (videos && videos.length) { %>
+<section class="section">
+  <div class="container">
+    <h2>Watch Us Work</h2>
+    <div class="grid grid-3" style="margin-top:20px;">
+      <% videos.forEach(v => { %>
+        <div class="video-card">
+          <div style="aspect-ratio:16/9; border-radius:10px; overflow:hidden;">
+            <iframe src="<%= v.embed_url %>" title="<%= v.title %>" loading="lazy" frameborder="0" allowfullscreen style="width:100%; height:100%;"></iframe>
+          </div>
+          <p style="margin-top:8px; font-weight:600; font-size:0.9rem;"><%= v.title %></p>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+</section>
+<% } %>
+
+<% if (awards && awards.length) { %>
+<section class="section section-tint">
+  <div class="container" style="max-width:700px;">
+    <h2>Awards &amp; Recognition</h2>
+    <div class="grid grid-2" style="margin-top:20px; gap:16px;">
+      <% awards.forEach(a => { %>
+        <div class="card" style="padding:18px;">
+          <p style="margin:0; font-weight:600;"><%= a.title %></p>
+          <p class="sub" style="margin:4px 0 0;"><%= [a.issuer, a.year].filter(Boolean).join(' · ') %></p>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+</section>
+<% } %>
 
 <section class="section section-tint">
   <h2>Reviews</h2>
