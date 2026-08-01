@@ -29,7 +29,7 @@
                 <% if (a.price) { %><span>₹<strong><%= a.price %></strong></span><% } %>
               </div>
               <div style="display:flex; gap:8px;">
-                <a class="btn btn-sm btn-primary" href="/order?art_type=<%= encodeURIComponent(a.category) %>&size=<%= encodeURIComponent(a.size || '') %>&price=<%= encodeURIComponent(a.price || '') %>">Order This</a>
+                <a class="btn btn-sm btn-primary" href="/order?art_type=<%= encodeURIComponent(a.category) %>&size=<%= encodeURIComponent(a.size || '') %>&price=<%= encodeURIComponent(a.price || '') %>">Order Now</a>
                 <form action="/wishlist/<%= a.id %>/toggle" method="POST">
                   <input type="hidden" name="redirect_to" value="/account/wishlist">
                   <button class="btn btn-sm btn-outline" type="submit">Remove</button>
