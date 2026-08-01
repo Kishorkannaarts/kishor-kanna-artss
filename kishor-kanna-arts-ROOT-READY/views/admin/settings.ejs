@@ -27,6 +27,8 @@
   <input type="file" name="about_image" accept="image/*">
 </div>
 <div class="form-group"><label>About Us Text</label><textarea name="about_text"><%= settings.about_text %></textarea></div>
+<div class="form-group"><label>Mission Statement</label><textarea name="about_mission" placeholder="e.g. To transform people's most meaningful memories into handcrafted artworks that last forever."><%= settings.about_mission %></textarea></div>
+<div class="form-group"><label>Vision Statement</label><textarea name="about_vision" placeholder="What you're working toward as a studio"><%= settings.about_vision %></textarea></div>
 <div class="form-group"><label>Years of Experience (leave blank to hide this stat)</label><input type="text" name="about_years_experience" value="<%= settings.about_years_experience %>" placeholder="e.g. 5"></div>
       <div class="form-group">
         <label>SEO Meta Description (shows in Google search results)</label>
@@ -61,6 +63,13 @@
       <div class="form-group"><label>YouTube Channel URL</label><input type="text" name="youtube_url" value="<%= settings.youtube_url %>" placeholder="https://youtube.com/@yourchannel"></div>
       <div class="form-group"><label>WhatsApp Number</label><input type="text" name="whatsapp_number" value="<%= settings.whatsapp_number %>"></div>
       <div class="form-group"><label>WhatsApp Popup Default Message</label><input type="text" name="whatsapp_default_message" value="<%= settings.whatsapp_default_message %>" placeholder="e.g. Hi! I'm interested in a custom artwork."></div>
+
+      <h3 style="margin-top:24px;">Checkout Payment</h3>
+      <div class="form-group">
+        <label>Online Payment % at Checkout</label>
+        <input type="number" name="checkout_advance_percent" min="0" max="100" value="<%= settings.checkout_advance_percent || 100 %>">
+        <small style="color:var(--muted); display:block; margin-top:4px;">For orders with a known price, customers are sent to pay this percentage online right after submitting. Set to 0 to disable online payment at checkout (orders will go back to the manual quote-then-invoice flow). Custom/unpriced orders are never charged automatically.</small>
+      </div>
 
       <h3 style="margin-top:24px;">Website Colors</h3>
       <div class="form-group"><label>Accent Color (buttons, links, highlights)</label><input type="color" name="theme_accent" value="<%= settings.theme_accent || '#b5451b' %>"></div>
