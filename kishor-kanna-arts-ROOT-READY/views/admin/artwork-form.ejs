@@ -42,6 +42,14 @@
         <input type="text" name="price" value="<%= artwork ? artwork.price : '' %>" placeholder="e.g. ₹1500">
       </div>
       <div class="form-group">
+        <label>Materials Used (shown on the artwork page)</label>
+        <input type="text" name="materials" value="<%= artwork ? artwork.materials : '' %>" placeholder="e.g. Graphite pencil on 300gsm archival paper">
+      </div>
+      <div class="form-group">
+        <label>Estimated Creation Time (shown on the artwork page)</label>
+        <input type="text" name="estimated_creation_time" value="<%= artwork ? artwork.estimated_creation_time : '' %>" placeholder="e.g. 5-7 days">
+      </div>
+      <div class="form-group">
         <label>Image (upload to <%= artwork && artwork.image ? 'replace current image' : 'add image' %>)</label>
         <% if (artwork && artwork.image) { %><img class="thumb" src="<%= artwork.image %>" style="margin-bottom:10px;"><% } %>
         <input type="file" name="image" accept="image/*">
