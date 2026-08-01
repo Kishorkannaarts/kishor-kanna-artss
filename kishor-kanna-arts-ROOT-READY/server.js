@@ -672,7 +672,10 @@ app.get('/portfolio/:id', ah(async (req, res) => {
     isWishlisted = !!(await db.findOne('wishlist', { customer_id: req.session.customerId, artwork_id: artwork.id }));
   }
 
-  res.render('artwork-detail', { artwork, related, isWishlisted, matchedService });
+  const artworkReviews = db.normalize(await db.find('testimonials', { artwork_id: artwork.id, approved: true }, { created_at: -1 }))
+    .map(t => ({ ...t, embed_url: videoEmbedUrl(t.video_url) }));
+
+  res.render('artwork-detail', { artwork, related, isWishlisted, matchedService, artworkReviews });
 }));
 
 // Retired as a separate page — Services and the Shop/Portfolio catalog were
@@ -692,7 +695,12 @@ app.get('/about', ah(async (req, res) => {
   else if (reviewFilter === 'text') testimonials = testimonials.filter(t => !t.embed_url && !t.photo_url);
 
   const faqs = db.normalize(await db.find('faqs', {}, { created_at: 1 }));
-  res.render('about', { testimonials, faqs, reviewFilter });
+  const studioPhotos = db.normalize(await db.find('studio_photos', {}, { created_at: 1 }));
+  const awards = db.normalize(await db.find('awards', {}, { created_at: 1 }));
+  const timeline = db.normalize(await db.find('timeline_milestones', {}, { created_at: 1 }));
+  const videos = db.normalize(await db.find('videos', {}, { created_at: -1 })).slice(0, 6)
+    .map(v => ({ ...v, embed_url: videoEmbedUrl(v.video_url) })).filter(v => v.embed_url);
+  res.render('about', { testimonials, faqs, reviewFilter, studioPhotos, awards, timeline, videos });
 }));
 
 // Reserved for the future course platform (live classes, recorded courses,
@@ -880,7 +888,7 @@ app.get('/order', ah(async (req, res) => {
   const refImage = req.body.compressed_image_data
     ? await uploadImageDataUri(req.body.compressed_image_data, 'orders')
     : await uploadImage(req.file, 'orders');
-  await db.insertOne('orders', { order_code, name, phone, email, art_type, size, reference_image: refImage, delivery_date, notes, estimated_price: finalPrice ? finalPrice.toFixed(0) : null, discount_percent_applied, coupon_code: appliedCouponCode, wallet_used: walletUsed || 0, address_line, city, state, pincode, status: 'Received', advance_amount: null, advance_payment_link: null, advance_paid: false, balance_amount: null, balance_payment_link: null, balance_paid: false, customer_id: (req.session && req.session.customerId) || null });
+  const newOrder = await db.insertOne('orders', { order_code, name, phone, email, art_type, size, reference_image: refImage, delivery_date, notes, estimated_price: finalPrice ? finalPrice.toFixed(0) : null, discount_percent_applied, coupon_code: appliedCouponCode, wallet_used: walletUsed || 0, address_line, city, state, pincode, status: 'Received', advance_amount: null, advance_payment_link: null, advance_paid: false, balance_amount: null, balance_payment_link: null, balance_paid: false, customer_id: (req.session && req.session.customerId) || null });
   if (appliedCouponCode) {
     const mdb = await db.getDB();
     await mdb.collection('coupons').updateOne({ code: appliedCouponCode }, { $inc: { used_count: 1 } });
@@ -907,6 +915,32 @@ app.get('/order', ah(async (req, res) => {
     mailer.sendMail({ to: email, subject: renderTemplate(s.tmpl_order_received_subject, data), html: renderTemplate(s.tmpl_order_received_body, data).replace(/\n/g, '<br>') });
   }
   notify.notifyOrder('order_received', { phone, order_code, customer_id: (req.session && req.session.customerId) || null }, data);
+
+  // Online payment at checkout: only for orders with a real, server-verified
+  // price (never a guessed/custom price) and only if the customer didn't
+  // click "Pay Later". A Razorpay hiccup here must never lose the order that
+  // was already saved above — fall through to the normal success screen.
+  const skippedPayment = req.body.pay_now === '0';
+  const checkoutPercent = parseFloat(s.checkout_advance_percent);
+  const effectivePercent = isNaN(checkoutPercent) ? 100 : checkoutPercent;
+  if (finalPrice && !skippedPayment && effectivePercent > 0 && razorpay.isConfigured()) {
+    try {
+      const payAmount = (finalPrice * effectivePercent / 100).toFixed(0);
+      const link = await razorpay.createPaymentLink({
+        amount: payAmount,
+        description: `${effectivePercent >= 100 ? 'Payment' : 'Advance payment'} - ${order_code}`,
+        name, phone, email,
+        referenceId: `${order_code}-checkout-${Date.now()}`,
+        callbackUrl: `${trackUrl}?order_code=${encodeURIComponent(order_code)}`
+      });
+      if (link) {
+        await db.updateById('orders', newOrder.id, { status: 'Confirmed', advance_amount: payAmount, advance_payment_link: link.short_url, advance_payment_link_id: link.id, advance_paid: false });
+        return res.redirect(link.short_url);
+      }
+    } catch (err) {
+      console.error('[order] checkout payment link failed, falling back to pay-later:', err.message);
+    }
+  }
 
   res.render('order', { success: order_code, error: null, blockedDates, old: {}, services, offerDiscount, presetPrice: '' });
 }));
@@ -1242,7 +1276,7 @@ app.get('/account/invoice/:id', requireCustomer, ah(async (req, res) => {
 
 app.post('/testimonials', memoryUpload.single('photo'), csrfCheck, ah(async (req, res) => {
   if (isSpamBot(req)) return res.redirect('/about?thanks=1'); // silently drop, no tell for bots
-  const { name, message, rating, video_url } = req.body;
+  const { name, message, rating, video_url, artwork_id, redirect_to } = req.body;
   const photoUrl = await uploadImage(req.file, 'reviews');
   // Only accept a video link if we can actually turn it into an embeddable
   // player — a broken/unsupported link is worse than no video at all.
@@ -1251,19 +1285,22 @@ app.post('/testimonials', memoryUpload.single('photo'), csrfCheck, ah(async (req
   // so it's fair to mark it verified automatically. Anonymous submissions
   // still need a human to confirm before they earn the badge.
   const isVerifiedCustomer = !!(req.session && req.session.customerId);
+  // Only trust a same-site relative path here — never redirect off-domain.
+  const safeRedirect = (redirect_to && redirect_to.startsWith('/')) ? redirect_to : '/about?thanks=1';
   await db.insertOne('testimonials', {
     name, message, rating: parseInt(rating) || 5, approved: false,
     photo_url: photoUrl || null,
     video_url: validVideoUrl,
     verified: isVerifiedCustomer,
-    customer_id: (req.session && req.session.customerId) || null
+    customer_id: (req.session && req.session.customerId) || null,
+    artwork_id: artwork_id || null
   });
   if (process.env.NOTIFY_EMAIL) {
     const s = res.locals.settings;
     const data = { name, message, rating: parseInt(rating) || 5, site_name: s.site_name };
     mailer.sendMail({ to: process.env.NOTIFY_EMAIL, subject: renderTemplate(s.tmpl_new_review_admin_subject, data), html: renderTemplate(s.tmpl_new_review_admin_body, data).replace(/\n/g, '<br>') });
   }
-  res.redirect('/about?thanks=1');
+  res.redirect(safeRedirect.includes('?') ? safeRedirect + '&thanks=1' : safeRedirect + '?thanks=1');
 }));
 
 // ---------- Customer Gallery ----------
@@ -1271,16 +1308,27 @@ app.post('/testimonials', memoryUpload.single('photo'), csrfCheck, ah(async (req
 // portraits in their homes — no rating or review text required, just proof
 // the finished piece looks great in real life. Same moderation pattern
 // (submit unapproved, admin approves before it goes public).
+const GALLERY_PAGE_SIZE = 24;
 app.get('/gallery', ah(async (req, res) => {
-  const photos = db.normalize(await db.find('gallery_photos', { approved: true }, { created_at: -1 }));
-  res.render('gallery-public', { photos, submitted: req.query.thanks === '1' });
+  const allPhotos = db.normalize(await db.find('gallery_photos', { approved: true }, { created_at: -1 }));
+  const photos = allPhotos.slice(0, GALLERY_PAGE_SIZE);
+  res.render('gallery-public', { photos, submitted: req.query.thanks === '1', hasMore: allPhotos.length > GALLERY_PAGE_SIZE, pageSize: GALLERY_PAGE_SIZE });
+}));
+
+// Infinite-scroll pagination for the gallery masonry grid.
+app.get('/gallery/photos.json', ah(async (req, res) => {
+  const skip = Math.max(0, parseInt(req.query.skip) || 0);
+  const allPhotos = db.normalize(await db.find('gallery_photos', { approved: true }, { created_at: -1 }));
+  const page = allPhotos.slice(skip, skip + GALLERY_PAGE_SIZE);
+  res.json({ photos: page, hasMore: skip + GALLERY_PAGE_SIZE < allPhotos.length });
 }));
 
 app.post('/gallery/submit', memoryUpload.single('photo'), csrfCheck, ah(async (req, res) => {
   if (isSpamBot(req)) return res.redirect('/gallery'); // silently drop, no tell for bots
   if (!req.file) {
-    const photos = db.normalize(await db.find('gallery_photos', { approved: true }, { created_at: -1 }));
-    return res.render('gallery-public', { photos, submitted: false, submitError: 'Please choose a photo to upload.' });
+    const allPhotos = db.normalize(await db.find('gallery_photos', { approved: true }, { created_at: -1 }));
+    const photos = allPhotos.slice(0, GALLERY_PAGE_SIZE);
+    return res.render('gallery-public', { photos, submitted: false, submitError: 'Please choose a photo to upload.', hasMore: allPhotos.length > GALLERY_PAGE_SIZE, pageSize: GALLERY_PAGE_SIZE });
   }
   const { name, caption } = req.body;
   const photoUrl = await uploadImage(req.file, 'customer-gallery');
@@ -1521,7 +1569,7 @@ app.post('/admin/artworks/:id/revert-image', requireAdmin, ah(async (req, res) =
 }));
 
 app.post('/admin/artworks/save', requireAdmin, memoryUpload.fields([{ name: 'image', maxCount: 1 }, { name: 'before_image', maxCount: 1 }]), csrfCheck, ah(async (req, res) => {
-  const { id, title, category, description, story, size, price, featured } = req.body;
+  const { id, title, category, description, story, size, price, featured, materials, estimated_creation_time } = req.body;
   const imageFile = req.files && req.files.image && req.files.image[0];
   const beforeFile = req.files && req.files.before_image && req.files.before_image[0];
   const uploadedUrl = await uploadImage(imageFile, 'artworks');
@@ -1531,9 +1579,9 @@ app.post('/admin/artworks/save', requireAdmin, memoryUpload.fields([{ name: 'ima
     const existing = await db.findById('artworks', id);
     const image = uploadedUrl || (existing ? existing.image : null);
     const before_image = uploadedBeforeUrl || (existing ? existing.before_image : null);
-    await db.updateById('artworks', id, { title, category, description, story, size, price, image, before_image, featured: featuredVal });
+    await db.updateById('artworks', id, { title, category, description, story, size, price, image, before_image, featured: featuredVal, materials, estimated_creation_time });
   } else {
-    await db.insertOne('artworks', { title, category, description, story, size, price, image: uploadedUrl, before_image: uploadedBeforeUrl || null, featured: featuredVal });
+    await db.insertOne('artworks', { title, category, description, story, size, price, image: uploadedUrl, before_image: uploadedBeforeUrl || null, featured: featuredVal, materials, estimated_creation_time });
   }
   res.redirect('/admin/artworks');
 }));
@@ -1960,18 +2008,20 @@ app.post('/admin/orders/:id/send-artwork', requireAdmin, memoryUpload.single('ar
 app.get('/admin/testimonials', requireAdmin, ah(async (req, res) => {
   const testimonials = db.normalize(await db.find('testimonials', {}, { created_at: -1 }))
     .map(t => ({ ...t, embed_url: videoEmbedUrl(t.video_url) }));
-  res.render('admin/testimonials', { testimonials });
+  const artworks = db.normalize(await db.find('artworks', {}, { created_at: -1 }));
+  res.render('admin/testimonials', { testimonials, artworks });
 }));
 
 app.post('/admin/testimonials/add', requireAdmin, memoryUpload.single('photo'), csrfCheck, ah(async (req, res) => {
-  const { name, message, rating, video_url } = req.body;
+  const { name, message, rating, video_url, artwork_id } = req.body;
   const photoUrl = await uploadImage(req.file, 'reviews');
   const validVideoUrl = videoEmbedUrl(video_url) ? video_url.trim() : null;
   // Reviews the admin adds directly (e.g. copied from Google/WhatsApp) are
   // auto-verified — the admin is vouching for them personally.
   await db.insertOne('testimonials', {
     name, message, rating: parseInt(rating) || 5, approved: true,
-    photo_url: photoUrl || null, video_url: validVideoUrl, verified: true
+    photo_url: photoUrl || null, video_url: validVideoUrl, verified: true,
+    artwork_id: artwork_id || null
   });
   res.redirect('/admin/testimonials');
 }));
@@ -1993,14 +2043,54 @@ app.post('/admin/testimonials/:id/verify', requireAdmin, ah(async (req, res) => 
 }));
 
 app.post('/admin/testimonials/:id/update', requireAdmin, ah(async (req, res) => {
-  const { name, message, rating } = req.body;
-  await db.updateById('testimonials', req.params.id, { name, message, rating: parseInt(rating) || 5 });
+  const { name, message, rating, artwork_id } = req.body;
+  await db.updateById('testimonials', req.params.id, { name, message, rating: parseInt(rating) || 5, artwork_id: artwork_id || null });
   res.redirect('/admin/testimonials');
 }));
 
 app.post('/admin/testimonials/:id/delete', requireAdmin, ah(async (req, res) => {
   await db.deleteById('testimonials', req.params.id);
   res.redirect('/admin/testimonials');
+}));
+
+// ---- About Page Content: Studio Photos, Awards, Journey Timeline ----
+// These are deliberately empty until the admin adds real entries — we never
+// invent studio history, award names, or dates on the business's behalf.
+app.get('/admin/about-content', requireAdmin, ah(async (req, res) => {
+  const studioPhotos = db.normalize(await db.find('studio_photos', {}, { created_at: 1 }));
+  const awards = db.normalize(await db.find('awards', {}, { created_at: 1 }));
+  const timeline = db.normalize(await db.find('timeline_milestones', {}, { created_at: 1 }));
+  res.render('admin/about-content', { studioPhotos, awards, timeline });
+}));
+
+app.post('/admin/about-content/studio-photo/add', requireAdmin, memoryUpload.single('photo'), csrfCheck, ah(async (req, res) => {
+  const url = await uploadImage(req.file, 'studio');
+  if (url) await db.insertOne('studio_photos', { image_url: url, caption: req.body.caption || '' });
+  res.redirect('/admin/about-content');
+}));
+app.post('/admin/about-content/studio-photo/:id/delete', requireAdmin, csrfCheck, ah(async (req, res) => {
+  await db.deleteById('studio_photos', req.params.id);
+  res.redirect('/admin/about-content');
+}));
+
+app.post('/admin/about-content/award/add', requireAdmin, csrfCheck, ah(async (req, res) => {
+  const { title, year, issuer } = req.body;
+  if (title) await db.insertOne('awards', { title, year: year || '', issuer: issuer || '' });
+  res.redirect('/admin/about-content');
+}));
+app.post('/admin/about-content/award/:id/delete', requireAdmin, csrfCheck, ah(async (req, res) => {
+  await db.deleteById('awards', req.params.id);
+  res.redirect('/admin/about-content');
+}));
+
+app.post('/admin/about-content/timeline/add', requireAdmin, csrfCheck, ah(async (req, res) => {
+  const { year_label, text } = req.body;
+  if (text) await db.insertOne('timeline_milestones', { year_label: year_label || '', text });
+  res.redirect('/admin/about-content');
+}));
+app.post('/admin/about-content/timeline/:id/delete', requireAdmin, csrfCheck, ah(async (req, res) => {
+  await db.deleteById('timeline_milestones', req.params.id);
+  res.redirect('/admin/about-content');
 }));
 
 // ---- Customer Gallery ----
