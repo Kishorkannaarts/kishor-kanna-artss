@@ -115,7 +115,7 @@
                 <% if (a.size) { %><span>Size: <strong><%= a.size %></strong></span><% } %>
                 <% if (a.price) { %><span style="margin-left:10px;">₹<strong><%= a.price %></strong></span><% } %>
               </div>
-              <a class="btn btn-sm btn-primary" href="/order?art_type=<%= encodeURIComponent(a.category) %>&size=<%= encodeURIComponent(a.size || '') %>&price=<%= encodeURIComponent(a.price || '') %>">Order This</a>
+              <a class="btn btn-sm btn-primary" href="/order?art_type=<%= encodeURIComponent(a.category) %>&size=<%= encodeURIComponent(a.size || '') %>&price=<%= encodeURIComponent(a.price || '') %>">Order Now</a>
             </div>
           </div>
         </div>
@@ -182,6 +182,27 @@
     </div>
   </div>
 </section>
+
+<!-- 6.5 MEET THE ARTIST -->
+<% if (settings.about_image_url || settings.about_text) { %>
+<section class="section">
+  <div class="container about-hero">
+    <% if (settings.about_image_url) { %>
+      <img src="<%= cld ? cld(settings.about_image_url, 'w_800') : settings.about_image_url %>" alt="The artist behind <%= settings.site_name %>" class="about-hero-img reveal" loading="lazy" decoding="async">
+    <% } %>
+    <div class="reveal">
+      <h2>Meet the Artist</h2>
+      <p><%= (settings.about_text || '').length > 260 ? settings.about_text.slice(0, 260).trim() + '…' : settings.about_text %></p>
+      <% if (settings.about_years_experience) { %>
+        <div class="about-stats" style="border-top:none; padding-top:0; margin-top:10px;">
+          <div class="about-stat"><strong><%= settings.about_years_experience %>+</strong><span>Years Experience</span></div>
+        </div>
+      <% } %>
+      <a class="btn btn-outline" href="/about" style="margin-top:14px;">Read the Full Story</a>
+    </div>
+  </div>
+</section>
+<% } %>
 
 <!-- 7. HOW IT WORKS -->
 <section class="section" id="how-it-works">
@@ -437,6 +458,19 @@
   </div>
 </section>
 <% } %>
+
+<!-- 11.5 NEWSLETTER -->
+<section class="section section-tint" style="text-align:center;">
+  <div class="container" style="max-width:520px;">
+    <h2 class="reveal">Stay Inspired</h2>
+    <p class="sub reveal">Subscribe for exclusive offers, new artwork releases, and creative inspiration.</p>
+    <form class="newsletter-form reveal" action="/newsletter" method="POST" style="display:flex; gap:10px; margin-top:18px; flex-wrap:wrap; justify-content:center;">
+      <div style="position:absolute;left:-9999px;top:-9999px;" aria-hidden="true"><input type="text" name="website" tabindex="-1" autocomplete="off"></div>
+      <input type="email" name="email" placeholder="Your email" required style="flex:1; min-width:220px; padding:13px 18px; border-radius:100px; border:1.5px solid var(--border-color); font-family:var(--font-body);">
+      <button type="submit" class="btn btn-gold">Subscribe</button>
+    </form>
+  </div>
+</section>
 
 <!-- 12. CTA -->
 <section class="section section-tint cta-final" style="text-align:center;">
