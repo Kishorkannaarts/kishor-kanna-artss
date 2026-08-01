@@ -178,9 +178,12 @@
                 <tr id="pv_notes_row" style="display:none;"><td style="padding:6px 0; color:var(--text-secondary,#777); vertical-align:top;">Notes</td><td id="pv_notes" style="padding:6px 0;"></td></tr>
               </table>
             </div>
+            <input type="hidden" name="pay_now" id="payNowInput" value="1">
+            <p class="sub" id="paymentNote" style="display:none; margin:0 0 10px;">You'll be taken to a secure Razorpay page to complete payment right after this.</p>
             <div style="display:flex; gap:10px; flex-wrap:wrap;">
               <button class="btn btn-outline" type="button" id="editOrderBtn">← Edit Details</button>
               <button class="btn btn-gold" type="submit" id="confirmOrderBtn">Confirm &amp; Place Order</button>
+              <button class="btn btn-outline" type="submit" id="payLaterBtn" style="display:none;">Pay Later</button>
             </div>
           </div>
         </form>
@@ -607,6 +610,22 @@
     document.getElementById('pv_art').textContent = artTypeSelect.value + ' / ' + sizeSelect.value;
     document.getElementById('pv_price').textContent = priceDisplay.textContent || 'To be confirmed';
 
+    // A known, server-verifiable price (not "Custom") is the only case where
+    // checkout offers online payment — matches the server-side rule exactly.
+    const priceKnown = !!estimatedPriceInput.value;
+    const payLaterBtn = document.getElementById('payLaterBtn');
+    const paymentNote = document.getElementById('paymentNote');
+    const confirmBtnEl = document.getElementById('confirmOrderBtn');
+    if (priceKnown) {
+      confirmBtnEl.textContent = 'Pay Now & Confirm Order';
+      payLaterBtn.style.display = '';
+      paymentNote.style.display = 'block';
+    } else {
+      confirmBtnEl.textContent = 'Confirm & Place Order';
+      payLaterBtn.style.display = 'none';
+      paymentNote.style.display = 'none';
+    }
+
     const couponRow = document.getElementById('pv_coupon_row');
     if (couponCodeInput.value) {
       couponRow.style.display = '';
@@ -651,8 +670,15 @@
   // ---- Submit: show a "please wait" overlay and stop double-submits ----
   const submitOverlay = document.getElementById('submitOverlay');
   const confirmOrderBtn = document.getElementById('confirmOrderBtn');
+  const payLaterBtnEl = document.getElementById('payLaterBtn');
+  const payNowInput = document.getElementById('payNowInput');
+  if (confirmOrderBtn) confirmOrderBtn.addEventListener('click', function () { payNowInput.value = '1'; });
+  if (payLaterBtnEl) payLaterBtnEl.addEventListener('click', function () { payNowInput.value = '0'; });
   if (orderForm) orderForm.addEventListener('submit', function () {
-    if (confirmOrderBtn) { confirmOrderBtn.disabled = true; confirmOrderBtn.textContent = 'Placing your order…'; }
+    if (confirmOrderBtn) { confirmOrderBtn.disabled = true; }
+    if (payLaterBtnEl) payLaterBtnEl.disabled = true;
+    const clickedPayNow = payNowInput.value !== '0';
+    if (confirmOrderBtn) confirmOrderBtn.textContent = clickedPayNow ? 'Redirecting to payment…' : 'Placing your order…';
     if (submitOverlay) submitOverlay.classList.add('active');
     try { sessionStorage.removeItem('kka_order_draft'); } catch (e) {}
   });
