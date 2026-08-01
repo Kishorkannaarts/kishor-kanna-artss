@@ -20,7 +20,7 @@
     <% } %>
 
     <% if (photos.length) { %>
-      <div class="gallery-grid">
+      <div class="gallery-grid" id="galleryGrid">
         <% photos.forEach(p => { %>
           <button type="button" class="gallery-item" data-full="<%= p.photo_url %>" data-caption="<%= (p.caption || '').replace(/"/g, '&quot;') %>" data-name="<%= p.name %>">
             <img src="<%= p.photo_url %>" alt="Photo shared by <%= p.name %>" loading="lazy" decoding="async">
@@ -28,6 +28,9 @@
           </button>
         <% }) %>
       </div>
+      <div id="galleryLoading" class="sub" style="text-align:center; padding:20px; display:none;">Loading more…</div>
+      <div id="galleryEnd" class="sub" style="text-align:center; padding:20px; display:none;">You've seen them all!</div>
+      <div id="galleryScrollSentinel"></div>
     <% } else { %>
       <p class="sub">No photos yet — be the first to share yours below!</p>
     <% } %>
@@ -57,9 +60,11 @@
 </div>
 
 <style>
-  .gallery-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-top:24px; }
-  .gallery-item { position:relative; padding:0; border:none; border-radius:10px; overflow:hidden; cursor:pointer; background:none; aspect-ratio:1; }
-  .gallery-item img { width:100%; height:100%; object-fit:cover; display:block; transition:transform 0.25s ease; }
+  .gallery-grid { column-count:2; column-gap:16px; margin-top:24px; }
+  @media (min-width:640px) { .gallery-grid { column-count:3; } }
+  @media (min-width:960px) { .gallery-grid { column-count:4; } }
+  .gallery-item { position:relative; display:block; width:100%; padding:0; border:none; border-radius:10px; overflow:hidden; cursor:pointer; background:none; margin-bottom:16px; break-inside:avoid; }
+  .gallery-item img { width:100%; height:auto; display:block; transition:transform 0.25s ease; }
   .gallery-item:hover img { transform:scale(1.05); }
   .gallery-item-name { position:absolute; bottom:0; left:0; right:0; padding:8px 10px; background:linear-gradient(transparent, rgba(0,0,0,0.7)); color:#fff; font-size:0.8rem; text-align:left; }
 </style>
@@ -69,7 +74,8 @@
     var lightbox = document.getElementById('galleryLightbox');
     var img = document.getElementById('galleryLightboxImg');
     var caption = document.getElementById('galleryLightboxCaption');
-    document.querySelectorAll('.gallery-item').forEach(function (btn) {
+
+    function bindItem(btn) {
       btn.addEventListener('click', function () {
         img.src = btn.getAttribute('data-full');
         var cap = btn.getAttribute('data-caption') || '';
@@ -77,7 +83,9 @@
         caption.textContent = cap ? (cap + ' — ' + name) : name;
         lightbox.style.display = 'flex';
       });
-    });
+    }
+    document.querySelectorAll('.gallery-item').forEach(bindItem);
+
     document.getElementById('galleryLightboxClose').addEventListener('click', function () {
       lightbox.style.display = 'none';
       img.src = '';
@@ -85,6 +93,50 @@
     lightbox.addEventListener('click', function (e) {
       if (e.target === lightbox) { lightbox.style.display = 'none'; img.src = ''; }
     });
+
+    // ---- Infinite scroll ----
+    var grid = document.getElementById('galleryGrid');
+    var sentinel = document.getElementById('galleryScrollSentinel');
+    if (!grid || !sentinel) return;
+    var loadingEl = document.getElementById('galleryLoading');
+    var endEl = document.getElementById('galleryEnd');
+    var skip = <%= pageSize %>;
+    var hasMore = <%= hasMore ? 'true' : 'false' %>;
+    var loading = false;
+
+    function escapeAttr(s) { return (s || '').replace(/"/g, '&quot;'); }
+
+    function loadMore() {
+      if (loading || !hasMore) return;
+      loading = true;
+      loadingEl.style.display = 'block';
+      fetch('/gallery/photos.json?skip=' + skip)
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          (data.photos || []).forEach(function (p) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'gallery-item';
+            btn.setAttribute('data-full', p.photo_url);
+            btn.setAttribute('data-caption', escapeAttr(p.caption));
+            btn.setAttribute('data-name', p.name);
+            btn.innerHTML = '<img src="' + p.photo_url + '" alt="Photo shared by ' + (p.name || '') + '" loading="lazy" decoding="async"><span class="gallery-item-name">' + (p.name || '') + '</span>';
+            bindItem(btn);
+            grid.appendChild(btn);
+          });
+          skip += (data.photos || []).length;
+          hasMore = !!data.hasMore;
+          loading = false;
+          loadingEl.style.display = 'none';
+          if (!hasMore) { endEl.style.display = 'block'; observer.disconnect(); }
+        })
+        .catch(function () { loading = false; loadingEl.style.display = 'none'; });
+    }
+
+    var observer = new IntersectionObserver(function (entries) {
+      if (entries[0].isIntersecting) loadMore();
+    }, { rootMargin: '400px' });
+    observer.observe(sentinel);
   })();
 </script>
 
