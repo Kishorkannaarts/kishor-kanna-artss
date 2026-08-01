@@ -13,7 +13,7 @@
     </p>
 
     <table style="margin-bottom:30px;">
-      <tr><th>Media</th><th>Rating</th><th>Name</th><th>Review</th><th>Status</th><th>Verified</th><th>Actions</th></tr>
+      <tr><th>Media</th><th>Rating</th><th>Name</th><th>Review</th><th>Artwork</th><th>Status</th><th>Verified</th><th>Actions</th></tr>
       <% testimonials.forEach(t => { %>
         <tr id="view-<%= t.id %>">
           <td>
@@ -24,6 +24,7 @@
           <td><%= '★'.repeat(t.rating) %><%= '☆'.repeat(5 - t.rating) %></td>
           <td><%= t.name %></td>
           <td style="max-width:340px;"><%= t.message %></td>
+          <td style="color:var(--muted); font-size:0.85rem;"><% const linked = t.artwork_id ? artworks.find(a => a.id === t.artwork_id) : null; %><%= linked ? linked.title : '—' %></td>
           <td><span class="badge <%= t.approved ? 'badge-ok' : 'badge-new' %>"><%= t.approved ? 'Approved' : 'Pending' %></span></td>
           <td>
             <form action="/admin/testimonials/<%= t.id %>/verify" method="POST">
@@ -47,7 +48,7 @@
           </td>
         </tr>
         <tr id="edit-<%= t.id %>" style="display:none;">
-          <td colspan="7">
+          <td colspan="8">
             <form action="/admin/testimonials/<%= t.id %>/update" method="POST" style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
               <div class="form-group" style="min-width:140px; margin-bottom:0;">
                 <label>Name</label>
@@ -65,6 +66,15 @@
                 <label>Review</label>
                 <textarea name="message" style="min-height:44px;" required><%= t.message %></textarea>
               </div>
+              <div class="form-group" style="min-width:180px; margin-bottom:0;">
+                <label>Linked Artwork</label>
+                <select name="artwork_id">
+                  <option value="">— None —</option>
+                  <% artworks.forEach(a => { %>
+                    <option value="<%= a.id %>" <%= t.artwork_id === a.id ? 'selected' : '' %>><%= a.title %></option>
+                  <% }) %>
+                </select>
+              </div>
               <button class="btn btn-primary btn-sm" type="submit">Save</button>
               <button class="btn btn-ghost btn-sm" type="button" onclick="document.getElementById('edit-<%= t.id %>').style.display='none'; document.getElementById('view-<%= t.id %>').style.display='table-row';">Cancel</button>
             </form>
@@ -72,7 +82,7 @@
           </td>
         </tr>
       <% }) %>
-      <% if (testimonials.length === 0) { %><tr><td colspan="7">No reviews yet.</td></tr><% } %>
+      <% if (testimonials.length === 0) { %><tr><td colspan="8">No reviews yet.</td></tr><% } %>
     </table>
 
     <h2 style="font-size:1.1rem;">Add a Review</h2>
@@ -92,6 +102,13 @@
       <div class="form-group"><label>Review Message</label><textarea name="message" required></textarea></div>
       <div class="form-group"><label>Photo (optional)</label><input type="file" name="photo" accept="image/*"></div>
       <div class="form-group"><label>Video Link (optional)</label><input type="url" name="video_url" placeholder="YouTube or Google Drive link"></div>
+      <div class="form-group">
+        <label>Linked Artwork (optional)</label>
+        <select name="artwork_id">
+          <option value="">— None —</option>
+          <% artworks.forEach(a => { %><option value="<%= a.id %>"><%= a.title %></option><% }) %>
+        </select>
+      </div>
       <button class="btn btn-primary" type="submit">Add Review</button>
     </form>
   </div>
