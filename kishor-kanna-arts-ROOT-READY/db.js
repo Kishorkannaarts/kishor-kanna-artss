@@ -383,6 +383,20 @@ Give a gift they'll treasure forever — a custom hand-made portrait from {{site
   // Customer Gallery: the public page and homepage teaser both query
   // approved-only, newest first.
   await db.collection('gallery_photos').createIndex({ approved: 1, created_at: -1 }, { background: true });
+  // Notifications: db.count('notifications', { customer_id, read: false })
+  // runs on literally every page view for a logged-in customer (the unread
+  // bell-badge count in the global res.locals middleware), so this is the
+  // single hottest query in the app — without this index it was a full
+  // collection scan on every request. Same compound shape as the actual
+  // query for an index-only match.
+  await db.collection('notifications').createIndex({ customer_id: 1, read: 1 }, { background: true });
+  // Orders: "My Orders" on the customer dashboard filters by customer_id;
+  // this was previously unindexed even though orders.order_code was.
+  await db.collection('orders').createIndex({ customer_id: 1 }, { background: true });
+  // Testimonials: homepage teaser, portfolio reviews, and per-artwork
+  // reviews all query approved-only, newest first — same pattern as
+  // gallery_photos above, but this collection had no index at all.
+  await db.collection('testimonials').createIndex({ approved: 1, created_at: -1 }, { background: true });
 
   console.log('[db] MongoDB connected and schema ready');
 }
