@@ -67,6 +67,40 @@ app.use(express.urlencoded({ extended: true }));
 // raw bytes, not the re-serialized object — capturing it here (once,
 // globally) is simpler than giving the webhook route its own body parser.
 app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
+
+// ---------- NoSQL injection guard ----------
+// express.urlencoded({ extended: true }) parses bodies with `qs`, which
+// understands bracket notation — a submitted field like
+// `phone[$ne]=` becomes req.body.phone = { $ne: '' } instead of a string.
+// Several routes (e.g. POST /track-order) drop req.body values straight
+// into a MongoDB filter: db.findOne('orders', { order_code, phone }). If an
+// operator object like that reaches Mongo unfiltered, `$ne` (or `$gt`,
+// `$regex`, etc.) is interpreted as a query operator rather than a literal
+// value to match — turning a "must match this exact order code AND phone"
+// lookup into "match anything not equal to empty string", which can expose
+// another customer's order. This strips any `$`-prefixed key (and keys
+// containing '.', which Mongo also treats specially) out of every request
+// body/query before any route handler sees it, so no individual route has
+// to remember to sanitize its own filter inputs.
+function stripMongoOperators(value) {
+  if (Array.isArray(value)) {
+    value.forEach(stripMongoOperators);
+  } else if (value && typeof value === 'object') {
+    for (const key of Object.keys(value)) {
+      if (key.startsWith('$') || key.includes('.')) {
+        delete value[key];
+      } else {
+        stripMongoOperators(value[key]);
+      }
+    }
+  }
+  return value;
+}
+app.use((req, res, next) => {
+  stripMongoOperators(req.body);
+  stripMongoOperators(req.query);
+  next();
+});
 app.use('/public', express.static(path.join(__dirname, 'public'), {
   // CSS/JS here are versionless (no content-hash in the filename), so a long
   // cache without validation would strand visitors on stale assets after a
@@ -238,7 +272,15 @@ const memoryUpload = multer({
   // 1MB default is too small for a base64-encoded photo.
   limits: { fileSize: 15 * 1024 * 1024, fieldSize: 20 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype && file.mimetype.startsWith('image/')) return cb(null, true);
+    // Whitelist real raster photo formats only. The previous check
+    // (`mimetype.startsWith('image/')`) also let `image/svg+xml` through —
+    // SVGs can carry embedded <script>/event-handler markup, so accepting
+    // them as "just an image" opens a stored-XSS path if a file is ever
+    // opened directly rather than rendered inside an <img> tag. None of the
+    // upload spots here (reference photos, artwork/service photos, review
+    // photos) have any legitimate need for SVG, so it's excluded outright.
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (file.mimetype && allowed.includes(file.mimetype)) return cb(null, true);
     cb(new Error('INVALID_FILE_TYPE'));
   }
 });
@@ -260,7 +302,12 @@ async function uploadImage(file, folder) {
 // type=file> handle goes stale — see ERR_UPLOAD_FILE_CHANGED on some
 // Android Chrome versions with camera-captured photos).
 async function uploadImageDataUri(dataUri, folder) {
-  if (!dataUri || !dataUri.startsWith('data:image/')) return null;
+  // Same SVG exclusion as memoryUpload's fileFilter above — this path
+  // uploads a client-sent base64 data URI directly and never passes through
+  // multer, so it needs its own mimetype whitelist rather than the loose
+  // "data:image/" prefix check.
+  const allowedPrefixes = ['data:image/jpeg', 'data:image/jpg', 'data:image/png', 'data:image/webp', 'data:image/gif'];
+  if (!dataUri || !allowedPrefixes.some(p => dataUri.startsWith(p))) return null;
   if (!process.env.CLOUDINARY_CLOUD_NAME) {
     console.log('[uploads] Cloudinary not configured - image not saved. See README.');
     return null;
@@ -491,6 +538,18 @@ function requireAdmin(req, res, next) {
 function requireCustomer(req, res, next) {
   if (req.session && req.session.customerId) return next();
   return res.redirect('/account/login?next=' + encodeURIComponent(req.originalUrl));
+}
+
+// Whitelists a post-login/action redirect target to an internal path only.
+// `next`/`redirect_to` params are attacker-controllable (a phishing link can
+// read "yoursite.com/account/login?next=https://evil.example/fake-login"),
+// so anything that isn't a same-site path is rejected in favor of `fallback`.
+// A leading "//" is also rejected — browsers treat "//evil.com" as
+// protocol-relative, i.e. still an external redirect, even though it
+// "starts with /".
+function safeRedirect(target, fallback) {
+  if (typeof target === 'string' && target.startsWith('/') && !target.startsWith('//')) return target;
+  return fallback;
 }
 
 function ah(fn) {
@@ -1061,7 +1120,7 @@ app.post('/account/signup', ah(async (req, res) => {
   if (ref_code) await referral.linkReferralIfAny(customer, ref_code);
   req.session.customerId = customer.id;
   req.session.customerName = customer.name;
-  res.redirect(req.query.next || '/account/dashboard');
+  res.redirect(safeRedirect(req.query.next, '/account/dashboard'));
 }));
 
 app.get('/account/login', (req, res) => {
@@ -1077,7 +1136,7 @@ app.post('/account/login', loginLimiter, ah(async (req, res) => {
   }
   req.session.customerId = customer._id.toString();
   req.session.customerName = customer.name;
-  res.redirect(req.query.next || req.body.next || '/account/dashboard');
+  res.redirect(safeRedirect(req.query.next || req.body.next, '/account/dashboard'));
 }));
 
 app.post('/account/logout', (req, res) => {
@@ -1186,9 +1245,16 @@ app.post('/account/addresses', requireCustomer, ah(async (req, res) => {
 }));
 
 app.post('/account/addresses/:id/default', requireCustomer, ah(async (req, res) => {
-  const db_ = await db.getDB();
-  await db_.collection('addresses').updateMany({ customer_id: req.session.customerId }, { $set: { is_default: false } });
-  await db.updateById('addresses', req.params.id, { is_default: true });
+  // Ownership check — without this, any logged-in customer could pass
+  // another customer's address id and flip it to "default" on that
+  // stranger's account (the /delete route right below already had this
+  // check; this route was missing it).
+  const address = await db.findById('addresses', req.params.id);
+  if (address && address.customer_id === req.session.customerId) {
+    const db_ = await db.getDB();
+    await db_.collection('addresses').updateMany({ customer_id: req.session.customerId }, { $set: { is_default: false } });
+    await db.updateById('addresses', req.params.id, { is_default: true });
+  }
   res.redirect('/account/addresses');
 }));
 
@@ -1251,7 +1317,11 @@ app.post('/wishlist/:artworkId/toggle', requireCustomer, ah(async (req, res) => 
   }
   // Send the visitor back to wherever they clicked the heart from (portfolio
   // grid, artwork detail page, or the wishlist page itself when removing).
-  res.redirect(req.body.redirect_to || req.get('Referer') || '/portfolio');
+  // redirect_to is attacker-controllable, so it's whitelisted to an internal
+  // path via safeRedirect; Referer isn't attacker-supplied in the same way
+  // (it reflects the browser's own prior page), so it's left as the
+  // fallback rather than a would-be open-redirect vector.
+  res.redirect(safeRedirect(req.body.redirect_to, req.get('Referer') || '/portfolio'));
 }));
 
 app.get('/account/wishlist', requireCustomer, ah(async (req, res) => {
@@ -1301,7 +1371,7 @@ app.post('/testimonials', memoryUpload.single('photo'), csrfCheck, ah(async (req
   // still need a human to confirm before they earn the badge.
   const isVerifiedCustomer = !!(req.session && req.session.customerId);
   // Only trust a same-site relative path here — never redirect off-domain.
-  const safeRedirect = (redirect_to && redirect_to.startsWith('/')) ? redirect_to : '/about?thanks=1';
+  const safeRedirectTarget = safeRedirect(redirect_to, '/about?thanks=1');
   await db.insertOne('testimonials', {
     name, message, rating: parseInt(rating) || 5, approved: false,
     photo_url: photoUrl || null,
@@ -1315,7 +1385,7 @@ app.post('/testimonials', memoryUpload.single('photo'), csrfCheck, ah(async (req
     const data = { name, message, rating: parseInt(rating) || 5, site_name: s.site_name };
     mailer.sendMail({ to: process.env.NOTIFY_EMAIL, subject: renderTemplate(s.tmpl_new_review_admin_subject, data), html: renderTemplate(s.tmpl_new_review_admin_body, data).replace(/\n/g, '<br>') });
   }
-  res.redirect(safeRedirect.includes('?') ? safeRedirect + '&thanks=1' : safeRedirect + '?thanks=1');
+  res.redirect(safeRedirectTarget.includes('?') ? safeRedirectTarget + '&thanks=1' : safeRedirectTarget + '?thanks=1');
 }));
 
 // ---------- Customer Gallery ----------
