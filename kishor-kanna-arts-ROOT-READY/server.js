@@ -334,9 +334,24 @@ function slugify(str) {
   return base || 'post';
 }
 
+// Escapes text before it's dropped into an HTML email body. Every {{field}}
+// substituted by renderTemplate ultimately comes from customer-submitted
+// input (order name/notes, contact form message, review text, etc.) — without
+// this, a customer could put HTML/script markup in their name or notes and
+// have it render as live markup inside the confirmation email sent to them,
+// or inside the notification email sent to NOTIFY_EMAIL.
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function renderTemplate(str, data) {
   return (str || '').replace(/{{\s*(\w+)\s*}}/g, (m, key) =>
-    (data[key] !== undefined && data[key] !== null) ? data[key] : '');
+    (data[key] !== undefined && data[key] !== null) ? escapeHtml(data[key]) : '');
 }
 
 // ---------- Abandoned order recovery scheduler ----------
@@ -909,7 +924,7 @@ app.get('/order', ah(async (req, res) => {
   if (process.env.NOTIFY_EMAIL) {
     const addressLine = [address_line, city, state, pincode].filter(Boolean).join(', ');
     mailer.sendMail({ to: process.env.NOTIFY_EMAIL, subject: `New Order Received - ${order_code}`,
-      html: `<h2>New Order</h2><p><b>ID:</b> ${order_code}</p><p><b>Name:</b> ${name}</p><p><b>Phone:</b> ${phone}</p><p><b>Email:</b> ${email||'-'}</p><p><b>Type:</b> ${art_type} / ${size}</p><p><b>Coupon:</b> ${appliedCouponCode || '-'}</p><p><b>Delivery Address:</b> ${addressLine || '-'}</p><p><b>Date:</b> ${delivery_date||'-'}</p><p><b>Notes:</b> ${notes||'-'}</p>` });
+      html: `<h2>New Order</h2><p><b>ID:</b> ${escapeHtml(order_code)}</p><p><b>Name:</b> ${escapeHtml(name)}</p><p><b>Phone:</b> ${escapeHtml(phone)}</p><p><b>Email:</b> ${email ? escapeHtml(email) : '-'}</p><p><b>Type:</b> ${escapeHtml(art_type)} / ${escapeHtml(size)}</p><p><b>Coupon:</b> ${appliedCouponCode ? escapeHtml(appliedCouponCode) : '-'}</p><p><b>Delivery Address:</b> ${addressLine ? escapeHtml(addressLine) : '-'}</p><p><b>Date:</b> ${delivery_date ? escapeHtml(delivery_date) : '-'}</p><p><b>Notes:</b> ${notes ? escapeHtml(notes) : '-'}</p>` });
   }
   if (email) {
     mailer.sendMail({ to: email, subject: renderTemplate(s.tmpl_order_received_subject, data), html: renderTemplate(s.tmpl_order_received_body, data).replace(/\n/g, '<br>') });
@@ -1378,7 +1393,19 @@ app.post('/admin/login', loginLimiter, (req, res) => {
   const validUser = username === process.env.ADMIN_USERNAME;
   const storedPass = process.env.ADMIN_PASSWORD || '';
   let validPass = storedPass.startsWith('$2') ? bcrypt.compareSync(password, storedPass) : password === storedPass;
-  if (validUser && validPass) { req.session.isAdmin = true; return res.redirect('/admin/dashboard'); }
+  if (validUser && validPass) {
+    // Regenerate the session on login (session fixation protection) — a
+    // fresh session ID is issued now that the user has escalated to admin,
+    // instead of reusing whatever pre-login session ID the browser had.
+    return req.session.regenerate((err) => {
+      if (err) {
+        console.error('[admin login] session regenerate failed:', err);
+        return res.render('admin/login', { error: 'Login failed, please try again.' });
+      }
+      req.session.isAdmin = true;
+      res.redirect('/admin/dashboard');
+    });
+  }
   res.render('admin/login', { error: 'Invalid username or password' });
 });
 
@@ -2575,6 +2602,27 @@ app.post('/admin/gift-reminders/:id/delete', requireAdmin, ah(async (req, res) =
 // =========================================================
 app.use((req, res) => {
   res.status(404).render('404');
+});
+
+// =========================================================
+// GLOBAL ERROR HANDLER — catches everything ah() forwards via
+// .catch(next), plus any other error passed to next(err).
+// Must be registered LAST (after the 404 handler) since Express
+// identifies error-handling middleware by its 4-argument signature,
+// not by position relative to the 404 route.
+// =========================================================
+app.use((err, req, res, next) => {
+  console.error('[unhandled error]', req.method, req.originalUrl, err);
+  if (res.headersSent) return next(err);
+  res.status(err.status || 500);
+  if (req.accepts('html')) {
+    // Reuses the existing 404 view/branding as a graceful fallback so
+    // visitors never see a raw stack trace. Swap in a dedicated
+    // views/500.ejs later if you want a distinct "something went wrong"
+    // message instead of the "page not found" copy.
+    return res.render('404');
+  }
+  res.json({ error: 'Something went wrong. Please try again.' });
 });
 
 // =========================================================
