@@ -111,9 +111,13 @@ async function getHowItWorks() {
 }
 
 // ---------- Generic collection helpers ----------
-async function find(col, filter = {}, sort = { created_at: -1 }, limit = 0) {
+// projection is optional (e.g. { status: 1, created_at: 1 }) — pass it when
+// a caller only needs a handful of fields from otherwise-heavy documents
+// (like orders, which also carry reference images, notes, and addresses).
+// Existing callers that don't pass one are unaffected.
+async function find(col, filter = {}, sort = { created_at: -1 }, limit = 0, projection = null) {
   const db = await getDB();
-  let q = db.collection(col).find(filter).sort(sort);
+  let q = db.collection(col).find(filter, projection ? { projection } : undefined).sort(sort);
   if (limit) q = q.limit(limit);
   return q.toArray();
 }
